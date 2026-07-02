@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-text-primary antialiased selection:bg-gold selection:text-background;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  /* Estilo do Card Premium com efeito de Glassmorphism */
+  .card-premium {
+    @apply bg-background-paper border border-white/5 rounded-xl p-6 transition-all duration-300 hover:border-gold/30 hover:shadow-lg hover:shadow-gold/5;
+  }
+
+  /* Botão Premium Principal (Dourado Metálico) */
+  .btn-gold {
+    @apply bg-gradient-to-r from-gold-dark via-gold to-gold-light text-background font-semibold px-6 py-2.5 rounded-lg shadow-md hover:opacity-90 active:scale-95 transition-all duration-200;
+  }
+
+  /* Botão Premium Secundário (Borda Dourada / Transparente) */
+  .btn-gold-outline {
+    @apply bg-transparent border border-gold text-gold font-medium px-6 py-2.5 rounded-lg hover:bg-gold/10 active:scale-95 transition-all duration-200;
+  }
+
+  /* Botão Laranja de Alerta/Ação Alternativa */
+  .btn-accent {
+    @apply bg-accent-orange text-white font-semibold px-6 py-2.5 rounded-lg shadow-md hover:bg-opacity-90 active:scale-95 transition-all duration-200;
+  }
+}
