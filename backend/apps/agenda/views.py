@@ -1,10 +1,12 @@
 from datetime import datetime, time, timedelta
 from django.utils import timezone
+from django.db.models import Sum
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework import status
 from django_filters import rest_framework as filters
 from rest_framework import viewsets
+from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from apps.agenda.models import Servico, Agendamento
 from apps.agenda.serializers import ServicoSerializer, AgendamentoSerializer
@@ -93,10 +95,15 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_superuser:
             return Agendamento.objects.all()
+        
+        # Cliente final: OBRIGATORIAMENTE retorna apenas seus próprios agendamentos
         if user.tipo == 'CLIENTE':
             return Agendamento.objects.filter(cliente=user)
-        if user.empresa:
+            
+        # Profissionais e Administradores: veem todos os agendamentos da empresa
+        if user.tipo in ['ADMINISTRADOR', 'PROFISSIONAL'] and user.empresa:
             return Agendamento.objects.filter(empresa=user.empresa)
+            
         return Agendamento.objects.none()
 
     def perform_create(self, serializer):
@@ -254,3 +261,80 @@ def obter_disponibilidade(request):
         loop_time += timedelta(minutes=slot_intervalo_minutos)
 
     return Response({"horarios_disponiveis": horarios_disponiveis})
+
+
+class FinancasDashboardView(APIView):
+    """
+    APIView para consolidar os dados financeiros do mês atual para o tenant.
+    Apenas administradores do tenant (ou superuser) podem visualizar.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        
+        # Apenas administradores do tenant (ou superuser)
+        if user.tipo != 'ADMINISTRADOR' and not user.is_superuser:
+            return Response(
+                {"error": "Acesso negado. Apenas administradores podem visualizar o dashboard financeiro."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        empresa = user.empresa
+        if not empresa and not user.is_superuser:
+            return Response(
+                {"error": "Usuário não associado a uma empresa."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        hoje = timezone.localdate()
+        inicio_mes = hoje.replace(day=1)
+        
+        # Filtra os agendamentos concluídos do mês atual para a empresa
+        agendamentos_mes = Agendamento.objects.filter(
+            status='CONCLUIDO',
+            data_hora_inicio__date__gte=inicio_mes,
+            data_hora_inicio__date__lte=hoje
+        )
+        if not user.is_superuser:
+            agendamentos_mes = agendamentos_mes.filter(empresa=empresa)
+
+        # Consolidado financeiro
+        consolidado = agendamentos_mes.aggregate(
+            faturamento_bruto=Sum('valor_total'),
+            total_comissoes=Sum('valor_comissao'),
+            lucro_liquido=Sum('lucro_liquido')
+        )
+        
+        faturamento_bruto = consolidado['faturamento_bruto'] or 0.0
+        total_comissoes = consolidado['total_comissoes'] or 0.0
+        lucro_liquido = consolidado['lucro_liquido'] or 0.0
+
+        # Desempenho dos profissionais
+        desempenho_profissionais = []
+        barbeiros = Usuario.objects.filter(tipo='PROFISSIONAL')
+        if not user.is_superuser:
+            barbeiros = barbeiros.filter(empresa=empresa)
+            
+        for barbeiro in barbeiros:
+            agendamentos_barbeiro = agendamentos_mes.filter(profissional=barbeiro)
+            consolidado_barbeiro = agendamentos_barbeiro.aggregate(
+                faturamento=Sum('valor_total'),
+                comissao=Sum('valor_comissao')
+            )
+            desempenho_profissionais.append({
+                "barbeiro_id": barbeiro.id,
+                "nome": barbeiro.get_full_name() or barbeiro.username,
+                "faturamento": float(consolidado_barbeiro['faturamento'] or 0.0),
+                "comissao": float(consolidado_barbeiro['comissao'] or 0.0)
+            })
+
+        # Ordena desempenho pelo faturamento gerado (descendente)
+        desempenho_profissionais.sort(key=lambda x: x['faturamento'], reverse=True)
+
+        return Response({
+            "faturamento_bruto": float(faturamento_bruto),
+            "total_comissoes": float(total_comissoes),
+            "lucro_liquido": float(lucro_liquido),
+            "desempenho_profissionais": desempenho_profissionais
+        })

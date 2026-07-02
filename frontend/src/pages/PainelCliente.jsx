@@ -5,6 +5,11 @@ export default function PainelCliente() {
   const [agendamentos, setAgendamentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Estados para o modal customizado de cancelamento
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [selectedAgendamentoId, setSelectedAgendamentoId] = useState(null);
+  const [canceling, setCanceling] = useState(false);
 
   const fetchAgendamentos = async () => {
     setLoading(true);
@@ -25,18 +30,24 @@ export default function PainelCliente() {
     fetchAgendamentos();
   }, []);
 
-  const handleCancelar = async (id) => {
-    if (!window.confirm('Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.')) {
-      return;
-    }
+  const handleOpenCancelModal = (id) => {
+    setSelectedAgendamentoId(id);
+    setCancelModalOpen(true);
+  };
 
+  const handleConfirmarCancelamento = async () => {
+    if (!selectedAgendamentoId) return;
+    setCanceling(true);
     try {
-      await api.patch(`/api/agendamentos/${id}/cancelar/`);
-      // Atualiza a lista localmente para refletir o cancelamento
+      await api.patch(`/api/agendamentos/${selectedAgendamentoId}/cancelar/`);
+      setCancelModalOpen(false);
+      setSelectedAgendamentoId(null);
       fetchAgendamentos();
     } catch (err) {
       console.error('Erro ao cancelar agendamento:', err);
       alert('Falha ao cancelar o agendamento. Tente novamente mais tarde.');
+    } finally {
+      setCanceling(false);
     }
   };
 
@@ -94,7 +105,7 @@ export default function PainelCliente() {
         
         {isFuturo && agendamento.status !== 'CANCELADO' && (
           <button
-            onClick={() => handleCancelar(agendamento.id)}
+            onClick={() => handleOpenCancelModal(agendamento.id)}
             className="w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-semibold transition-all text-rose-400 border border-rose-500/30 hover:bg-rose-500/10 hover:border-rose-500/50"
           >
             Cancelar Agendamento
@@ -135,6 +146,56 @@ export default function PainelCliente() {
           </div>
         )}
       </div>
+
+      {/* Modal Customizado de Confirmação de Cancelamento */}
+      {cancelModalOpen && (
+        <div className="fixed inset-0 bg-background-darker/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-background-paper border border-white/5 rounded-2xl w-full max-w-sm overflow-hidden relative shadow-2xl shadow-rose-500/5 p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Ícone de Alerta */}
+            <div className="w-12 h-12 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-full flex items-center justify-center text-xl mx-auto">
+              ⚠️
+            </div>
+
+            <div className="text-center space-y-2">
+              <h3 className="text-base font-bold text-text-primary">Confirmar Cancelamento</h3>
+              <p className="text-text-muted text-xs leading-relaxed">
+                Tem certeza que deseja cancelar este agendamento? Esta ação liberará a vaga na agenda e não poderá ser desfeita.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCancelModalOpen(false);
+                  setSelectedAgendamentoId(null);
+                }}
+                className="flex-1 py-2.5 text-xs font-semibold rounded-lg bg-background-darker border border-white/10 text-text-primary hover:border-white/20 transition-colors"
+                disabled={canceling}
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarCancelamento}
+                className="flex-1 py-2.5 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition-colors shadow-md shadow-rose-600/15 flex items-center justify-center gap-2"
+                disabled={canceling}
+              >
+                {canceling ? (
+                  <>
+                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Processando...
+                  </>
+                ) : (
+                  'Sim, Cancelar'
+                )}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

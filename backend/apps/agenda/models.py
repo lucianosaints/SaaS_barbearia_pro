@@ -99,6 +99,27 @@ class Agendamento(models.Model):
         null=True,
         verbose_name=_("Observações")
     )
+    valor_total = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Valor Total")
+    )
+    valor_comissao = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Valor da Comissão")
+    )
+    lucro_liquido = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Lucro Líquido")
+    )
 
     class Meta:
         verbose_name = _("Agendamento")

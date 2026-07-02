@@ -3,8 +3,17 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView
 from apps.accounts.models import Usuario
-from apps.accounts.serializers import UsuarioSerializer
+from apps.accounts.serializers import UsuarioSerializer, CustomTokenObtainPairSerializer
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    """
+    View customizada para obtenção de Token JWT.
+    Retorna o perfil do usuário logado no mesmo payload do token.
+    """
+    serializer_class = CustomTokenObtainPairSerializer
+
 
 class UsuarioViewSet(viewsets.ModelViewSet):
     """

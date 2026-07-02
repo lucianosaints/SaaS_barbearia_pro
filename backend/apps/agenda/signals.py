@@ -1,4 +1,4 @@
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.core.mail import send_mail
 from django.conf import settings
@@ -52,3 +52,30 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, created: bool,
     except Exception as e:
         # Registra o log do erro para diagnóstico sem travar a requisição HTTP de agendamento (erro 500)
         logger.error(f"Falha ao enviar e-mail de confirmação para agendamento {instance.id}: {str(e)}")
+
+
+@receiver(pre_save, sender=Agendamento)
+def calcular_valores_financeiros(sender, instance: Agendamento, **kwargs) -> None:
+    """
+    Signal pre_save para calcular os valores financeiros de um agendamento
+    ao ser alterado para o status 'CONCLUIDO'.
+    """
+    if instance.status == 'CONCLUIDO':
+        # M2M relations necessitam que o objeto já tenha ID salvo
+        if instance.pk:
+            # Caso o valor_total não tenha sido preenchido de forma customizada, calcula-o
+            if not instance.valor_total:
+                total_servicos = sum(s.preco for s in instance.servicos.all())
+                instance.valor_total = total_servicos
+            
+            # Se temos valor_total, calcula comissão e lucro líquido
+            if instance.valor_total:
+                taxa = 40.00
+                if instance.profissional and hasattr(instance.profissional, 'taxa_comissao'):
+                    taxa = instance.profissional.taxa_comissao
+                
+                # Comissão do barbeiro
+                comissao = (instance.valor_total * taxa) / 100
+                instance.valor_comissao = comissao
+                # Lucro líquido da empresa
+                instance.lucro_liquido = instance.valor_total - comissao

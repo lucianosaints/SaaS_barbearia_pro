@@ -35,6 +35,13 @@ class Usuario(AbstractUser):
         verbose_name=_("Empresa"),
         help_text=_("A barbearia à qual este usuário pertence. Pode ser nulo para administradores globais do SaaS.")
     )
+    taxa_comissao = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=40.00,
+        verbose_name=_("Taxa de Comissão"),
+        help_text=_("Percentual de comissão individual do profissional (ex: 40.0)")
+    )
 
     # Campos de Auditoria LGPD
     aceitou_termos = models.BooleanField(

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import useAgendamentoStore from '../store/useAgendamentoStore';
 import carlosImg from '../imagem/carlos_silva.jpg';
+import pedroImg from '../imagem/pedro.jpg';
+import { motion } from 'framer-motion';
 
 /**
  * Passo do Wizard para seleção do Barbeiro / Profissional.
@@ -47,6 +49,20 @@ export default function StepBarbeiros() {
     );
   }
 
+  // Configurações de Animação
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 25 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
+  };
+
   return (
     <div className="space-y-4">
       <div className="text-center mb-6">
@@ -54,7 +70,12 @@ export default function StepBarbeiros() {
         <p className="text-text-muted text-xs">Selecione quem irá cuidar do seu visual</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-1">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-1"
+      >
         {barbeiros.map((barbeiro) => {
           const isSelected = barbeiroId === barbeiro.id;
           const nomeCompleto = barbeiro.first_name 
@@ -62,15 +83,32 @@ export default function StepBarbeiros() {
             : barbeiro.username;
 
           const isCarlos = nomeCompleto.toLowerCase().includes('carlos');
+          const isPedro = nomeCompleto.toLowerCase().includes('pedro');
 
           return (
-            <div
+            <motion.div
               key={barbeiro.id}
+              variants={cardVariants}
+              whileHover={{ scale: 1.03, transition: { duration: 0.15 } }}
+              whileTap={{ scale: 0.97 }}
+              animate={isSelected ? {
+                borderColor: ["rgba(212, 175, 55, 0.4)", "rgba(212, 175, 55, 0.9)", "rgba(212, 175, 55, 0.4)"],
+                boxShadow: [
+                  "0 0 0px rgba(212, 175, 55, 0)",
+                  "0 0 10px rgba(212, 175, 55, 0.35)",
+                  "0 0 0px rgba(212, 175, 55, 0)"
+                ]
+              } : {
+                borderColor: "rgba(255, 255, 255, 0.05)",
+                boxShadow: "0 0 0px rgba(0,0,0,0)"
+              }}
+              transition={isSelected ? {
+                borderColor: { repeat: Infinity, duration: 2.5, ease: "easeInOut" },
+                boxShadow: { repeat: Infinity, duration: 2.5, ease: "easeInOut" }
+              } : { duration: 0.2 }}
               onClick={() => setBarbeiroId(barbeiro.id)}
-              className={`p-4 rounded-xl border cursor-pointer text-center transition-all duration-200 flex flex-col items-center gap-2 ${
-                isSelected
-                  ? 'bg-gold/10 border-gold shadow-md shadow-gold/5'
-                  : 'bg-background-darker border-white/5 hover:border-white/20'
+              className={`p-4 rounded-xl border cursor-pointer text-center flex flex-col items-center gap-2 transition-colors duration-200 ${
+                isSelected ? 'bg-gold/10' : 'bg-background-darker hover:border-white/20'
               }`}
             >
               {/* Foto real ou Inicial do Profissional */}
@@ -79,6 +117,8 @@ export default function StepBarbeiros() {
               }`}>
                 {isCarlos ? (
                   <img src={carlosImg} alt={nomeCompleto} className="w-full h-full object-cover" />
+                ) : isPedro ? (
+                  <img src={pedroImg} alt={nomeCompleto} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-xl font-bold">{nomeCompleto.charAt(0).toUpperCase()}</span>
                 )}
@@ -88,10 +128,10 @@ export default function StepBarbeiros() {
                 <h3 className="font-semibold text-xs text-text-primary line-clamp-1">{nomeCompleto}</h3>
                 <span className="text-[10px] text-text-muted">Disponível</span>
               </div>
-            </div>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </div>
   );
 }

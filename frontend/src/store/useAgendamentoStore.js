@@ -13,6 +13,7 @@ const useAgendamentoStore = create((set) => ({
   userToken: localStorage.getItem('access_token') || null,
   userId: localStorage.getItem('user_id') || null,
   userNome: localStorage.getItem('user_nome') || null,
+  userTipo: localStorage.getItem('user_tipo') || null,
   authModalOpen: false,
 
   // Ações de alteração de estado do Agendamento
@@ -31,11 +32,12 @@ const useAgendamentoStore = create((set) => ({
   setDataHora: (data) => set({ dataHora: data }),
 
   // Ações de Autenticação
-  login: (token, id, nome) => {
+  login: (token, id, nome, tipo) => {
     localStorage.setItem('access_token', token);
     localStorage.setItem('user_id', id);
     localStorage.setItem('user_nome', nome);
-    set({ userToken: token, userId: id, userNome: nome, authModalOpen: false });
+    localStorage.setItem('user_tipo', tipo);
+    set({ userToken: token, userId: id, userNome: nome, userTipo: tipo, authModalOpen: false });
   },
 
   logout: () => {
@@ -43,7 +45,8 @@ const useAgendamentoStore = create((set) => ({
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_id');
     localStorage.removeItem('user_nome');
-    set({ userToken: null, userId: null, userNome: null });
+    localStorage.removeItem('user_tipo');
+    set({ userToken: null, userId: null, userNome: null, userTipo: null });
   },
 
   setAuthModalOpen: (isOpen) => set({ authModalOpen: isOpen }),

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import useAgendamentoStore from '../store/useAgendamentoStore';
+import { motion } from 'framer-motion';
 
 /**
  * Passo do Wizard para seleção de Serviços.
@@ -16,7 +17,7 @@ export default function StepServicos() {
 
   useEffect(() => {
     async function loadServicos() {
-      setLoading(false);
+      setLoading(true);
       setError(null);
       try {
         const response = await api.get('/api/servicos/');
@@ -47,6 +48,20 @@ export default function StepServicos() {
     );
   }
 
+  // Configurações de Animação
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.08 }
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 25 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
+  };
+
   return (
     <div className="space-y-4">
       <div className="text-center mb-6">
@@ -54,17 +69,38 @@ export default function StepServicos() {
         <p className="text-text-muted text-xs">Você pode selecionar múltiplos serviços para uma mesma sessão</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 max-h-[350px] overflow-y-auto pr-1">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 gap-3 max-h-[350px] overflow-y-auto pr-1"
+      >
         {servicos.map((servico) => {
           const isSelected = servicosIds.includes(servico.id);
           return (
-            <div
+            <motion.div
               key={servico.id}
+              variants={cardVariants}
+              whileHover={{ scale: 1.02, transition: { duration: 0.15 } }}
+              whileTap={{ scale: 0.98 }}
+              animate={isSelected ? {
+                borderColor: ["rgba(212, 175, 55, 0.4)", "rgba(212, 175, 55, 0.9)", "rgba(212, 175, 55, 0.4)"],
+                boxShadow: [
+                  "0 0 0px rgba(212, 175, 55, 0)",
+                  "0 0 10px rgba(212, 175, 55, 0.35)",
+                  "0 0 0px rgba(212, 175, 55, 0)"
+                ]
+              } : {
+                borderColor: "rgba(255, 255, 255, 0.05)",
+                boxShadow: "0 0 0px rgba(0,0,0,0)"
+              }}
+              transition={isSelected ? {
+                borderColor: { repeat: Infinity, duration: 2, ease: "easeInOut" },
+                boxShadow: { repeat: Infinity, duration: 2, ease: "easeInOut" }
+              } : { duration: 0.2 }}
               onClick={() => toggleServicoId(servico.id)}
-              className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 flex justify-between items-center ${
-                isSelected
-                  ? 'bg-gold/10 border-gold shadow-md shadow-gold/5'
-                  : 'bg-background-darker border-white/5 hover:border-white/20'
+              className={`p-4 rounded-xl border cursor-pointer flex justify-between items-center transition-colors duration-200 ${
+                isSelected ? 'bg-gold/10' : 'bg-background-darker hover:border-white/20'
               }`}
             >
               <div>
@@ -81,10 +117,10 @@ export default function StepServicos() {
                   {isSelected && <span className="text-[10px] text-background font-bold">✓</span>}
                 </div>
               </div>
-            </div>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </div>
   );
 }

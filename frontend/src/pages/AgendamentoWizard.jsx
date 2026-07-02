@@ -5,6 +5,7 @@ import StepServicos from '../components/StepServicos';
 import StepBarbeiros from '../components/StepBarbeiros';
 import StepDataHora from '../components/StepDataHora';
 import AuthModal from '../components/AuthModal';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import bannerImg from '../imagem/Babearia2.jpg';
 
@@ -110,10 +111,10 @@ export default function AgendamentoWizard() {
   }
 
   return (
-    <div className="w-full max-w-md mx-auto py-8 px-4">
+    <div className="w-full max-w-md mx-auto py-4 sm:py-8 px-4">
       {/* Banner da Barbearia */}
-      <div className="w-full h-32 rounded-2xl overflow-hidden border border-white/5 mb-6 relative shadow-lg shadow-black/35">
-        <img src={bannerImg} alt="Golden Barber Shop" className="w-full h-full object-cover opacity-70" />
+      <div className="w-full h-24 sm:h-32 rounded-2xl overflow-hidden border border-white/5 mb-4 sm:mb-6 relative shadow-lg shadow-black/35">
+        <img src={bannerImg} alt="Barbeiro Pro" className="w-full h-full object-cover opacity-70" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-black/10 to-transparent"></div>
         <div className="absolute bottom-3 left-4">
           <span className="text-[9px] uppercase font-bold tracking-widest text-gold bg-background-darker/70 px-2 py-0.5 rounded border border-gold/25">Ambiente Premium</span>
@@ -121,7 +122,7 @@ export default function AgendamentoWizard() {
       </div>
 
       {/* Indicador de Passos */}
-      <div className="flex justify-between items-center mb-8 px-4">
+      <div className="flex justify-between items-center mb-4 sm:mb-8 px-4">
         {[1, 2, 3].map((num) => (
           <div key={num} className="flex items-center">
             <div className={`w-8 h-8 rounded-full border font-bold text-xs flex items-center justify-center transition-all ${
@@ -141,11 +142,21 @@ export default function AgendamentoWizard() {
       </div>
 
       {/* Conteúdo do Passo Ativo */}
-      <div className="card-premium mb-6 min-h-[380px] flex flex-col justify-between">
-        <div>
-          {step === 1 && <StepServicos />}
-          {step === 2 && <StepBarbeiros />}
-          {step === 3 && <StepDataHora />}
+      <div className="card-premium mb-4 sm:mb-6 min-h-[320px] sm:min-h-[380px] flex flex-col justify-between overflow-hidden">
+        <div className="flex-1 flex flex-col justify-between">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+            >
+              {step === 1 && <StepServicos />}
+              {step === 2 && <StepBarbeiros />}
+              {step === 3 && <StepDataHora />}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {/* Notificação de Erro se houver */}

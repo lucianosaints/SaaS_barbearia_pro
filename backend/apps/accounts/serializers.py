@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from apps.accounts.models import Usuario
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class UsuarioSerializer(serializers.ModelSerializer):
     """
@@ -37,3 +38,19 @@ class UsuarioSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Serializer customizado para injetar dados do perfil do usuário no retorno de autenticação.
+    """
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['user'] = {
+            'id': self.user.id,
+            'nome': self.user.get_full_name() or self.user.username,
+            'email': self.user.email,
+            'tipo': self.user.tipo
+        }
+        return data
+

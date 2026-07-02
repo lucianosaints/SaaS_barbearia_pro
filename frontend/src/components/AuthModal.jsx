@@ -31,17 +31,12 @@ export default function AuthModal({ onAuthSuccess }) {
       });
       const token = response.data.access;
       const refresh = response.data.refresh;
+      const user = response.data.user;
 
-      // Armazena tokens provisoriamente para requisitar dados do próprio usuário
       localStorage.setItem('access_token', token);
       localStorage.setItem('refresh_token', refresh);
 
-      // Busca dados cadastrais do próprio usuário autenticado
-      const userResponse = await api.get('/api/usuarios/');
-      const userList = userResponse.data.results || userResponse.data;
-      const user = userList[0] || { id: null, first_name: email };
-
-      login(token, user.id, user.first_name || email);
+      login(token, user.id, user.nome || email, user.tipo);
       if (onAuthSuccess) onAuthSuccess();
     } catch (err) {
       console.error(err);
@@ -69,7 +64,7 @@ export default function AuthModal({ onAuthSuccess }) {
       const refresh = response.data.refresh;
 
       localStorage.setItem('refresh_token', refresh);
-      login(token, response.data.user.id, response.data.user.nome);
+      login(token, response.data.user.id, response.data.user.nome, response.data.user.tipo);
 
       if (onAuthSuccess) onAuthSuccess();
     } catch (err) {

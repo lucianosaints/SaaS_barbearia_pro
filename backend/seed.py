@@ -67,7 +67,24 @@ def seed():
         barbeiro.save()
         print(f"Barbeiro criado: {barbeiro.first_name} (Username: carlos.barber, Senha: carlos123)")
 
-    print("Banco de dados semeado com sucesso! 🎉")
+    # 4. Cria outro Barbeiro (Pedro)
+    pedro, created = Usuario.objects.get_or_create(
+        username="pedro.barber",
+        defaults={
+            "email": "pedro.barber@goldenbarber.com",
+            "first_name": "Pedro",
+            "last_name": "Almeida",
+            "tipo": "PROFISSIONAL",
+            "empresa": empresa,
+            "is_active": True
+        }
+    )
+    if created:
+        pedro.set_password("pedro123")
+        pedro.save()
+        print(f"Barbeiro criado: {pedro.first_name} (Username: pedro.barber, Senha: pedro123)")
+
+    print("Banco de dados semeado com sucesso!")
 
 if __name__ == "__main__":
     seed()
