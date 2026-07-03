@@ -13,11 +13,11 @@ class UsuarioSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'password',
-            'empresa', 'aceitou_termos', 'data_aceite_termos', 'ip_aceite_termos',
+            'empresa', 'tipo', 'telefone', 'foto', 'avaliacao', 'aceitou_termos', 'data_aceite_termos', 'ip_aceite_termos',
             'is_staff', 'is_active', 'date_joined'
         ]
         read_only_fields = [
-            'id', 'date_joined', 'data_aceite_termos', 'ip_aceite_termos'
+            'id', 'empresa', 'date_joined', 'data_aceite_termos', 'ip_aceite_termos'
         ]
 
     def create(self, validated_data):

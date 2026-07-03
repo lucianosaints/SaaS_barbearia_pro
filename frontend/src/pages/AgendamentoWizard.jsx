@@ -44,6 +44,9 @@ export default function AgendamentoWizard() {
 
   // Faz a chamada de POST final no backend para criar o agendamento
   const handleFinalizarAgendamento = async () => {
+    // Se logou avulso e não tem dados do agendamento, apenas sai.
+    if (!servicosIds.length || !barbeiroId || !dataHora) return;
+
     setSubmitting(true);
     setSubmitError(null);
 

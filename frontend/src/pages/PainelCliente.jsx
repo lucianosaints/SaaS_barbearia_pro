@@ -45,7 +45,7 @@ export default function PainelCliente() {
       fetchAgendamentos();
     } catch (err) {
       console.error('Erro ao cancelar agendamento:', err);
-      alert('Falha ao cancelar o agendamento. Tente novamente mais tarde.');
+      setError('Falha ao cancelar o agendamento. Tente novamente mais tarde.');
     } finally {
       setCanceling(false);
     }
@@ -97,8 +97,11 @@ export default function PainelCliente() {
             )}
           </div>
           <div className="text-text-primary text-sm font-medium">{nomesServicos}</div>
-          <div className="text-text-muted text-xs flex items-center gap-3">
-            <span>💈 Profissional ID: {agendamento.profissional}</span>
+          <div className="text-text-muted text-xs flex flex-wrap items-center gap-3">
+            <span>💈 Profissional: {agendamento.profissional_nome || `ID ${agendamento.profissional}`}</span>
+            {agendamento.cliente_nome && (
+              <span>👤 Cliente: {agendamento.cliente_nome}</span>
+            )}
             <span>💰 R$ {valorTotal.toFixed(2).replace('.', ',')}</span>
           </div>
         </div>

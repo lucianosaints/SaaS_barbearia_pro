@@ -3,92 +3,160 @@ import api from '../services/api';
 import FilterBar from '../components/FilterBar';
 import AgendamentoTable from '../components/AgendamentoTable';
 
+// Importando as novas abas
+import GestaoServicos from './GestaoServicos';
+import GestaoEquipe from './GestaoEquipe';
+import FinanceiroDashboard from './FinanceiroDashboard';
+
 /**
  * Página AdminDashboard.
- * Visualização e controle operacional de todos os agendamentos da barbearia.
+ * Funciona como um container de abas para a gestão completa da barbearia.
  */
 export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState('agenda'); // 'agenda', 'servicos', 'equipe', 'financeiro'
+  
+  // ==========================================
+  // ESTADOS E FUNÇÕES DA ABA AGENDA (Padrão)
+  // ==========================================
   const [agendamentos, setAgendamentos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loadingAgenda, setLoadingAgenda] = useState(true);
+  const [errorAgenda, setErrorAgenda] = useState(null);
   const [currentFilters, setCurrentFilters] = useState({
     data: '',
     barbeiro: '',
     status: '',
   });
 
-  // Função para buscar agendamentos na API aplicando filtros
   const fetchAgendamentos = async (filters) => {
-    setLoading(true);
-    setError(null);
+    setLoadingAgenda(true);
+    setErrorAgenda(null);
     try {
       const params = {};
-      if (filters.data) {
-        // Envia a data para filtrar o início do agendamento (adequando à API)
-        params.data_hora_inicio = filters.data;
-      }
-      if (filters.barbeiro) {
-        params.barbeiro = filters.barbeiro;
-      }
-      if (filters.status) {
-        params.status = filters.status;
-      }
+      if (filters.data) params.data_hora_inicio = filters.data;
+      if (filters.barbeiro) params.barbeiro = filters.barbeiro;
+      if (filters.status) params.status = filters.status;
 
       const response = await api.get('/api/agendamentos/', { params });
-      // DRF costuma paginar os dados retornando { results: [...] } ou direto a lista
       setAgendamentos(response.data.results || response.data);
     } catch (err) {
       console.error('Erro ao buscar agendamentos:', err);
-      setError('Não foi possível carregar a lista de agendamentos. Verifique sua conexão ou autenticação.');
+      setErrorAgenda('Não foi possível carregar a lista de agendamentos. Verifique sua conexão ou autenticação.');
     } finally {
-      setLoading(false);
+      setLoadingAgenda(false);
     }
   };
 
-  // Carrega inicialmente
   useEffect(() => {
-    fetchAgendamentos(currentFilters);
-  }, []);
+    if (activeTab === 'agenda') {
+      fetchAgendamentos(currentFilters);
+    }
+  }, [activeTab]); // Recarrega se voltar pra agenda (opcional)
 
   const handleFilterChange = (newFilters) => {
     setCurrentFilters(newFilters);
     fetchAgendamentos(newFilters);
   };
 
+  // ==========================================
+  // RENDERIZAÇÃO
+  // ==========================================
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-8">
-      {/* Cabeçalho do Painel */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">
-            Painel de Gestão
-          </h1>
-          <p className="text-text-muted text-sm">Controle completo de horários e atendimento operacional</p>
-        </div>
-        <button 
-          onClick={() => fetchAgendamentos(currentFilters)}
-          className="btn-gold-outline text-xs px-4 py-2"
+      {/* Cabeçalho Principal do Admin */}
+      <div className="mb-6 border-b border-white/10 pb-4">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">
+          Painel de Gestão
+        </h1>
+        <p className="text-text-muted text-sm mt-1">Controle completo do seu negócio.</p>
+      </div>
+
+      {/* Menu de Navegação (Tabs) */}
+      <div className="flex gap-4 overflow-x-auto mb-8 pb-2">
+        <button
+          onClick={() => setActiveTab('agenda')}
+          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
+            activeTab === 'agenda' 
+            ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
+            : 'bg-background-paper border border-white/5 text-text-secondary hover:text-white hover:border-white/20'
+          }`}
         >
-          🔄 Atualizar Tabela
+          📅 Agenda e Operação
+        </button>
+        <button
+          onClick={() => setActiveTab('servicos')}
+          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
+            activeTab === 'servicos' 
+            ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
+            : 'bg-background-paper border border-white/5 text-text-secondary hover:text-white hover:border-white/20'
+          }`}
+        >
+          ✂️ Serviços
+        </button>
+        <button
+          onClick={() => setActiveTab('equipe')}
+          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
+            activeTab === 'equipe' 
+            ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
+            : 'bg-background-paper border border-white/5 text-text-secondary hover:text-white hover:border-white/20'
+          }`}
+        >
+          👥 Equipe (Barbeiros)
+        </button>
+        <button
+          onClick={() => setActiveTab('financeiro')}
+          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
+            activeTab === 'financeiro' 
+            ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
+            : 'bg-background-paper border border-white/5 text-text-secondary hover:text-white hover:border-white/20'
+          }`}
+        >
+          💰 Financeiro
         </button>
       </div>
 
-      {/* Barra de Filtros */}
-      <FilterBar onFilterChange={handleFilterChange} />
+      {/* Conteúdo da Aba Ativa */}
+      <div className="animate-in fade-in duration-300">
+        
+        {/* ABA: AGENDA */}
+        {activeTab === 'agenda' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-text-primary">Visão Operacional</h2>
+              <button 
+                onClick={() => fetchAgendamentos(currentFilters)}
+                className="btn-gold-outline text-xs px-4 py-2"
+              >
+                🔄 Atualizar Tabela
+              </button>
+            </div>
 
-      {/* Tabela ou Estados de carregamento/erro */}
-      {loading ? (
-        <div className="bg-background-paper border border-white/5 rounded-xl p-12 text-center">
-          <div className="inline-block w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-text-secondary text-sm">Carregando agendamentos...</p>
-        </div>
-      ) : error ? (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl p-6 text-center text-sm">
-          ❌ {error}
-        </div>
-      ) : (
-        <AgendamentoTable agendamentos={agendamentos} />
-      )}
+            <FilterBar onFilterChange={handleFilterChange} />
+
+            {loadingAgenda ? (
+              <div className="bg-background-paper border border-white/5 rounded-xl p-12 text-center">
+                <div className="inline-block w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-text-secondary text-sm">Carregando agendamentos...</p>
+              </div>
+            ) : errorAgenda ? (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl p-6 text-center text-sm">
+                ❌ {errorAgenda}
+              </div>
+            ) : (
+              <AgendamentoTable agendamentos={agendamentos} />
+            )}
+          </div>
+        )}
+
+        {/* ABA: SERVIÇOS */}
+        {activeTab === 'servicos' && <GestaoServicos />}
+
+        {/* ABA: EQUIPE */}
+        {activeTab === 'equipe' && <GestaoEquipe />}
+
+        {/* ABA: FINANCEIRO */}
+        {activeTab === 'financeiro' && <FinanceiroDashboard />}
+
+      </div>
     </div>
   );
 }

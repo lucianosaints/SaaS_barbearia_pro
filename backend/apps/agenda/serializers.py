@@ -9,7 +9,7 @@ class ServicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Servico
         fields = ['id', 'empresa', 'nome', 'preco', 'duracao_minutos', 'ativo']
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'empresa']
 
 
 class AgendamentoSerializer(serializers.ModelSerializer):
@@ -72,4 +72,11 @@ class AgendamentoSerializer(serializers.ModelSerializer):
         # Sobrescreve para retornar os detalhes dos serviços em vez de apenas os IDs no GET
         representation = super().to_representation(instance)
         representation['servicos_detalhes'] = ServicoSerializer(instance.servicos.all(), many=True).data
+        
+        if instance.cliente:
+            representation['cliente_nome'] = instance.cliente.get_full_name() or instance.cliente.username
+            
+        if instance.profissional:
+            representation['profissional_nome'] = instance.profissional.get_full_name() or instance.profissional.username
+            
         return representation

@@ -22,7 +22,6 @@ class Servico(models.Model):
         verbose_name=_("Nome do Serviço")
     )
     preco = models.DecimalField(
-        max_length=10,
         max_digits=10,
         decimal_places=2,
         verbose_name=_("Preço")

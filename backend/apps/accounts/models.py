@@ -42,6 +42,19 @@ class Usuario(AbstractUser):
         verbose_name=_("Taxa de Comissão"),
         help_text=_("Percentual de comissão individual do profissional (ex: 40.0)")
     )
+    foto = models.ImageField(
+        upload_to='profissionais/',
+        null=True,
+        blank=True,
+        verbose_name=_("Foto de Perfil")
+    )
+    avaliacao = models.DecimalField(
+        max_digits=3,
+        decimal_places=1,
+        default=5.0,
+        verbose_name=_("Avaliação"),
+        help_text=_("Nota do profissional (1.0 a 5.0)")
+    )
 
     # Campos de Auditoria LGPD
     aceitou_termos = models.BooleanField(

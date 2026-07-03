@@ -14,13 +14,15 @@ from apps.accounts.models import Usuario
 
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
+from apps.accounts.permissions import IsAdminUserOrReadOnly
+
 class ServicoViewSet(viewsets.ModelViewSet):
     """
     ViewSet para listar, criar e gerenciar Serviços.
     Garante isolamento multi-tenant e visualização pública.
     """
     serializer_class = ServicoSerializer
-    permission_classes = [AllowAny] # Permite visualização pública
+    permission_classes = [IsAdminUserOrReadOnly]
 
     def get_queryset(self):
         # Filtro de listagem pública por empresa para o Wizard
@@ -40,9 +42,10 @@ class ServicoViewSet(viewsets.ModelViewSet):
         return Servico.objects.filter(ativo=True)
 
     def perform_create(self, serializer):
-        # Associa o serviço automaticamente à empresa do usuário criador
-        if not self.request.user.is_superuser and self.request.user.empresa:
-            serializer.save(empresa=self.request.user.empresa)
+        user = self.request.user
+        empresa_id = self.request.data.get('empresa')
+        if not empresa_id and user.empresa:
+            serializer.save(empresa=user.empresa)
         else:
             serializer.save()
 
@@ -100,8 +103,12 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
         if user.tipo == 'CLIENTE':
             return Agendamento.objects.filter(cliente=user)
             
-        # Profissionais e Administradores: veem todos os agendamentos da empresa
-        if user.tipo in ['ADMINISTRADOR', 'PROFISSIONAL'] and user.empresa:
+        # Profissionais: veem apenas os agendamentos em que são o barbeiro
+        if user.tipo == 'PROFISSIONAL' and user.empresa:
+            return Agendamento.objects.filter(empresa=user.empresa, profissional=user)
+            
+        # Administradores: veem todos os agendamentos da empresa
+        if user.tipo == 'ADMINISTRADOR' and user.empresa:
             return Agendamento.objects.filter(empresa=user.empresa)
             
         return Agendamento.objects.none()
@@ -114,7 +121,11 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
             empresa = profissional.empresa if profissional else user.empresa
             serializer.save(cliente=user, empresa=empresa)
         else:
-            # Caso contrário (operadores/administradores), fluxo normal
+            # Admin/Profissional: exige que o cliente seja informado no payload
+            cliente = serializer.validated_data.get('cliente')
+            if not cliente:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({"cliente": "O campo cliente é obrigatório ao criar agendamento como administrador."})
             empresa = user.empresa or serializer.validated_data.get('empresa')
             serializer.save(empresa=empresa)
 

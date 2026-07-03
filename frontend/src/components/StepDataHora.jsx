@@ -82,11 +82,23 @@ export default function StepDataHora() {
           <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
             Escolher Dia
           </label>
+          <style>{`
+            input[type="date"]::-webkit-calendar-picker-indicator {
+              opacity: 0.8;
+              cursor: pointer;
+              /* Como o color-scheme já é dark, o ícone é nativamente claro. 
+                 Se precisarmos forçar a cor, podemos usar um SVG via background-image. */
+            }
+            input[type="date"]::-webkit-calendar-picker-indicator:hover {
+              opacity: 1;
+            }
+          `}</style>
           <input
             type="date"
             value={selectedDate}
             onChange={handleDateChange}
-            min={new Date().toISOString().split('T')[0]} // Impede datas retroativas
+            min={new Date().toISOString().split('T')[0]}
+            style={{ colorScheme: 'dark' }}
             className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold transition-colors"
           />
         </div>

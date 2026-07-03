@@ -63,6 +63,7 @@ export default function AuthModal({ onAuthSuccess }) {
       const token = response.data.access;
       const refresh = response.data.refresh;
 
+      localStorage.setItem('access_token', token);
       localStorage.setItem('refresh_token', refresh);
       login(token, response.data.user.id, response.data.user.nome, response.data.user.tipo);
 
@@ -126,13 +127,13 @@ export default function AuthModal({ onAuthSuccess }) {
             /* Formulário de Login */
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">E-mail</label>
+                <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">E-mail ou Usuário</label>
                 <input
-                  type="email"
+                  type="text"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="exemplo@gmail.com"
+                  placeholder="exemplo@gmail.com ou usuario"
                   className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold transition-colors"
                 />
               </div>

@@ -9,7 +9,7 @@ import backgroundImg from './imagem/Background.jpg'
 
 function App() {
   const [currentTab, setCurrentTab] = useState('client') // 'client' ou 'admin'
-  const { userToken, userNome, userTipo, logout } = useAgendamentoStore()
+  const { userToken, userNome, userTipo, logout, setAuthModalOpen } = useAgendamentoStore()
 
   return (
     <div 
@@ -33,7 +33,7 @@ function App() {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-            {userToken && (
+            {userToken ? (
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-text-secondary">Olá, <strong className="text-gold-light">{userNome}</strong></span>
                 <button 
@@ -43,6 +43,13 @@ function App() {
                   Sair
                 </button>
               </div>
+            ) : (
+              <button 
+                onClick={() => setAuthModalOpen(true)}
+                className="btn-gold-outline px-3 py-1 text-xs rounded-md"
+              >
+                Entrar
+              </button>
             )}
 
             <nav className="flex bg-background-darker border border-white/10 rounded-lg p-0.5 sm:p-1">
@@ -68,7 +75,7 @@ function App() {
                   Minha Agenda
                 </button>
               )}
-              {userToken && userTipo !== 'CLIENTE' && (
+              {userToken && userTipo === 'ADMINISTRADOR' && (
                 <button
                   onClick={() => setCurrentTab('admin')}
                   className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${

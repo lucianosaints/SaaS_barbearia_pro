@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import useAgendamentoStore from '../store/useAgendamentoStore';
-import carlosImg from '../imagem/carlos_silva.jpg';
-import pedroImg from '../imagem/pedro.jpg';
 import { motion } from 'framer-motion';
 
 /**
@@ -22,7 +20,9 @@ export default function StepBarbeiros() {
       setError(null);
       try {
         const response = await api.get('/api/usuarios/');
-        setBarbeiros(response.data.results || response.data);
+        const users = response.data.results || response.data;
+        const apenasProfissionais = users.filter(u => u.tipo === 'PROFISSIONAL');
+        setBarbeiros(apenasProfissionais);
       } catch (err) {
         console.error('Erro ao buscar barbeiros:', err);
         setError('Falha ao obter lista de profissionais.');
@@ -81,9 +81,8 @@ export default function StepBarbeiros() {
           const nomeCompleto = barbeiro.first_name 
             ? `${barbeiro.first_name} ${barbeiro.last_name || ''}` 
             : barbeiro.username;
-
-          const isCarlos = nomeCompleto.toLowerCase().includes('carlos');
-          const isPedro = nomeCompleto.toLowerCase().includes('pedro');
+          
+          const avaliacao = parseFloat(barbeiro.avaliacao) || 5.0;
 
           return (
             <motion.div
@@ -115,10 +114,12 @@ export default function StepBarbeiros() {
               <div className={`w-16 h-16 rounded-full overflow-hidden border flex items-center justify-center transition-colors ${
                 isSelected ? 'border-gold' : 'border-white/10 text-gold-light bg-background'
               }`}>
-                {isCarlos ? (
-                  <img src={carlosImg} alt={nomeCompleto} className="w-full h-full object-cover" />
-                ) : isPedro ? (
-                  <img src={pedroImg} alt={nomeCompleto} className="w-full h-full object-cover" />
+                {barbeiro.foto ? (
+                  <img 
+                    src={barbeiro.foto.startsWith('http') ? barbeiro.foto : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${barbeiro.foto}`} 
+                    alt={nomeCompleto} 
+                    className="w-full h-full object-cover" 
+                  />
                 ) : (
                   <span className="text-xl font-bold">{nomeCompleto.charAt(0).toUpperCase()}</span>
                 )}
@@ -126,7 +127,10 @@ export default function StepBarbeiros() {
 
               <div className="mt-1">
                 <h3 className="font-semibold text-xs text-text-primary line-clamp-1">{nomeCompleto}</h3>
-                <span className="text-[10px] text-text-muted">Disponível</span>
+                <div className="flex items-center justify-center gap-1 mt-0.5">
+                  <span className="text-gold text-[10px]">{'⭐'.repeat(Math.round(avaliacao))}</span>
+                  <span className="text-[10px] text-text-muted font-medium">{avaliacao.toFixed(1)}</span>
+                </div>
               </div>
             </motion.div>
           );

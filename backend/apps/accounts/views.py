@@ -15,6 +15,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
 
+from apps.accounts.permissions import IsAdminUserOrReadOnly
+
 class UsuarioViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gerenciamento de Usuários.
@@ -22,7 +24,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     pertencentes à mesma empresa do usuário logado ou filtrar profissionais publicamente.
     """
     serializer_class = UsuarioSerializer
-    permission_classes = [AllowAny] # Permite visualização pública (importante para o wizard de clientes)
+    permission_classes = [IsAdminUserOrReadOnly]
 
     def get_queryset(self):
         # Filtro de listagem pública por empresa para o Wizard
@@ -43,11 +45,12 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        # Associa automaticamente o novo usuário à empresa do criador (se não for superusuário informando outra)
-        if not user.is_superuser and user.empresa:
-            serializer.save(empresa=user.empresa)
+        empresa_id = self.request.data.get('empresa')
+        # Associa automaticamente o novo usuário à empresa do criador e fixa como PROFISSIONAL
+        if not empresa_id and user.empresa:
+            serializer.save(empresa=user.empresa, tipo='PROFISSIONAL')
         else:
-            serializer.save()
+            serializer.save(tipo='PROFISSIONAL')
 
 
 @api_view(['POST'])
