@@ -96,7 +96,7 @@ export default function AgendamentoWizard() {
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-text-primary">Agendado com Sucesso!</h1>
             <p className="text-text-muted text-sm">
-              Seu horário foi reservado. Um e-mail de confirmação foi enviado!
+              Seu horário foi reservado. Acompanhe pelo painel "Minha Agenda".
             </p>
           </div>
           <button

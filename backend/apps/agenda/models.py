@@ -146,9 +146,18 @@ class Agendamento(models.Model):
 def atualizar_data_hora_fim(sender, instance: Agendamento, action: str, **kwargs) -> None:
     """
     Signal para escutar alterações no relacionamento ManyToMany de serviços do Agendamento.
-    Atualiza e salva o campo `data_hora_fim` automaticamente.
+    Atualiza e salva o campo `data_hora_fim` e calcula o `valor_total` automaticamente.
     """
     if action in ["post_add", "post_remove", "post_clear"]:
-        instance.recalcular_fim()
-        # Salva apenas o campo atualizado para evitar recursão ou triggers desnecessários
-        instance.save(update_fields=["data_hora_fim"])
+        servicos = instance.servicos.all()
+        
+        # Recalcula data_hora_fim
+        total_duracao = sum(servico.duracao_minutos for servico in servicos)
+        instance.data_hora_fim = instance.data_hora_inicio + timedelta(minutes=total_duracao)
+        
+        # Calcula valor_total baseado nos serviços associados
+        valor_total = sum(servico.preco for servico in servicos)
+        instance.valor_total = valor_total
+        
+        # Salva apenas os campos atualizados para evitar recursão ou triggers desnecessários
+        instance.save(update_fields=["data_hora_fim", "valor_total"])

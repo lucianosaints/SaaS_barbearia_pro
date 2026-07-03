@@ -32,9 +32,10 @@ class AgendamentoSerializer(serializers.ModelSerializer):
         model = Agendamento
         fields = [
             'id', 'empresa', 'cliente', 'profissional', 'servicos',
-            'data_hora_inicio', 'data_hora_fim', 'status', 'observacoes'
+            'data_hora_inicio', 'data_hora_fim', 'status', 'observacoes',
+            'valor_total', 'valor_comissao', 'lucro_liquido'
         ]
-        read_only_fields = ['id', 'data_hora_fim', 'empresa']
+        read_only_fields = ['id', 'data_hora_fim', 'empresa', 'valor_total', 'valor_comissao', 'lucro_liquido']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

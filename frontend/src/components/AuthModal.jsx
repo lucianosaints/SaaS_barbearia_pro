@@ -36,7 +36,7 @@ export default function AuthModal({ onAuthSuccess }) {
       localStorage.setItem('access_token', token);
       localStorage.setItem('refresh_token', refresh);
 
-      login(token, user.id, user.nome || email, user.tipo);
+      login(token, user.id, user.nome || email, user.tipo, user.empresa);
       if (onAuthSuccess) onAuthSuccess();
     } catch (err) {
       console.error(err);

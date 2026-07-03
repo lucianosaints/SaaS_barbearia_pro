@@ -15,6 +15,7 @@ from apps.accounts.models import Usuario
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from apps.accounts.permissions import IsAdminUserOrReadOnly
+from apps.tenants.permissions import IsEmpresaAtiva
 
 class ServicoViewSet(viewsets.ModelViewSet):
     """
@@ -22,7 +23,7 @@ class ServicoViewSet(viewsets.ModelViewSet):
     Garante isolamento multi-tenant e visualização pública.
     """
     serializer_class = ServicoSerializer
-    permission_classes = [IsAdminUserOrReadOnly]
+    permission_classes = [IsAdminUserOrReadOnly, IsEmpresaAtiva]
 
     def get_queryset(self):
         # Filtro de listagem pública por empresa para o Wizard
@@ -46,8 +47,11 @@ class ServicoViewSet(viewsets.ModelViewSet):
         empresa_id = self.request.data.get('empresa')
         if not empresa_id and user.empresa:
             serializer.save(empresa=user.empresa)
-        else:
+        elif empresa_id:
             serializer.save()
+        else:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"empresa": "Não foi possível associar o serviço a uma empresa. Verifique se seu usuário está vinculado a uma barbearia."})
 
 
 class AgendamentoFilter(filters.FilterSet):
@@ -90,7 +94,7 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
     Se for um cliente final, retorna apenas os seus próprios agendamentos.
     """
     serializer_class = AgendamentoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsEmpresaAtiva]
     filter_backends = [filters.DjangoFilterBackend]
     filterset_class = AgendamentoFilter
 
@@ -121,13 +125,11 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
             empresa = profissional.empresa if profissional else user.empresa
             serializer.save(cliente=user, empresa=empresa)
         else:
-            # Admin/Profissional: exige que o cliente seja informado no payload
-            cliente = serializer.validated_data.get('cliente')
-            if not cliente:
-                from rest_framework.exceptions import ValidationError
-                raise ValidationError({"cliente": "O campo cliente é obrigatório ao criar agendamento como administrador."})
+            # Admin/Profissional: se cliente não for informado (ex: usando o wizard do cliente),
+            # assume que ele está agendando para si mesmo.
+            cliente = serializer.validated_data.get('cliente', user)
             empresa = user.empresa or serializer.validated_data.get('empresa')
-            serializer.save(empresa=empresa)
+            serializer.save(cliente=cliente, empresa=empresa)
 
     @action(detail=True, methods=['patch'])
     def cancelar(self, request, pk=None):
@@ -190,18 +192,6 @@ def obter_disponibilidade(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    user = request.user
-    servicos_qs = Servico.objects.filter(id__in=servico_ids, ativo=True)
-    if user.is_authenticated and not user.is_superuser and user.empresa:
-        servicos_qs = servicos_qs.filter(empresa=user.empresa)
-
-    if servicos_qs.count() != len(set(servico_ids)):
-        return Response(
-            {"error": "Um ou mais serviços informados são inválidos ou não pertencem à empresa."},
-            status=status.HTTP_404_NOT_FOUND
-        )
-
-    # Busca o profissional para obter sua respectiva empresa (tenant)
     barbeiro = Usuario.objects.filter(id=barbeiro_id).first()
     if not barbeiro or not barbeiro.empresa:
         return Response(
@@ -210,12 +200,22 @@ def obter_disponibilidade(request):
         )
 
     empresa = barbeiro.empresa
+
+    # Filtra os serviços pela empresa do barbeiro selecionado (não do usuário logado)
+    servicos_qs = Servico.objects.filter(id__in=servico_ids, ativo=True, empresa=empresa)
+
+    if servicos_qs.count() != len(set(servico_ids)):
+        return Response(
+            {"error": "Um ou mais serviços informados são inválidos ou não pertencem à empresa."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
     duracao_total = sum(s.duracao_minutos for s in servicos_qs)
 
     tz = timezone.get_current_timezone()
     
     # Parâmetros de expediente e almoço dinâmicos da empresa
-    hora_abertura = registrar_tempo_certo = empresa.hora_abertura
+    hora_abertura = empresa.hora_abertura
     hora_fechamento = empresa.hora_fechamento
     almoco_inicio = empresa.intervalo_almoco_inicio
     almoco_fim = empresa.intervalo_almoco_fim
@@ -226,6 +226,7 @@ def obter_disponibilidade(request):
         data_hora_inicio__date=data_selecionada,
         status__in=['PENDENTE', 'CONFIRMADO', 'CONCLUIDO']
     )
+    user = request.user
     if user.is_authenticated and not user.is_superuser and user.empresa:
         agendamentos = agendamentos.filter(empresa=user.empresa)
 

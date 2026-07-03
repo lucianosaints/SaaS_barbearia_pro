@@ -32,6 +32,7 @@ urlpatterns = [
     path('api/clientes/registrar/', registrar_cliente, name='registrar_cliente'),
     
     # Endpoints da API REST
+    path('api/assinaturas/', include('apps.payments.urls')),
     path('api/', include(router.urls)),
     
     # Endpoints de Autenticação (JWT)

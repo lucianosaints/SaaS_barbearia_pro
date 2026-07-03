@@ -21,6 +21,7 @@ export default function GestaoEquipe() {
     password: '',
     is_active: true,
     avaliacao: 5.0,
+    taxa_comissao: 40.0,
     foto: null,
   });
 
@@ -55,6 +56,7 @@ export default function GestaoEquipe() {
         password: '', // Não carrega senha na edição
         is_active: profissional.is_active,
         avaliacao: profissional.avaliacao || 5.0,
+        taxa_comissao: profissional.taxa_comissao || 40.0,
         foto: null, // Não carregar foto anterior no form state, a menos que tenhamos preview
       });
     } else {
@@ -67,6 +69,7 @@ export default function GestaoEquipe() {
         password: '',
         is_active: true,
         avaliacao: 5.0,
+        taxa_comissao: 40.0,
         foto: null,
       });
     }
@@ -102,6 +105,7 @@ export default function GestaoEquipe() {
       payload.append('telefone', formData.telefone);
       payload.append('is_active', formData.is_active);
       payload.append('avaliacao', formData.avaliacao);
+      payload.append('taxa_comissao', formData.taxa_comissao);
 
       if (formData.password) {
         payload.append('password', formData.password);
@@ -317,6 +321,21 @@ export default function GestaoEquipe() {
                     className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase mb-1">Taxa de Comissão (%)</label>
+                <input
+                  type="number"
+                  name="taxa_comissao"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={formData.taxa_comissao}
+                  onChange={handleInputChange}
+                  placeholder="Ex: 40.0"
+                  className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
+                />
               </div>
 
               <div className="flex items-center gap-2 mt-4">

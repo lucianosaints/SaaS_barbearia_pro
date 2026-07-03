@@ -52,6 +52,22 @@ class Empresa(models.Model):
         blank=True,
         verbose_name=_("Fim do Intervalo de Almoço")
     )
+    assinatura_ativa = models.BooleanField(
+        default=False,
+        verbose_name=_("Assinatura Ativa"),
+        help_text=_("Indica se a barbearia possui uma assinatura paga e ativa.")
+    )
+    em_trial = models.BooleanField(
+        default=True,
+        verbose_name=_("Em Período de Teste"),
+        help_text=_("Indica se a barbearia ainda está no Free Trial.")
+    )
+    data_fim_trial = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name=_("Fim do Período de Teste"),
+        help_text=_("Data em que o período de teste expira.")
+    )
 
     class Meta:
         verbose_name = _("Empresa")

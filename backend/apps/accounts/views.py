@@ -6,6 +6,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from apps.accounts.models import Usuario
 from apps.accounts.serializers import UsuarioSerializer, CustomTokenObtainPairSerializer
+from apps.accounts.permissions import IsAdminUserOrReadOnly
+from apps.tenants.permissions import IsEmpresaAtiva
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
@@ -15,8 +17,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
 
-from apps.accounts.permissions import IsAdminUserOrReadOnly
-
 class UsuarioViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gerenciamento de Usuários.
@@ -24,7 +24,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     pertencentes à mesma empresa do usuário logado ou filtrar profissionais publicamente.
     """
     serializer_class = UsuarioSerializer
-    permission_classes = [IsAdminUserOrReadOnly]
+    permission_classes = [IsAdminUserOrReadOnly, IsEmpresaAtiva]
 
     def get_queryset(self):
         # Filtro de listagem pública por empresa para o Wizard

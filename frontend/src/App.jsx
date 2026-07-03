@@ -5,6 +5,7 @@ import AgendamentoWizard from './pages/AgendamentoWizard'
 import PainelCliente from './pages/PainelCliente'
 import FinanceiroDashboard from './pages/FinanceiroDashboard'
 import ProtectedRoute from './components/ProtectedRoute'
+import LandingPage from './pages/LandingPage'
 import backgroundImg from './imagem/Background.jpg'
 
 function App() {
@@ -99,6 +100,16 @@ function App() {
                   Financeiro
                 </button>
               )}
+              <button
+                onClick={() => setCurrentTab('landing')}
+                className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${
+                  currentTab === 'landing'
+                    ? 'bg-gold text-background'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                Vitrine SaaS
+              </button>
             </nav>
           </div>
         </div>
@@ -124,6 +135,7 @@ function App() {
             <FinanceiroDashboard />
           </ProtectedRoute>
         )}
+        {currentTab === 'landing' && <LandingPage />}
       </main>
 
       {/* Rodapé institucional */}

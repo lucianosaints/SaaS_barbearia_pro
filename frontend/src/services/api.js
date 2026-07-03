@@ -79,7 +79,7 @@ api.interceptors.response.use(
 
       try {
         // Faz a requisição de Refresh Token na API do Django
-        const response = await axios.post('http://localhost:8000/api/token/refresh/', {
+        const response = await api.post('/api/token/refresh/', {
           refresh: refreshToken,
         });
 

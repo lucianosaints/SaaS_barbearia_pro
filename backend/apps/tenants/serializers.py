@@ -7,5 +7,6 @@ class EmpresaSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Empresa
-        fields = ['id', 'nome', 'slug', 'cnpj', 'data_criacao', 'ativo']
+        fields = ['id', 'nome', 'slug', 'cnpj', 'data_criacao', 'ativo',
+                  'hora_abertura', 'hora_fechamento', 'intervalo_almoco_inicio', 'intervalo_almoco_fim']
         read_only_fields = ['id', 'data_criacao']

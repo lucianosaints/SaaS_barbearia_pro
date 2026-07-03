@@ -2,6 +2,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from apps.tenants.models import Empresa
 from apps.tenants.serializers import EmpresaSerializer
+from apps.accounts.permissions import IsAdminUserOrReadOnly
 
 class EmpresaViewSet(viewsets.ModelViewSet):
     """
@@ -10,7 +11,7 @@ class EmpresaViewSet(viewsets.ModelViewSet):
     acesse apenas os dados da própria empresa.
     """
     serializer_class = EmpresaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUserOrReadOnly]
 
     def get_queryset(self):
         user = self.request.user

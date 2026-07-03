@@ -57,25 +57,23 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, created: bool,
 @receiver(pre_save, sender=Agendamento)
 def calcular_valores_financeiros(sender, instance: Agendamento, **kwargs) -> None:
     """
-    Signal pre_save para calcular os valores financeiros de um agendamento
-    ao ser alterado para o status 'CONCLUIDO'.
+    Signal pre_save para calcular comissão e lucro líquido quando o status
+    muda para 'CONCLUIDO'. O valor_total já é preenchido pelo signal m2m_changed
+    em models.py no momento da associação dos serviços.
     """
-    if instance.status == 'CONCLUIDO':
-        # M2M relations necessitam que o objeto já tenha ID salvo
-        if instance.pk:
-            # Caso o valor_total não tenha sido preenchido de forma customizada, calcula-o
-            if not instance.valor_total:
-                total_servicos = sum(s.preco for s in instance.servicos.all())
+    if instance.status == 'CONCLUIDO' and instance.pk:
+        # Se valor_total ainda não foi preenchido, tenta calcular agora
+        if not instance.valor_total:
+            total_servicos = sum(s.preco for s in instance.servicos.all())
+            if total_servicos > 0:
                 instance.valor_total = total_servicos
+
+        # Calcula comissão e lucro líquido
+        if instance.valor_total:
+            taxa = 40.00
+            if instance.profissional and hasattr(instance.profissional, 'taxa_comissao'):
+                taxa = instance.profissional.taxa_comissao
             
-            # Se temos valor_total, calcula comissão e lucro líquido
-            if instance.valor_total:
-                taxa = 40.00
-                if instance.profissional and hasattr(instance.profissional, 'taxa_comissao'):
-                    taxa = instance.profissional.taxa_comissao
-                
-                # Comissão do barbeiro
-                comissao = (instance.valor_total * taxa) / 100
-                instance.valor_comissao = comissao
-                # Lucro líquido da empresa
-                instance.lucro_liquido = instance.valor_total - comissao
+            comissao = (instance.valor_total * taxa) / 100
+            instance.valor_comissao = comissao
+            instance.lucro_liquido = instance.valor_total - comissao

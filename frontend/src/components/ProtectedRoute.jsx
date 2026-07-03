@@ -16,14 +16,12 @@ export default function ProtectedRoute({ children, allowedRoles, onDenied }) {
   useEffect(() => {
     // Caso não esteja logado
     if (!userToken) {
-      alert("Acesso Negado. Por favor, faça login para acessar esta página.");
       onDenied();
       return;
     }
 
     // Caso o tipo do usuário não esteja autorizado
     if (allowedRoles && !allowedRoles.includes(userTipo)) {
-      alert("Acesso Negado. Você não tem permissão para acessar esta área.");
       onDenied();
     }
   }, [userToken, userTipo, allowedRoles, onDenied]);

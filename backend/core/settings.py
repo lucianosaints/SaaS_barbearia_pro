@@ -26,11 +26,13 @@ INSTALLED_APPS = [
     # Third-party apps
     'rest_framework',
     'corsheaders',
+    'rest_framework_simplejwt.token_blacklist',
     
     # Local apps
     'apps.tenants',
     'apps.accounts',
     'apps.agenda',
+    'apps.payments',
 ]
 
 # Middlewares

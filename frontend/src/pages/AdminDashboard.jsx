@@ -7,12 +7,15 @@ import AgendamentoTable from '../components/AgendamentoTable';
 import GestaoServicos from './GestaoServicos';
 import GestaoEquipe from './GestaoEquipe';
 import FinanceiroDashboard from './FinanceiroDashboard';
+import LockoutScreen from '../components/LockoutScreen';
+import useAgendamentoStore from '../store/useAgendamentoStore';
 
 /**
  * Página AdminDashboard.
  * Funciona como um container de abas para a gestão completa da barbearia.
  */
 export default function AdminDashboard() {
+  const { userEmpresa, userTipo } = useAgendamentoStore();
   const [activeTab, setActiveTab] = useState('agenda'); // 'agenda', 'servicos', 'equipe', 'financeiro'
   
   // ==========================================
@@ -60,6 +63,17 @@ export default function AdminDashboard() {
   // ==========================================
   // RENDERIZAÇÃO
   // ==========================================
+  
+  if (userEmpresa && userEmpresa.em_trial === false && userEmpresa.assinatura_ativa === false) {
+    if (userTipo !== 'CLIENTE' && userTipo !== 'SUPERADMIN') {
+        return (
+          <div className="w-full max-w-7xl mx-auto px-4 py-8">
+             <LockoutScreen />
+          </div>
+        );
+    }
+  }
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-8">
       {/* Cabeçalho Principal do Admin */}

@@ -21,7 +21,7 @@ export default function StepBarbeiros() {
       try {
         const response = await api.get('/api/usuarios/');
         const users = response.data.results || response.data;
-        const apenasProfissionais = users.filter(u => u.tipo === 'PROFISSIONAL');
+        const apenasProfissionais = users.filter(u => u.tipo === 'PROFISSIONAL' || u.tipo === 'ADMINISTRADOR');
         setBarbeiros(apenasProfissionais);
       } catch (err) {
         console.error('Erro ao buscar barbeiros:', err);

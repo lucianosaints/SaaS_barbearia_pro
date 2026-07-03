@@ -13,7 +13,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'password',
-            'empresa', 'tipo', 'telefone', 'foto', 'avaliacao', 'aceitou_termos', 'data_aceite_termos', 'ip_aceite_termos',
+            'empresa', 'tipo', 'telefone', 'foto', 'avaliacao', 'taxa_comissao',
+            'aceitou_termos', 'data_aceite_termos', 'ip_aceite_termos',
             'is_staff', 'is_active', 'date_joined'
         ]
         read_only_fields = [
@@ -50,7 +51,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'id': self.user.id,
             'nome': self.user.get_full_name() or self.user.username,
             'email': self.user.email,
-            'tipo': self.user.tipo
+            'tipo': self.user.tipo,
+            'empresa': {
+                'id': self.user.empresa_id,
+                'em_trial': self.user.empresa.em_trial if self.user.empresa else False,
+                'assinatura_ativa': self.user.empresa.assinatura_ativa if self.user.empresa else False,
+            } if self.user.empresa else None
         }
         return data
 
