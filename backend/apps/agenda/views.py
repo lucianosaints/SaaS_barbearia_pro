@@ -300,13 +300,12 @@ class FinancasDashboardView(APIView):
             )
 
         hoje = timezone.localdate()
-        inicio_mes = hoje.replace(day=1)
         
         # Filtra os agendamentos concluídos do mês atual para a empresa
         agendamentos_mes = Agendamento.objects.filter(
             status='CONCLUIDO',
-            data_hora_inicio__date__gte=inicio_mes,
-            data_hora_inicio__date__lte=hoje
+            data_hora_inicio__year=hoje.year,
+            data_hora_inicio__month=hoje.month
         )
         if not user.is_superuser:
             agendamentos_mes = agendamentos_mes.filter(empresa=empresa)

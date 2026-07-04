@@ -87,6 +87,15 @@ class Agendamento(models.Model):
         ('CONCLUIDO', _('Concluído')),
         ('CANCELADO', _('Cancelado')),
     ]
+    STATUS_PAGAMENTO_CHOICES = [
+        ('PENDENTE', _('Pendente')),
+        ('PAGO', _('Pago')),
+    ]
+    METODO_PAGAMENTO_CHOICES = [
+        ('PIX', _('Pix')),
+        ('CARTAO', _('Cartão')),
+        ('DINHEIRO', _('Dinheiro')),
+    ]
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -118,6 +127,19 @@ class Agendamento(models.Model):
         null=True,
         blank=True,
         verbose_name=_("Lucro Líquido")
+    )
+    status_pagamento = models.CharField(
+        max_length=20,
+        choices=STATUS_PAGAMENTO_CHOICES,
+        default='PENDENTE',
+        verbose_name=_("Status do Pagamento")
+    )
+    metodo_pagamento = models.CharField(
+        max_length=20,
+        choices=METODO_PAGAMENTO_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name=_("Método de Pagamento")
     )
 
     class Meta:

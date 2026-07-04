@@ -33,7 +33,8 @@ class AgendamentoSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'empresa', 'cliente', 'profissional', 'servicos',
             'data_hora_inicio', 'data_hora_fim', 'status', 'observacoes',
-            'valor_total', 'valor_comissao', 'lucro_liquido'
+            'valor_total', 'valor_comissao', 'lucro_liquido',
+            'status_pagamento', 'metodo_pagamento'
         ]
         read_only_fields = ['id', 'data_hora_fim', 'empresa', 'valor_total', 'valor_comissao', 'lucro_liquido']
 
@@ -76,9 +77,12 @@ class AgendamentoSerializer(serializers.ModelSerializer):
         
         if instance.cliente:
             representation['cliente_nome'] = instance.cliente.get_full_name() or instance.cliente.username
+            representation['cliente_telefone'] = instance.cliente.telefone
+            representation['cliente_foto'] = instance.cliente.foto.url if instance.cliente.foto else None
             
         if instance.profissional:
             representation['profissional_nome'] = instance.profissional.get_full_name() or instance.profissional.username
+            representation['profissional_foto'] = instance.profissional.foto.url if instance.profissional.foto else None
             
         if instance.empresa:
             representation['empresa_nome'] = instance.empresa.nome

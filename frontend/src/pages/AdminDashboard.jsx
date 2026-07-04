@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import FilterBar from '../components/FilterBar';
-import AgendamentoTable from '../components/AgendamentoTable';
+import AgendaTable from '../components/AgendaTable';
 
 // Importando as novas abas
 import GestaoServicos from './GestaoServicos';
@@ -29,6 +29,8 @@ export default function AdminDashboard() {
     barbeiro: '',
     status: '',
   });
+  const [editingAgendamento, setEditingAgendamento] = useState(null);
+  const [savingStatus, setSavingStatus] = useState(false);
 
   const fetchAgendamentos = async (filters) => {
     setLoadingAgenda(true);
@@ -58,6 +60,28 @@ export default function AdminDashboard() {
   const handleFilterChange = (newFilters) => {
     setCurrentFilters(newFilters);
     fetchAgendamentos(newFilters);
+  };
+
+  const handleEditClick = (agendamento) => {
+    setEditingAgendamento(agendamento);
+  };
+
+  const handleSaveStatus = async (e) => {
+    e.preventDefault();
+    setSavingStatus(true);
+    try {
+      await api.patch(`/api/agendamentos/${editingAgendamento.id}/`, {
+        status: editingAgendamento.status,
+        status_pagamento: editingAgendamento.status_pagamento
+      });
+      setEditingAgendamento(null);
+      fetchAgendamentos(currentFilters);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar o status do agendamento.");
+    } finally {
+      setSavingStatus(false);
+    }
   };
 
   // ==========================================
@@ -177,7 +201,60 @@ export default function AdminDashboard() {
                 ❌ {errorAgenda}
               </div>
             ) : (
-              <AgendamentoTable agendamentos={agendamentos} />
+              <>
+                <AgendaTable agendamentos={agendamentos} onEdit={handleEditClick} />
+
+            {/* Modal de Edição Rápida */}
+            {editingAgendamento && (
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-[#1a1a1a] border border-gold/20 rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+                  <h3 className="text-xl font-bold text-gold mb-4">Atualizar Status</h3>
+                  <form onSubmit={handleSaveStatus} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 mb-1">Situação do Serviço</label>
+                      <select 
+                        value={editingAgendamento.status}
+                        onChange={(e) => setEditingAgendamento({...editingAgendamento, status: e.target.value})}
+                        className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-gold outline-none"
+                      >
+                        <option value="PENDENTE">Pendente</option>
+                        <option value="CONFIRMADO">Confirmado</option>
+                        <option value="CONCLUIDO">Concluído</option>
+                        <option value="CANCELADO">Cancelado</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 mb-1">Situação do Pagamento</label>
+                      <select 
+                        value={editingAgendamento.status_pagamento || 'PENDENTE'}
+                        onChange={(e) => setEditingAgendamento({...editingAgendamento, status_pagamento: e.target.value})}
+                        className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-gold outline-none"
+                      >
+                        <option value="PENDENTE">Pendente</option>
+                        <option value="PAGO">Pago</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-3 pt-4">
+                      <button 
+                        type="button" 
+                        onClick={() => setEditingAgendamento(null)}
+                        className="flex-1 py-2.5 rounded-lg bg-transparent border border-white/20 text-gray-300 font-semibold text-sm hover:bg-white/5 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button 
+                        type="submit" 
+                        disabled={savingStatus}
+                        className="flex-1 py-2.5 rounded-lg bg-gold text-black font-bold text-sm hover:bg-yellow-500 disabled:opacity-50 transition-colors"
+                      >
+                        {savingStatus ? 'Salvando...' : 'Salvar Alterações'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              )}
+              </>
             )}
           </div>
         )}
