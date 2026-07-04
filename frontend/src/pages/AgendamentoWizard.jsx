@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import useAgendamentoStore from '../store/useAgendamentoStore';
 import api from '../services/api';
 import StepServicos from '../components/StepServicos';
@@ -18,9 +19,37 @@ export default function AgendamentoWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  
+  // States para carregamento do slug
+  const [loadingEmpresa, setLoadingEmpresa] = useState(true);
+  const [empresaNotFound, setEmpresaNotFound] = useState(false);
+
+  const { empresaSlug } = useParams();
+  const navigate = useNavigate();
 
   // Zustand
-  const { barbeiroId, servicosIds, dataHora, resetStore, userToken, setAuthModalOpen } = useAgendamentoStore();
+  const { empresaId, setEmpresaId, barbeiroId, servicosIds, dataHora, resetStore, userToken, setAuthModalOpen } = useAgendamentoStore();
+
+  useEffect(() => {
+    async function fetchEmpresa() {
+      try {
+        const response = await api.get(`/api/empresas/por-slug/${empresaSlug}/`);
+        setEmpresaId(response.data.id);
+      } catch (error) {
+        console.error("Erro ao buscar empresa pelo slug", error);
+        setEmpresaNotFound(true);
+      } finally {
+        setLoadingEmpresa(false);
+      }
+    }
+    
+    if (empresaSlug) {
+      fetchEmpresa();
+    } else {
+      setEmpresaNotFound(true);
+      setLoadingEmpresa(false);
+    }
+  }, [empresaSlug, setEmpresaId]);
 
   // Verifica se o passo atual está válido para avançar
   const isStepValid = () => {
@@ -113,6 +142,25 @@ export default function AgendamentoWizard() {
     );
   }
 
+  if (loadingEmpresa) {
+    return (
+      <div className="w-full h-[60vh] flex flex-col items-center justify-center text-text-muted">
+        <div className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-sm">Buscando barbearia...</p>
+      </div>
+    );
+  }
+
+  if (empresaNotFound) {
+    return (
+      <div className="w-full h-[60vh] flex flex-col items-center justify-center text-text-muted px-4 text-center">
+        <h2 className="text-2xl font-bold text-white mb-2">Barbearia não encontrada</h2>
+        <p className="text-sm max-w-sm mb-6">O link que você tentou acessar não existe ou a barbearia está inativa.</p>
+        <button onClick={() => navigate('/')} className="btn-gold px-6">Ir para a Tela Inicial</button>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-md mx-auto py-4 sm:py-8 px-4">
       {/* Banner da Barbearia */}
@@ -130,13 +178,13 @@ export default function AgendamentoWizard() {
           <div key={num} className="flex items-center">
             <div className={`w-8 h-8 rounded-full border font-bold text-xs flex items-center justify-center transition-all ${
               step >= num 
-                ? 'bg-gold border-gold text-background' 
+                ? 'bg-gold border-gold text-background-darker' 
                 : 'border-white/10 text-text-muted bg-background-darker'
             }`}>
               {num}
             </div>
             {num < 3 && (
-              <div className={`w-16 h-[2px] transition-colors ${
+              <div className={`w-16 sm:w-24 h-[2px] transition-colors ${
                 step > num ? 'bg-gold' : 'bg-white/10'
               }`} />
             )}
@@ -188,7 +236,11 @@ export default function AgendamentoWizard() {
             type="button"
             onClick={handleNext}
             disabled={!isStepValid()}
-            className="btn-gold flex-1 py-3 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`px-8 py-3 rounded-lg font-bold text-sm transition-all ${
+              isStepValid() 
+              ? 'bg-gradient-to-r from-gold-light to-gold-dark text-background-darker hover:shadow-lg hover:shadow-gold/20 flex-1' 
+              : 'bg-white/5 text-white/30 cursor-not-allowed flex-1'
+            }`}
           >
             Avançar
           </button>

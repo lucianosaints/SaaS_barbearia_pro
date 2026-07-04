@@ -54,6 +54,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'tipo': self.user.tipo,
             'empresa': {
                 'id': self.user.empresa_id,
+                'slug': self.user.empresa.slug if self.user.empresa else None,
                 'em_trial': self.user.empresa.em_trial if self.user.empresa else False,
                 'assinatura_ativa': self.user.empresa.assinatura_ativa if self.user.empresa else False,
             } if self.user.empresa else None

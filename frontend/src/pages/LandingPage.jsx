@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import useAgendamentoStore from '../store/useAgendamentoStore';
+import heroImage from '../imagem/Image 3.png';
+import logoImg from '../imagem/logo.png';
 import OnboardingModal from '../components/OnboardingModal';
+import AuthModal from '../components/AuthModal';
 
 export default function LandingPage() {
   const { setAuthModalOpen } = useAgendamentoStore();
@@ -16,11 +19,13 @@ export default function LandingPage() {
           
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-gold-dark via-gold to-gold-light flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.3)]">
-              <span className="text-background-darker font-bold text-xl">G</span>
-            </div>
-            <span className="text-xl font-bold tracking-wide text-white">
-              Golden<span className="text-gold">Barber</span>
+            <img 
+              src={logoImg} 
+              alt="Ícone Barbeiro_Pro" 
+              className="w-10 h-10 rounded-full object-cover border-2 border-gold shadow-[0_0_15px_rgba(212,175,55,0.3)]" 
+            />
+            <span className="text-xl font-bold tracking-wide text-white uppercase">
+              Barbeiro_<span className="text-gold">Pro</span>
             </span>
           </div>
 
@@ -51,7 +56,7 @@ export default function LandingPage() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-sm font-semibold mb-2">
             <span className="w-2 h-2 rounded-full bg-gold animate-pulse"></span>
-            O SaaS Definitivo para Barbearias
+            O sistema Definitivo para a sua Barbearia.
           </div>
           
           <h1 className="text-5xl lg:text-6xl font-extrabold text-white leading-tight">
@@ -70,7 +75,7 @@ export default function LandingPage() {
             >
               Começar Teste Grátis de 7 Dias
             </button>
-            <p className="text-xs text-text-muted mt-4">Nenhum cartão de crédito necessário.</p>
+            <p className="text-xs text-text-muted mt-4">Preço justo: <strong className="text-gold">R$ 49,99/mês</strong></p>
           </div>
         </motion.div>
 
@@ -81,22 +86,19 @@ export default function LandingPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          {/* Placeholder premium para imagem hiper-realista */}
-          <div className="hero-image-placeholder relative aspect-square md:aspect-[4/3] lg:aspect-square w-full rounded-3xl bg-bg-secondary border border-white/5 shadow-2xl overflow-hidden flex items-center justify-center group cursor-pointer">
+          {/* Imagem Premium */}
+          <div className="relative aspect-square md:aspect-[4/3] lg:aspect-square w-full rounded-3xl bg-bg-secondary border border-white/5 shadow-2xl overflow-hidden group">
+            <img 
+              src={heroImage} 
+              alt="Gestão de Barbearia Profissional" 
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+            />
             
             {/* Decoração interna simulando reflexo/vidro */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-50"></div>
-            
-            <div className="text-center p-6 transition-transform duration-500 group-hover:scale-105">
-              <svg className="w-16 h-16 text-white/20 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <p className="text-text-muted font-medium">[ Espaço para Imagem Hiper-Realista ]</p>
-              <p className="text-xs text-text-muted/50 mt-2">Dimensões sugeridas: 1080x1080px</p>
-            </div>
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-black/40 pointer-events-none"></div>
             
             {/* Bordas decorativas */}
-            <div className="absolute -inset-px rounded-3xl border border-gold/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="absolute -inset-px rounded-3xl border border-gold/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
           </div>
         </motion.div>
       </section>
@@ -164,19 +166,18 @@ export default function LandingPage() {
 
       {/* 4. Footer */}
       <footer className="w-full bg-bg-primary py-8 border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 opacity-50">
-            <span className="text-gold font-bold text-lg">G</span>
-            <span className="text-white font-medium text-sm">Golden Barber SaaS</span>
-          </div>
-          <p className="text-text-muted text-sm">
-            Copyright © {new Date().getFullYear()} Golden Barber SaaS. Todos os direitos reservados.
+        <div className="max-w-7xl mx-auto px-6 flex justify-center">
+          <p className="text-text-muted text-sm text-center">
+            Copyright © {new Date().getFullYear()} Barbeiro_Pro. Todos os direitos reservados i9builder @luciano.saints
           </p>
         </div>
       </footer>
 
       {/* Modal de Registro do SaaS */}
       <OnboardingModal isOpen={isOnboardingOpen} onClose={() => setIsOnboardingOpen(false)} />
+
+      {/* Modal de Autenticação */}
+      <AuthModal />
     </div>
   );
 }

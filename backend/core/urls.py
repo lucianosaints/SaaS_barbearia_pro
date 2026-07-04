@@ -9,7 +9,7 @@ from rest_framework_simplejwt.views import (
 
 # Importando as ViewSets e views customizadas
 from apps.tenants.views import EmpresaViewSet
-from apps.accounts.views import UsuarioViewSet, registrar_cliente, CustomTokenObtainPairView
+from apps.accounts.views import UsuarioViewSet, registrar_cliente, registrar_saas, CustomTokenObtainPairView
 from apps.agenda.views import ServicoViewSet, AgendamentoViewSet, obter_disponibilidade, FinancasDashboardView
 
 # Inicializando o roteador principal do DRF
@@ -30,6 +30,9 @@ urlpatterns = [
     
     # Endpoint de registro de cliente
     path('api/clientes/registrar/', registrar_cliente, name='registrar_cliente'),
+    
+    # Endpoint de registro de SaaS
+    path('api/saas/registrar/', registrar_saas, name='registrar_saas'),
     
     # Endpoints da API REST
     path('api/assinaturas/', include('apps.payments.urls')),

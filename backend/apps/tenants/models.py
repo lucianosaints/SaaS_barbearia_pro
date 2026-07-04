@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.utils.text import slugify
 
 class Empresa(models.Model):
     """
@@ -15,6 +16,8 @@ class Empresa(models.Model):
     slug = models.SlugField(
         unique=True, 
         max_length=100,
+        blank=True,
+        null=True,
         verbose_name=_("Identificador Único (Slug)"),
         help_text=_("Usado para subdomínios ou rotas na URL da barbearia")
     )
@@ -76,3 +79,14 @@ class Empresa(models.Model):
 
     def __str__(self) -> str:
         return self.nome
+
+    def save(self, *args, **kwargs):
+        if not self.slug and self.nome:
+            base_slug = slugify(self.nome)
+            slug = base_slug
+            counter = 1
+            while Empresa.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)

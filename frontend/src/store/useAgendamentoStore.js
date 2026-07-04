@@ -5,6 +5,7 @@ import { create } from 'zustand';
  */
 const useAgendamentoStore = create((set) => ({
   // Estados iniciais de Agendamento
+  empresaId: null,
   barbeiroId: null,
   servicosIds: [],
   dataHora: null,
@@ -18,6 +19,8 @@ const useAgendamentoStore = create((set) => ({
   authModalOpen: false,
 
   // Ações de alteração de estado do Agendamento
+  setEmpresaId: (id) => set({ empresaId: id, barbeiroId: null, servicosIds: [], dataHora: null }),
+  
   setBarbeiroId: (id) => set({ barbeiroId: id }),
   
   setServicosIds: (ids) => set({ servicosIds: ids }),
@@ -58,6 +61,7 @@ const useAgendamentoStore = create((set) => ({
 
   // Reseta o fluxo de agendamento mantendo a autenticação
   resetStore: () => set({
+    empresaId: null,
     barbeiroId: null,
     servicosIds: [],
     dataHora: null,

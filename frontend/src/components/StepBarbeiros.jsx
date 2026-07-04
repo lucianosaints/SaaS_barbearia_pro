@@ -12,14 +12,16 @@ export default function StepBarbeiros() {
   const [error, setError] = useState(null);
 
   // Zustand
-  const { barbeiroId, setBarbeiroId } = useAgendamentoStore();
+  const { empresaId, barbeiroId, setBarbeiroId } = useAgendamentoStore();
 
   useEffect(() => {
     async function loadBarbeiros() {
       setLoading(true);
       setError(null);
       try {
-        const response = await api.get('/api/usuarios/');
+        const response = await api.get('/api/usuarios/', {
+          params: { empresa_id: empresaId }
+        });
         const users = response.data.results || response.data;
         const apenasProfissionais = users.filter(u => u.tipo === 'PROFISSIONAL' || u.tipo === 'ADMINISTRADOR');
         setBarbeiros(apenasProfissionais);
@@ -30,8 +32,10 @@ export default function StepBarbeiros() {
         setLoading(false);
       }
     }
-    loadBarbeiros();
-  }, []);
+    if (empresaId) {
+      loadBarbeiros();
+    }
+  }, [empresaId]);
 
   if (loading) {
     return (

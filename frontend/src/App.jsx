@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import useAgendamentoStore from './store/useAgendamentoStore'
 import AdminDashboard from './pages/AdminDashboard'
 import AgendamentoWizard from './pages/AgendamentoWizard'
@@ -8,9 +9,32 @@ import ProtectedRoute from './components/ProtectedRoute'
 import LandingPage from './pages/LandingPage'
 import backgroundImg from './imagem/Background.jpg'
 
+import logoImg from './imagem/logo.png'
+
 function App() {
-  const [currentTab, setCurrentTab] = useState('client') // 'client' ou 'admin'
-  const { userToken, userNome, userTipo, logout, setAuthModalOpen } = useAgendamentoStore()
+  const [currentTab, setCurrentTab] = useState('landing') // 'landing' por padrão para visitantes
+  const { userToken, userNome, userTipo, userEmpresa, logout, setAuthModalOpen } = useAgendamentoStore()
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Redireciona para a landing page se logout, ou para o dashboard se login
+  useEffect(() => {
+    if (location.pathname.startsWith('/agendar/')) {
+       // Se estiver na rota de agendamento, não força a aba landing.
+       return;
+    }
+    if (!userToken) {
+      setCurrentTab('landing');
+    } else if (currentTab === 'landing') {
+      // Quando logar a partir da landing page, redireciona para a aba correta
+      if (userTipo === 'ADMINISTRADOR' || userTipo === 'PROFISSIONAL') {
+        setCurrentTab('admin');
+      } else {
+        setCurrentTab('client_dashboard');
+      }
+    }
+  }, [userToken, userTipo, location.pathname]);
 
   return (
     <div 
@@ -23,15 +47,20 @@ function App() {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      {/* Barra de Navegação Superior */}
-      <header className="bg-background-paper border-b border-white/5 sticky top-0 z-50 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:flex-row justify-between items-center">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">💈</span>
-            <span className="font-extrabold tracking-wider bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent uppercase">
-              Barbeiro_pro
-            </span>
-          </div>
+      {/* Barra de Navegação Superior (Oculta na Landing Page e na tela de Agendamento Pública) */}
+      {(currentTab !== 'landing' || userToken) && (
+        <header className="bg-background-paper border-b border-white/5 sticky top-0 z-50 px-6 py-4">
+          <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:flex-row justify-between items-center">
+            <div className="flex items-center gap-3">
+              <img 
+                src={logoImg} 
+                alt="Ícone Barbeiro_Pro" 
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-gold shadow-[0_0_15px_rgba(212,175,55,0.3)]" 
+              />
+              <span className="font-extrabold tracking-wider bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent uppercase">
+                Barbeiro_Pro
+              </span>
+            </div>
 
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
             {userToken ? (
@@ -54,19 +83,39 @@ function App() {
             )}
 
             <nav className="flex bg-background-darker border border-white/10 rounded-lg p-0.5 sm:p-1">
-              <button
-                onClick={() => setCurrentTab('client')}
-                className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${
-                  currentTab === 'client'
-                    ? 'bg-gold text-background'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                Agendar
-              </button>
-              {userToken && (
+              {/* Visitante não logado */}
+              {!userToken && (
                 <button
-                  onClick={() => setCurrentTab('client_dashboard')}
+                  onClick={() => setCurrentTab('landing')}
+                  className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${
+                    currentTab === 'landing'
+                      ? 'bg-gold text-background'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Vitrine SaaS
+                </button>
+              )}
+
+              {/* Botões Comuns para Administradores/Profissionais */}
+              {userToken && (userTipo === 'ADMINISTRADOR' || userTipo === 'PROFISSIONAL') && userEmpresa && userEmpresa.slug && (
+                <button
+                  onClick={() => window.open(`/agendar/${userEmpresa.slug}`, '_blank')}
+                  className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all text-text-secondary hover:text-text-primary`}
+                >
+                  Ver Meu Agendamento
+                </button>
+              )}
+
+              {/* Cliente */}
+              {userToken && userTipo === 'CLIENTE' && (
+                <button
+                  onClick={() => {
+                     // Em vez de mudar para tab 'client', que não existe mais para o genérico,
+                     // a gente pode mandar pro dashboard de cliente.
+                     setCurrentTab('client_dashboard');
+                     navigate('/');
+                  }}
                   className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${
                     currentTab === 'client_dashboard'
                       ? 'bg-gold text-background'
@@ -76,7 +125,9 @@ function App() {
                   Minha Agenda
                 </button>
               )}
-              {userToken && userTipo === 'ADMINISTRADOR' && (
+
+              {/* Admin ou Profissional */}
+              {userToken && (userTipo === 'ADMINISTRADOR' || userTipo === 'PROFISSIONAL') && (
                 <button
                   onClick={() => setCurrentTab('admin')}
                   className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${
@@ -100,48 +151,54 @@ function App() {
                   Financeiro
                 </button>
               )}
-              <button
-                onClick={() => setCurrentTab('landing')}
-                className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${
-                  currentTab === 'landing'
-                    ? 'bg-gold text-background'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                Vitrine SaaS
-              </button>
             </nav>
           </div>
         </div>
       </header>
+      )}
 
-      {/* Área de Conteúdo Principal */}
       <main className="flex-1 flex flex-col justify-start sm:justify-center py-4 sm:py-0">
-        {currentTab === 'client' && <AgendamentoWizard />}
-        {currentTab === 'client_dashboard' && <PainelCliente />}
-        {currentTab === 'admin' && (
-          <ProtectedRoute 
-            allowedRoles={['ADMINISTRADOR', 'PROFISSIONAL']} 
-            onDenied={() => setCurrentTab('client_dashboard')}
-          >
-            <AdminDashboard />
-          </ProtectedRoute>
+        {location.pathname.startsWith('/agendar/') ? (
+          <Routes>
+            <Route path="/agendar/:empresaSlug" element={<AgendamentoWizard />} />
+          </Routes>
+        ) : (
+          <>
+            {currentTab === 'client_dashboard' && (
+              <ProtectedRoute 
+                allowedRoles={['CLIENTE']} 
+                onDenied={() => setCurrentTab('landing')}
+              >
+                <PainelCliente />
+              </ProtectedRoute>
+            )}
+            {currentTab === 'admin' && (
+              <ProtectedRoute 
+                allowedRoles={['ADMINISTRADOR', 'PROFISSIONAL']} 
+                onDenied={() => setCurrentTab(userToken ? 'client_dashboard' : 'landing')}
+              >
+                <AdminDashboard />
+              </ProtectedRoute>
+            )}
+            {currentTab === 'finance' && (
+              <ProtectedRoute 
+                allowedRoles={['ADMINISTRADOR']} 
+                onDenied={() => setCurrentTab(userToken ? 'admin' : 'landing')}
+              >
+                <FinanceiroDashboard />
+              </ProtectedRoute>
+            )}
+            {currentTab === 'landing' && <LandingPage />}
+          </>
         )}
-        {currentTab === 'finance' && (
-          <ProtectedRoute 
-            allowedRoles={['ADMINISTRADOR']} 
-            onDenied={() => setCurrentTab('client_dashboard')}
-          >
-            <FinanceiroDashboard />
-          </ProtectedRoute>
-        )}
-        {currentTab === 'landing' && <LandingPage />}
       </main>
 
       {/* Rodapé institucional */}
-      <footer className="text-center py-6 text-[10px] text-text-muted border-t border-white/5">
-        &copy; 2026 Barbeiro_pro SaaS. Todos os direitos reservados.
-      </footer>
+      {(currentTab !== 'landing' || userToken) && (
+        <footer className="py-4 text-center text-xs text-text-muted border-t border-white/5 mt-auto">
+          &copy; {new Date().getFullYear()} Barbeiro_Pro. Todos os direitos reservados i9builder @luciano.saints
+        </footer>
+      )}
     </div>
   )
 }

@@ -80,4 +80,8 @@ class AgendamentoSerializer(serializers.ModelSerializer):
         if instance.profissional:
             representation['profissional_nome'] = instance.profissional.get_full_name() or instance.profissional.username
             
+        if instance.empresa:
+            representation['empresa_nome'] = instance.empresa.nome
+            representation['empresa_slug'] = instance.empresa.slug
+            
         return representation

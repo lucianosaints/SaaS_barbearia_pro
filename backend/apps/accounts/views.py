@@ -116,3 +116,87 @@ def registrar_cliente(request):
             'tipo': usuario.tipo
         }
     }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def registrar_saas(request):
+    """
+    Cadastra uma nova barbearia (Empresa) e o usuário administrador.
+    Inicia o período de teste grátis (Trial).
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.utils.text import slugify
+    from apps.tenants.models import Empresa
+
+    nome_barbearia = request.data.get('nome_barbearia')
+    nome_admin = request.data.get('nome_admin')
+    email = request.data.get('email')
+    senha = request.data.get('senha')
+
+    if not all([nome_barbearia, nome_admin, email, senha]):
+        return Response(
+            {"error": "Todos os campos são obrigatórios."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if Usuario.objects.filter(username=email).exists() or Usuario.objects.filter(email=email).exists():
+        return Response(
+            {"error": "Já existe um usuário com este e-mail."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Criar a Empresa com 7 dias de trial
+    base_slug = slugify(nome_barbearia)
+    slug = base_slug
+    counter = 1
+    while Empresa.objects.filter(slug=slug).exists():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
+    empresa = Empresa.objects.create(
+        nome=nome_barbearia,
+        slug=slug,
+        em_trial=True,
+        data_fim_trial=timezone.now().date() + timedelta(days=7),
+        ativo=True
+    )
+
+    # Separa primeiro e último nome
+    nomes = nome_admin.strip().split(' ', 1)
+    first_name = nomes[0]
+    last_name = nomes[1] if len(nomes) > 1 else ''
+
+    # Criar o Usuário Administrador
+    usuario = Usuario(
+        username=email,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        tipo='ADMINISTRADOR',
+        is_active=True,
+        empresa=empresa
+    )
+    usuario.set_password(senha)
+    usuario.save()
+
+    # Gerar JWT
+    refresh = RefreshToken.for_user(usuario)
+
+    return Response({
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+        'user': {
+            'id': usuario.id,
+            'nome': usuario.get_full_name() or usuario.username,
+            'email': usuario.email,
+            'tipo': usuario.tipo,
+            'empresa': {
+                'id': empresa.id,
+                'slug': empresa.slug,
+                'em_trial': empresa.em_trial,
+                'assinatura_ativa': empresa.assinatura_ativa
+            }
+        }
+    }, status=status.HTTP_201_CREATED)

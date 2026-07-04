@@ -106,13 +106,22 @@ export default function PainelCliente() {
           </div>
         </div>
         
-        {isFuturo && agendamento.status !== 'CANCELADO' && (
+        {isFuturo && agendamento.status !== 'CANCELADO' ? (
           <button
             onClick={() => handleOpenCancelModal(agendamento.id)}
             className="w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-semibold transition-all text-rose-400 border border-rose-500/30 hover:bg-rose-500/10 hover:border-rose-500/50"
           >
             Cancelar Agendamento
           </button>
+        ) : (
+          agendamento.empresa_slug && (
+            <a
+              href={`/agendar/${agendamento.empresa_slug}`}
+              className="w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-gold/10 text-gold hover:bg-gold/20 border border-gold/30 text-center block"
+            >
+              Agendar Novamente
+            </a>
+          )
         )}
       </div>
     );

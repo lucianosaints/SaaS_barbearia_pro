@@ -133,7 +133,8 @@ export default function GestaoEquipe() {
       closeModal();
     } catch (err) {
       console.error(err);
-      setError('Erro ao salvar profissional. Verifique os dados (o e-mail já pode estar em uso) ou suas permissões.');
+      const erroMsg = err.response?.data ? JSON.stringify(err.response.data) : 'Erro ao salvar profissional. Verifique os dados.';
+      setError(`Erro: ${erroMsg}`);
       setTimeout(() => setError(null), 5000);
     } finally {
       setIsSubmitting(false);
@@ -151,14 +152,14 @@ export default function GestaoEquipe() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-text-primary">Gestão de Equipe</h2>
           <p className="text-text-muted text-xs mt-1">Gerencie os profissionais que atendem na sua barbearia.</p>
         </div>
         <button 
           onClick={() => openModal()}
-          className="btn-gold text-xs px-4 py-2"
+          className="btn-gold text-xs px-4 py-2 w-full sm:w-auto"
         >
           + Adicionar Profissional
         </button>
@@ -177,10 +178,10 @@ export default function GestaoEquipe() {
       )}
 
       {/* Lista de Profissionais */}
-      <div className="bg-background-paper border border-white/5 rounded-2xl overflow-hidden">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-background-paper border border-white/5 rounded-2xl overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[600px]">
           <thead>
-            <tr className="border-b border-white/5 bg-background-darker/50 text-[10px] uppercase text-text-secondary tracking-wider font-semibold">
+            <tr className="border-b border-white/5 bg-background-darker/50 text-[10px] uppercase text-text-secondary tracking-wider font-semibold whitespace-nowrap">
               <th className="py-3 px-4">Nome</th>
               <th className="py-3 px-4">E-mail (Login)</th>
               <th className="py-3 px-4">Telefone</th>
@@ -225,13 +226,13 @@ export default function GestaoEquipe() {
       {/* Modal de Formulário */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-background-paper border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95">
+          <div className="bg-background-paper border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-text-primary mb-4">
               {formData.id ? 'Editar Profissional' : 'Novo Profissional'}
             </h3>
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-text-secondary uppercase mb-1">Nome</label>
                   <input
@@ -297,7 +298,7 @@ export default function GestaoEquipe() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-text-secondary uppercase mb-1">Foto de Perfil</label>
                   <input
