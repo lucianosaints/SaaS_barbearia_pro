@@ -5,6 +5,7 @@ import api from '../services/api';
 import StepServicos from '../components/StepServicos';
 import StepBarbeiros from '../components/StepBarbeiros';
 import StepDataHora from '../components/StepDataHora';
+import StepPagamento from '../components/StepPagamento';
 import AuthModal from '../components/AuthModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -28,7 +29,7 @@ export default function AgendamentoWizard() {
   const navigate = useNavigate();
 
   // Zustand
-  const { empresaId, setEmpresaId, barbeiroId, servicosIds, dataHora, resetStore, userToken, setAuthModalOpen } = useAgendamentoStore();
+  const { empresaId, setEmpresaId, barbeiroId, servicosIds, dataHora, metodoPagamento, resetStore, userToken, setAuthModalOpen } = useAgendamentoStore();
 
   useEffect(() => {
     async function fetchEmpresa() {
@@ -51,16 +52,16 @@ export default function AgendamentoWizard() {
     }
   }, [empresaSlug, setEmpresaId]);
 
-  // Verifica se o passo atual está válido para avançar
   const isStepValid = () => {
     if (step === 1) return servicosIds.length > 0;
     if (step === 2) return barbeiroId !== null;
     if (step === 3) return dataHora !== null;
+    if (step === 4) return metodoPagamento !== null;
     return false;
   };
 
   const handleNext = () => {
-    if (isStepValid() && step < 3) {
+    if (isStepValid() && step < 4) {
       setStep(step + 1);
     }
   };
@@ -84,6 +85,7 @@ export default function AgendamentoWizard() {
         profissional: barbeiroId,
         servicos: servicosIds,
         data_hora_inicio: dataHora,
+        metodo_pagamento: metodoPagamento,
       };
 
       await api.post('/api/agendamentos/', payload);
@@ -174,7 +176,7 @@ export default function AgendamentoWizard() {
 
       {/* Indicador de Passos */}
       <div className="flex justify-between items-center mb-4 sm:mb-8 px-4">
-        {[1, 2, 3].map((num) => (
+        {[1, 2, 3, 4].map((num) => (
           <div key={num} className="flex items-center">
             <div className={`w-8 h-8 rounded-full border font-bold text-xs flex items-center justify-center transition-all ${
               step >= num 
@@ -183,8 +185,8 @@ export default function AgendamentoWizard() {
             }`}>
               {num}
             </div>
-            {num < 3 && (
-              <div className={`w-16 sm:w-24 h-[2px] transition-colors ${
+            {num < 4 && (
+              <div className={`w-8 sm:w-16 h-[2px] transition-colors ${
                 step > num ? 'bg-gold' : 'bg-white/10'
               }`} />
             )}
@@ -206,6 +208,7 @@ export default function AgendamentoWizard() {
               {step === 1 && <StepServicos />}
               {step === 2 && <StepBarbeiros />}
               {step === 3 && <StepDataHora />}
+              {step === 4 && <StepPagamento />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -231,7 +234,7 @@ export default function AgendamentoWizard() {
           </button>
         )}
 
-        {step < 3 ? (
+        {step < 4 ? (
           <button
             type="button"
             onClick={handleNext}

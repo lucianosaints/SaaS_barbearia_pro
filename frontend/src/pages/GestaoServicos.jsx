@@ -116,7 +116,7 @@ export default function GestaoServicos() {
 
   return (
     <div className="w-full space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-text-primary">Gestão de Serviços</h2>
           <p className="text-text-muted text-xs mt-1">Configure os serviços prestados pela sua barbearia.</p>
@@ -142,8 +142,8 @@ export default function GestaoServicos() {
       )}
 
       {/* Lista de Serviços */}
-      <div className="bg-background-paper border border-white/5 rounded-2xl overflow-hidden">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-background-paper border border-white/5 rounded-2xl overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[500px]">
           <thead>
             <tr className="border-b border-white/5 bg-background-darker/50 text-[10px] uppercase text-text-secondary tracking-wider font-semibold">
               <th className="py-3 px-4">Nome</th>

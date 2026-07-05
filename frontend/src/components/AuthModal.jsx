@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FaWhatsapp } from 'react-icons/fa';
 import useAgendamentoStore from '../store/useAgendamentoStore';
 import api from '../services/api';
 
@@ -175,14 +176,17 @@ export default function AuthModal({ onAuthSuccess }) {
 
               <div>
                 <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Telefone</label>
-                <input
-                  type="tel"
-                  required
-                  value={telefone}
-                  onChange={(e) => setTelefone(e.target.value)}
-                  placeholder="(11) 99999-9999"
-                  className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold transition-colors"
-                />
+                <div className="relative">
+                  <FaWhatsapp className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 text-lg" />
+                  <input
+                    type="tel"
+                    required
+                    value={telefone}
+                    onChange={(e) => setTelefone(e.target.value)}
+                    placeholder="(11) 99999-9999"
+                    className="w-full bg-background-darker border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold transition-colors"
+                  />
+                </div>
               </div>
 
               <div>

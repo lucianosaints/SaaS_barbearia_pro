@@ -3,23 +3,33 @@ import { create } from 'zustand';
 /**
  * Zustand Store para gerenciar o estado do fluxo de agendamento do cliente (Wizard).
  */
+const getInitialEmpresa = () => {
+  try {
+    const item = localStorage.getItem('user_empresa');
+    return item && item !== 'undefined' ? JSON.parse(item) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
 const useAgendamentoStore = create((set) => ({
   // Estados iniciais de Agendamento
   empresaId: null,
   barbeiroId: null,
   servicosIds: [],
   dataHora: null,
+  metodoPagamento: null,
 
   // Estados de Autenticação do Cliente
   userToken: localStorage.getItem('access_token') || null,
   userId: localStorage.getItem('user_id') || null,
   userNome: localStorage.getItem('user_nome') || null,
   userTipo: localStorage.getItem('user_tipo') || null,
-  userEmpresa: JSON.parse(localStorage.getItem('user_empresa')) || null,
+  userEmpresa: getInitialEmpresa(),
   authModalOpen: false,
 
   // Ações de alteração de estado do Agendamento
-  setEmpresaId: (id) => set({ empresaId: id, barbeiroId: null, servicosIds: [], dataHora: null }),
+  setEmpresaId: (id) => set({ empresaId: id, barbeiroId: null, servicosIds: [], dataHora: null, metodoPagamento: null }),
   
   setBarbeiroId: (id) => set({ barbeiroId: id }),
   
@@ -34,6 +44,8 @@ const useAgendamentoStore = create((set) => ({
   }),
 
   setDataHora: (data) => set({ dataHora: data }),
+
+  setMetodoPagamento: (metodo) => set({ metodoPagamento: metodo }),
 
   // Ações de Autenticação
   login: (token, id, nome, tipo, empresa = null) => {
@@ -65,6 +77,7 @@ const useAgendamentoStore = create((set) => ({
     barbeiroId: null,
     servicosIds: [],
     dataHora: null,
+    metodoPagamento: null,
   }),
 }));
 

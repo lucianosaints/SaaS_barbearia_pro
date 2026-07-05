@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import FilterBar from '../components/FilterBar';
 import AgendaTable from '../components/AgendaTable';
-
-// Importando as novas abas
 import GestaoServicos from './GestaoServicos';
 import GestaoEquipe from './GestaoEquipe';
 import FinanceiroDashboard from './FinanceiroDashboard';
+import GestaoConfiguracoes from './GestaoConfiguracoes';
+import BloqueioHorarioModal from '../components/BloqueioHorarioModal';
+import ConfirmModal from '../components/ConfirmModal';
 import LockoutScreen from '../components/LockoutScreen';
 import useAgendamentoStore from '../store/useAgendamentoStore';
 
@@ -16,7 +17,9 @@ import useAgendamentoStore from '../store/useAgendamentoStore';
  */
 export default function AdminDashboard() {
   const { userEmpresa, userTipo } = useAgendamentoStore();
-  const [activeTab, setActiveTab] = useState('agenda'); // 'agenda', 'servicos', 'equipe', 'financeiro'
+  const [activeTab, setActiveTab] = useState('agenda'); // 'agenda', 'servicos', 'equipe', 'financeiro', 'configuracoes'
+  const [bloqueioModalOpen, setBloqueioModalOpen] = useState(false);
+  const [cancelamentoModal, setCancelamentoModal] = useState({ isOpen: false, agendamento: null });
   
   // ==========================================
   // ESTADOS E FUNÇÕES DA ABA AGENDA (Padrão)
@@ -84,6 +87,24 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleCancelAgendamento = (agendamento) => {
+    setCancelamentoModal({ isOpen: true, agendamento });
+  };
+
+  const confirmCancelamento = async () => {
+    const agendamento = cancelamentoModal.agendamento;
+    if (!agendamento) return;
+    
+    try {
+      await api.patch(`/api/agendamentos/${agendamento.id}/cancelar/`);
+      setCancelamentoModal({ isOpen: false, agendamento: null });
+      fetchAgendamentos(currentFilters);
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.error || "Erro ao cancelar o agendamento.");
+    }
+  };
+
   // ==========================================
   // RENDERIZAÇÃO
   // ==========================================
@@ -125,7 +146,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Menu de Navegação (Tabs) */}
-      <div className="flex gap-4 overflow-x-auto mb-8 pb-2">
+      <div className="flex flex-wrap gap-2 sm:gap-4 mb-8 pb-2">
         <button
           onClick={() => setActiveTab('agenda')}
           className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
@@ -169,6 +190,16 @@ export default function AdminDashboard() {
             >
               💰 Financeiro
             </button>
+            <button
+              onClick={() => setActiveTab('configuracoes')}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
+                activeTab === 'configuracoes' 
+                ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
+                : 'bg-background-paper border border-white/5 text-text-secondary hover:text-white hover:border-white/20'
+              }`}
+            >
+              ⚙️ Configurações
+            </button>
           </>
         )}
       </div>
@@ -179,14 +210,22 @@ export default function AdminDashboard() {
         {/* ABA: AGENDA */}
         {activeTab === 'agenda' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap gap-4">
               <h2 className="text-xl font-bold text-text-primary">Visão Operacional</h2>
-              <button 
-                onClick={() => fetchAgendamentos(currentFilters)}
-                className="btn-gold-outline text-xs px-4 py-2"
-              >
-                🔄 Atualizar Tabela
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setBloqueioModalOpen(true)}
+                  className="bg-red-500/20 text-red-500 border border-red-500/50 hover:bg-red-500/30 font-semibold text-xs px-4 py-2 rounded-lg transition-colors"
+                >
+                  🚫 Bloquear Horário
+                </button>
+                <button 
+                  onClick={() => fetchAgendamentos(currentFilters)}
+                  className="btn-gold-outline text-xs px-4 py-2"
+                >
+                  🔄 Atualizar Tabela
+                </button>
+              </div>
             </div>
 
             <FilterBar onFilterChange={handleFilterChange} />
@@ -202,7 +241,7 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <>
-                <AgendaTable agendamentos={agendamentos} onEdit={handleEditClick} />
+                <AgendaTable agendamentos={agendamentos} onEdit={handleEditClick} onCancel={handleCancelAgendamento} />
 
             {/* Modal de Edição Rápida */}
             {editingAgendamento && (
@@ -268,7 +307,32 @@ export default function AdminDashboard() {
         {/* ABA: FINANCEIRO */}
         {activeTab === 'financeiro' && <FinanceiroDashboard />}
 
+        {/* ABA: CONFIGURACOES */}
+        {activeTab === 'configuracoes' && <GestaoConfiguracoes />}
+
       </div>
+
+      {/* MODAL DE BLOQUEIO */}
+      <BloqueioHorarioModal 
+        isOpen={bloqueioModalOpen} 
+        onClose={() => setBloqueioModalOpen(false)} 
+        onSave={() => {
+          setBloqueioModalOpen(false);
+          if (activeTab === 'agenda') fetchAgendamentos(currentFilters);
+        }}
+      />
+
+      {/* MODAL DE CONFIRMACAO DE CANCELAMENTO */}
+      <ConfirmModal 
+        isOpen={cancelamentoModal.isOpen}
+        title="Cancelar Agendamento"
+        message={cancelamentoModal.agendamento ? `Tem certeza que deseja cancelar o agendamento de ${cancelamentoModal.agendamento.cliente_nome}? O horário será liberado imediatamente.` : ''}
+        confirmText="Sim, Cancelar"
+        cancelText="Voltar"
+        isDestructive={true}
+        onConfirm={confirmCancelamento}
+        onCancel={() => setCancelamentoModal({ isOpen: false, agendamento: null })}
+      />
     </div>
   );
 }

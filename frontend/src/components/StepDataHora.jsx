@@ -14,8 +14,8 @@ export default function StepDataHora() {
   const [selectedDate, setSelectedDate] = useState(dataHora ? dataHora.split('T')[0] : '');
   const [selectedTime, setSelectedTime] = useState(dataHora && dataHora.includes('T') ? dataHora.split('T')[1].substring(0, 5) : '');
   
-  // Estados para dados da API
   const [horariosDisponiveis, setHorariosDisponiveis] = useState([]);
+  const [mensagemBloqueio, setMensagemBloqueio] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -24,6 +24,7 @@ export default function StepDataHora() {
     async function loadDisponibilidade() {
       if (!selectedDate || !barbeiroId || servicosIds.length === 0) {
         setHorariosDisponiveis([]);
+        setMensagemBloqueio(null);
         return;
       }
 
@@ -40,10 +41,12 @@ export default function StepDataHora() {
           },
         });
         setHorariosDisponiveis(response.data.horarios_disponiveis || []);
+        setMensagemBloqueio(response.data.mensagem || null);
       } catch (err) {
         console.error('Erro ao carregar disponibilidade:', err);
         setError('Ocorreu um erro ao carregar os horários disponíveis.');
         setHorariosDisponiveis([]);
+        setMensagemBloqueio(null);
       } finally {
         setLoading(false);
       }
@@ -118,6 +121,10 @@ export default function StepDataHora() {
             ) : error ? (
               <div className="py-4 text-center text-xs text-rose-400 bg-rose-500/5 rounded-lg border border-rose-500/10">
                 ⚠️ {error}
+              </div>
+            ) : mensagemBloqueio ? (
+              <div className="py-6 px-4 text-center text-sm font-semibold text-rose-400 bg-rose-500/10 rounded-xl border border-rose-500/20">
+                🚫 {mensagemBloqueio}
               </div>
             ) : horariosDisponiveis.length > 0 ? (
               <div className="grid grid-cols-4 gap-2 max-h-[220px] overflow-y-auto pr-1">

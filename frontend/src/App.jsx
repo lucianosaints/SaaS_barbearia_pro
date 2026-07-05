@@ -82,7 +82,7 @@ function App() {
               </button>
             )}
 
-            <nav className="flex bg-background-darker border border-white/10 rounded-lg p-0.5 sm:p-1">
+            <nav className="flex flex-wrap justify-center bg-background-darker border border-white/10 rounded-lg p-1 sm:p-1 gap-1">
               {/* Visitante não logado */}
               {!userToken && (
                 <button

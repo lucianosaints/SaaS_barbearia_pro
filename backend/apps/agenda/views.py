@@ -8,9 +8,10 @@ from django_filters import rest_framework as filters
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from apps.agenda.models import Servico, Agendamento
-from apps.agenda.serializers import ServicoSerializer, AgendamentoSerializer
+from apps.agenda.models import Servico, Agendamento, BloqueioHorario
+from apps.agenda.serializers import ServicoSerializer, AgendamentoSerializer, BloqueioHorarioSerializer
 from apps.accounts.models import Usuario
+from django.db.models import Q
 
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
@@ -135,8 +136,14 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
     def cancelar(self, request, pk=None):
         agendamento = self.get_object()
         
-        # Garante que só o próprio cliente ou um administrador possa cancelar
+        # Garante que só o próprio cliente ou um administrador/profissional da empresa possa cancelar
         if request.user.tipo == 'CLIENTE' and agendamento.cliente != request.user:
+            return Response(
+                {"error": "Você não tem permissão para cancelar este agendamento."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        # Se for profissional, só pode cancelar se for da mesma empresa
+        if request.user.tipo == 'PROFISSIONAL' and agendamento.empresa != request.user.empresa:
             return Response(
                 {"error": "Você não tem permissão para cancelar este agendamento."},
                 status=status.HTTP_403_FORBIDDEN
@@ -226,6 +233,18 @@ def obter_disponibilidade(request):
         data_hora_inicio__date=data_selecionada,
         status__in=['PENDENTE', 'CONFIRMADO', 'CONCLUIDO']
     )
+    
+    datetime_inicio_dia = timezone.make_aware(datetime.combine(data_selecionada, time.min), tz)
+    datetime_fim_dia = timezone.make_aware(datetime.combine(data_selecionada, time.max), tz)
+
+    bloqueios = BloqueioHorario.objects.filter(
+        empresa=empresa,
+        data_hora_inicio__lt=datetime_fim_dia,
+        data_hora_fim__gt=datetime_inicio_dia
+    ).filter(
+        Q(profissional_id=barbeiro_id) | Q(profissional__isnull=True)
+    )
+    
     user = request.user
     if user.is_authenticated and not user.is_superuser and user.empresa:
         agendamentos = agendamentos.filter(empresa=user.empresa)
@@ -267,12 +286,26 @@ def obter_disponibilidade(request):
                     tem_sobreposicao = True
                     break
 
+        # 3. Verifica colisão com bloqueios de horário
+        if not tem_sobreposicao:
+            for bloqueio in bloqueios:
+                if slot_inicio < bloqueio.data_hora_fim and slot_fim > bloqueio.data_hora_inicio:
+                    tem_sobreposicao = True
+                    break
+
         if not tem_sobreposicao:
             horarios_disponiveis.append(timezone.localtime(slot_inicio).strftime('%H:%M'))
 
         loop_time += timedelta(minutes=slot_intervalo_minutos)
 
-    return Response({"horarios_disponiveis": horarios_disponiveis})
+    mensagem = None
+    if not horarios_disponiveis and bloqueios.exists():
+        mensagem = "Este dia está totalmente bloqueado ou indisponível para agendamentos."
+
+    return Response({
+        "horarios_disponiveis": horarios_disponiveis,
+        "mensagem": mensagem
+    })
 
 
 class FinancasDashboardView(APIView):
@@ -349,3 +382,27 @@ class FinancasDashboardView(APIView):
             "lucro_liquido": float(lucro_liquido),
             "desempenho_profissionais": desempenho_profissionais
         })
+
+
+class BloqueioHorarioViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar os bloqueios de horário.
+    """
+    serializer_class = BloqueioHorarioSerializer
+    permission_classes = [IsAuthenticated, IsEmpresaAtiva]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser:
+            return BloqueioHorario.objects.all()
+        if user.tipo in ['ADMINISTRADOR', 'PROFISSIONAL'] and user.empresa:
+            return BloqueioHorario.objects.filter(empresa=user.empresa)
+        return BloqueioHorario.objects.none()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.tipo in ['ADMINISTRADOR', 'PROFISSIONAL'] and user.empresa:
+            serializer.save(empresa=user.empresa)
+        else:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Apenas administradores ou profissionais podem criar bloqueios.")

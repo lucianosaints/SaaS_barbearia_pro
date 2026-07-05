@@ -1,10 +1,10 @@
 import React from 'react';
-import { FiEdit2, FiClock } from 'react-icons/fi';
-import { FaWhatsapp, FaCut } from 'react-icons/fa';
-import { MdOutlinePix, MdCreditCard } from 'react-icons/md';
+import { FiEdit2, FiClock, FiTrash2 } from 'react-icons/fi';
+import { FaWhatsapp, FaCut, FaCreditCard, FaRegCreditCard } from 'react-icons/fa';
+import { MdOutlinePix } from 'react-icons/md';
 import { BsCashCoin } from 'react-icons/bs';
 
-export default function AgendaTable({ agendamentos, onEdit, onDelete }) {
+export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
   // Formatters
   const formatTime = (dateStr) => {
     if (!dateStr) return '-';
@@ -43,7 +43,8 @@ export default function AgendaTable({ agendamentos, onEdit, onDelete }) {
     let Icon = BsCashCoin;
     let color = 'text-gray-400';
     if (metodo === 'PIX') { Icon = MdOutlinePix; color = 'text-green-400'; }
-    if (metodo === 'CARTAO') { Icon = MdCreditCard; color = 'text-gold'; }
+    if (metodo === 'CREDITO') { Icon = FaCreditCard; color = 'text-gold'; }
+    if (metodo === 'DEBITO') { Icon = FaRegCreditCard; color = 'text-blue-400'; }
     
     const isPaid = status === 'PAGO';
     
@@ -185,6 +186,16 @@ export default function AgendaTable({ agendamentos, onEdit, onDelete }) {
                         >
                           <FaWhatsapp size={16} />
                         </a>
+                      )}
+                      
+                      {agendamento.status !== 'CANCELADO' && agendamento.status !== 'CONCLUIDO' && onCancel && (
+                        <button 
+                          onClick={() => onCancel(agendamento)}
+                          className="p-2 rounded-full hover:bg-red-500/20 text-red-500 transition-colors ml-2"
+                          title="Cancelar Agendamento"
+                        >
+                          <FiTrash2 size={16} />
+                        </button>
                       )}
                     </div>
                   </td>

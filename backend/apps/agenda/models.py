@@ -93,7 +93,8 @@ class Agendamento(models.Model):
     ]
     METODO_PAGAMENTO_CHOICES = [
         ('PIX', _('Pix')),
-        ('CARTAO', _('Cartão')),
+        ('CREDITO', _('Cartão de Crédito')),
+        ('DEBITO', _('Cartão de Débito')),
         ('DINHEIRO', _('Dinheiro')),
     ]
     status = models.CharField(
@@ -183,3 +184,47 @@ def atualizar_data_hora_fim(sender, instance: Agendamento, action: str, **kwargs
         
         # Salva apenas os campos atualizados para evitar recursão ou triggers desnecessários
         instance.save(update_fields=["data_hora_fim", "valor_total"])
+
+
+class BloqueioHorario(models.Model):
+    """
+    Representa um bloqueio de horário na agenda, indicando indisponibilidade.
+    Se profissional for null, o bloqueio se aplica a todos os profissionais da empresa (ex: feriado, manutenção).
+    """
+    empresa = models.ForeignKey(
+        Empresa,
+        on_delete=models.CASCADE,
+        related_name="bloqueios",
+        verbose_name=_("Empresa")
+    )
+    profissional = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="bloqueios",
+        verbose_name=_("Profissional"),
+        help_text=_("Deixe em branco para bloquear a agenda de todos os profissionais")
+    )
+    data_hora_inicio = models.DateTimeField(
+        verbose_name=_("Data/Hora de Início")
+    )
+    data_hora_fim = models.DateTimeField(
+        verbose_name=_("Data/Hora de Fim")
+    )
+    motivo = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name=_("Motivo do Bloqueio")
+    )
+
+    class Meta:
+        verbose_name = _("Bloqueio de Horário")
+        verbose_name_plural = _("Bloqueios de Horário")
+        ordering = ['data_hora_inicio']
+
+    def __str__(self) -> str:
+        prof = self.profissional.get_full_name() if self.profissional else "Todos"
+        return f"Bloqueio {prof}: {self.data_hora_inicio.strftime('%d/%m %H:%M')} até {self.data_hora_fim.strftime('%H:%M')}"
+
