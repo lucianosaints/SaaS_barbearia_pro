@@ -8,8 +8,8 @@ from django_filters import rest_framework as filters
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from apps.agenda.models import Servico, Agendamento, BloqueioHorario
-from apps.agenda.serializers import ServicoSerializer, AgendamentoSerializer, BloqueioHorarioSerializer
+from apps.agenda.models import Servico, Agendamento, BloqueioHorario, FilaEspera
+from apps.agenda.serializers import ServicoSerializer, AgendamentoSerializer, BloqueioHorarioSerializer, FilaEsperaSerializer
 from apps.accounts.models import Usuario
 from django.db.models import Q
 
@@ -250,6 +250,7 @@ def obter_disponibilidade(request):
         agendamentos = agendamentos.filter(empresa=user.empresa)
 
     horarios_disponiveis = []
+    horarios_ocupados = []
     agora = timezone.localtime(timezone.now())
 
     datetime_inicio_exp = timezone.make_aware(datetime.combine(data_selecionada, hora_abertura), tz)
@@ -295,6 +296,8 @@ def obter_disponibilidade(request):
 
         if not tem_sobreposicao:
             horarios_disponiveis.append(timezone.localtime(slot_inicio).strftime('%H:%M'))
+        else:
+            horarios_ocupados.append(timezone.localtime(slot_inicio).strftime('%H:%M'))
 
         loop_time += timedelta(minutes=slot_intervalo_minutos)
 
@@ -304,6 +307,7 @@ def obter_disponibilidade(request):
 
     return Response({
         "horarios_disponiveis": horarios_disponiveis,
+        "horarios_ocupados": horarios_ocupados,
         "mensagem": mensagem
     })
 
@@ -406,3 +410,23 @@ class BloqueioHorarioViewSet(viewsets.ModelViewSet):
         else:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Apenas administradores ou profissionais podem criar bloqueios.")
+
+class FilaEsperaViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar a fila de espera.
+    Clientes podem entrar na fila publicamente.
+    """
+    serializer_class = FilaEsperaSerializer
+    filter_backends = [filters.DjangoFilterBackend]
+    filterset_fields = ['data_desejada', 'notificado']
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [AllowAny()]
+        return [IsAuthenticated(), IsEmpresaAtiva()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated and user.tipo in ['ADMINISTRADOR', 'PROFISSIONAL'] and user.empresa:
+            return FilaEspera.objects.filter(empresa=user.empresa)
+        return FilaEspera.objects.none()

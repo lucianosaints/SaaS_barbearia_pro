@@ -228,3 +228,45 @@ class BloqueioHorario(models.Model):
         prof = self.profissional.get_full_name() if self.profissional else "Todos"
         return f"Bloqueio {prof}: {self.data_hora_inicio.strftime('%d/%m %H:%M')} até {self.data_hora_fim.strftime('%H:%M')}"
 
+
+class FilaEspera(models.Model):
+    """
+    Representa a fila de espera (Sniper de Desistências) para um horário específico.
+    """
+    empresa = models.ForeignKey(
+        Empresa,
+        on_delete=models.CASCADE,
+        related_name="fila_espera",
+        verbose_name=_("Empresa")
+    )
+    cliente_nome = models.CharField(
+        max_length=150,
+        verbose_name=_("Nome do Cliente")
+    )
+    cliente_telefone = models.CharField(
+        max_length=20,
+        verbose_name=_("WhatsApp do Cliente")
+    )
+    data_desejada = models.DateField(
+        verbose_name=_("Data Desejada")
+    )
+    horario_desejado = models.TimeField(
+        verbose_name=_("Horário Desejado")
+    )
+    notificado = models.BooleanField(
+        default=False,
+        verbose_name=_("Notificado?")
+    )
+    criado_em = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Criado Em")
+    )
+
+    class Meta:
+        verbose_name = _("Fila de Espera")
+        verbose_name_plural = _("Fila de Espera")
+        ordering = ['criado_em']
+
+    def __str__(self):
+        return f"{self.cliente_nome} aguardando {self.data_desejada.strftime('%d/%m/%Y')} às {self.horario_desejado.strftime('%H:%M')}"
+

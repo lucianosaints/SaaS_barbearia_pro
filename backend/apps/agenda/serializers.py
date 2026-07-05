@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.agenda.models import Servico, Agendamento, BloqueioHorario
+from apps.agenda.models import Servico, Agendamento, BloqueioHorario, FilaEspera
 from apps.accounts.models import Usuario
 
 class ServicoSerializer(serializers.ModelSerializer):
@@ -107,3 +107,12 @@ class BloqueioHorarioSerializer(serializers.ModelSerializer):
         else:
             representation['profissional_nome'] = 'Todos os Profissionais'
         return representation
+
+class FilaEsperaSerializer(serializers.ModelSerializer):
+    """
+    Serializer para o modelo FilaEspera.
+    """
+    class Meta:
+        model = FilaEspera
+        fields = ['id', 'empresa', 'cliente_nome', 'cliente_telefone', 'data_desejada', 'horario_desejado', 'notificado', 'criado_em']
+        read_only_fields = ['id', 'notificado', 'criado_em']

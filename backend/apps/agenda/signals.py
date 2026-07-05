@@ -2,7 +2,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.core.mail import send_mail
 from django.conf import settings
-from apps.agenda.models import Agendamento
+from apps.agenda.models import Agendamento, FilaEspera
 import logging
 
 logger = logging.getLogger(__name__)
@@ -77,3 +77,27 @@ def calcular_valores_financeiros(sender, instance: Agendamento, **kwargs) -> Non
             comissao = (instance.valor_total * taxa) / 100
             instance.valor_comissao = comissao
             instance.lucro_liquido = instance.valor_total - comissao
+
+
+@receiver(post_save, sender=Agendamento)
+def sniper_de_desistencias(sender, instance: Agendamento, created: bool, **kwargs) -> None:
+    """
+    Verifica se um agendamento foi cancelado. Se sim, procura na Fila de Espera 
+    por alguém que queria esse horário e simula a notificação.
+    """
+    if instance.status == 'CANCELADO':
+        data = instance.data_hora_inicio.date()
+        horario = instance.data_hora_inicio.time()
+        
+        espera = FilaEspera.objects.filter(
+            empresa=instance.empresa,
+            data_desejada=data,
+            horario_desejado=horario,
+            notificado=False
+        ).order_by('criado_em').first()
+        
+        if espera:
+            espera.notificado = True
+            espera.save()
+            print(f"\n[SNIPER] Notificando {espera.cliente_nome} no WhatsApp {espera.cliente_telefone} sobre a vaga liberada!\n")
+            logger.info(f"Notificando {espera.cliente_nome} ({espera.cliente_telefone}) sobre vaga liberada em {data} às {horario}.")

@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import FilterBar from '../components/FilterBar';
 import AgendaTable from '../components/AgendaTable';
 import GestaoServicos from './GestaoServicos';
@@ -10,6 +12,7 @@ import BloqueioHorarioModal from '../components/BloqueioHorarioModal';
 import ConfirmModal from '../components/ConfirmModal';
 import LockoutScreen from '../components/LockoutScreen';
 import useAgendamentoStore from '../store/useAgendamentoStore';
+import PlacaQRCode from '../components/PlacaQRCode';
 
 /**
  * Página AdminDashboard.
@@ -24,6 +27,31 @@ export default function AdminDashboard() {
   // ==========================================
   // ESTADOS E FUNÇÕES DA ABA AGENDA (Padrão)
   // ==========================================
+  const placaRef = useRef(null);
+  const [gerandoPDF, setGerandoPDF] = useState(false);
+
+  const gerarPDF = async () => {
+    if (!placaRef.current || !userEmpresa) return;
+    try {
+      setGerandoPDF(true);
+      const element = placaRef.current;
+      const canvas = await html2canvas(element, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Placa-${userEmpresa.slug}.pdf`);
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      alert('Não foi possível gerar o PDF. Tente novamente.');
+    } finally {
+      setGerandoPDF(false);
+    }
+  };
+
   const [agendamentos, setAgendamentos] = useState([]);
   const [loadingAgenda, setLoadingAgenda] = useState(true);
   const [errorAgenda, setErrorAgenda] = useState(null);
@@ -141,6 +169,14 @@ export default function AdminDashboard() {
             >
               {window.location.origin}/agendar/{userEmpresa.slug}
             </a>
+            
+            <button 
+              onClick={gerarPDF} 
+              disabled={gerandoPDF}
+              className="mt-4 w-full sm:w-auto bg-white text-black hover:bg-gray-200 px-4 py-2 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            >
+              🖨️ {gerandoPDF ? 'Gerando PDF...' : 'Baixar Placa QR Code (PDF)'}
+            </button>
           </div>
         )}
       </div>
@@ -333,6 +369,15 @@ export default function AdminDashboard() {
         onConfirm={confirmCancelamento}
         onCancel={() => setCancelamentoModal({ isOpen: false, agendamento: null })}
       />
+
+      {/* PLACA QR CODE INVISÍVEL PARA GERAÇÃO DO PDF */}
+      {userEmpresa && (
+        <PlacaQRCode 
+          ref={placaRef} 
+          nomeBarbearia={userEmpresa.nome} 
+          linkAgendamento={`${window.location.origin}/agendar/${userEmpresa.slug}`} 
+        />
+      )}
     </div>
   );
 }

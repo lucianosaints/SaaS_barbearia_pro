@@ -10,7 +10,7 @@ from rest_framework_simplejwt.views import (
 # Importando as ViewSets e views customizadas
 from apps.tenants.views import EmpresaViewSet
 from apps.accounts.views import UsuarioViewSet, registrar_cliente, registrar_saas, CustomTokenObtainPairView
-from apps.agenda.views import ServicoViewSet, AgendamentoViewSet, obter_disponibilidade, FinancasDashboardView, BloqueioHorarioViewSet
+from apps.agenda.views import ServicoViewSet, AgendamentoViewSet, obter_disponibilidade, FinancasDashboardView, BloqueioHorarioViewSet, FilaEsperaViewSet
 
 # Inicializando o roteador principal do DRF
 router = DefaultRouter()
@@ -19,6 +19,7 @@ router.register(r'usuarios', UsuarioViewSet, basename='usuario')
 router.register(r'servicos', ServicoViewSet, basename='servico')
 router.register(r'agendamentos', AgendamentoViewSet, basename='agendamento')
 router.register(r'bloqueios', BloqueioHorarioViewSet, basename='bloqueio')
+router.register(r'fila-espera', FilaEsperaViewSet, basename='fila_espera')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
