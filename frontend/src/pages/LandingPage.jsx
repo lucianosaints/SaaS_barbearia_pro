@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import useAgendamentoStore from '../store/useAgendamentoStore';
 import videoBackground from '../imagem/barbeiro_pro.mp4';
 import logoImg from '../imagem/logo.png';
+import i9builderImg from '../imagem/i9builder.png';
 import OnboardingModal from '../components/OnboardingModal';
 import AuthModal from '../components/AuthModal';
 
@@ -212,10 +213,17 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           
           {/* Esquerda: Copyright */}
-          <p className="text-text-muted text-sm text-center md:text-left">
-            Copyright © {new Date().getFullYear()} Barbeiro_Pro. <br className="md:hidden" />
-            Todos os direitos reservados <span className="text-white font-semibold">i9builder</span>
-          </p>
+          <div className="flex items-center justify-center md:justify-start gap-3 text-text-muted text-sm text-center md:text-left">
+            <img 
+              src={i9builderImg} 
+              alt="i9builder Logo" 
+              className="w-8 h-8 rounded-full object-cover border border-white/10 shadow-sm" 
+            />
+            <p>
+              Copyright © {new Date().getFullYear()} Barbeiro_Pro. <br className="md:hidden" />
+              Todos os direitos reservados <span className="text-white font-semibold">i9builder</span>
+            </p>
+          </div>
 
           {/* Direita: Contato e LGPD */}
           <div className="flex flex-col md:flex-row items-center gap-4">

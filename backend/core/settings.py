@@ -2,12 +2,16 @@
 Django settings for core project.
 """
 
-from datetime import timedelta
-import os
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+from datetime import timedelta
 
-# Paths
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # Security
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-gold-barber-key-change-in-prod')
@@ -43,6 +47,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.subscription_middleware.SubscriptionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -150,3 +155,8 @@ CORS_ALLOW_CREDENTIALS = True
 # Email configuration for local development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'notificacoes@goldenbarber.com.br'
+
+# WAHA API Configuration
+WAHA_API_URL = os.environ.get('WAHA_API_URL', 'http://localhost:3000')
+WAHA_SESSION = os.environ.get('WAHA_SESSION', 'default')
+

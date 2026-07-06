@@ -7,9 +7,12 @@ import PainelCliente from './pages/PainelCliente'
 import FinanceiroDashboard from './pages/FinanceiroDashboard'
 import ProtectedRoute from './components/ProtectedRoute'
 import LandingPage from './pages/LandingPage'
+import Assinatura from './pages/Assinatura'
 import backgroundImg from './imagem/Background.jpg'
+import i9builderImg from './imagem/i9builder.png'
 
 import logoImg from './imagem/logo.png'
+import WhatsAppButton from './components/WhatsAppButton'
 
 function App() {
   const [currentTab, setCurrentTab] = useState('landing') // 'landing' por padrão para visitantes
@@ -20,8 +23,8 @@ function App() {
 
   // Redireciona para a landing page se logout, ou para o dashboard se login
   useEffect(() => {
-    if (location.pathname.startsWith('/agendar/')) {
-       // Se estiver na rota de agendamento, não força a aba landing.
+    if (location.pathname.startsWith('/agendar/') || location.pathname.startsWith('/admin/assinatura')) {
+       // Se estiver na rota de agendamento ou assinatura, não força a aba landing.
        return;
     }
     if (!userToken) {
@@ -162,6 +165,10 @@ function App() {
           <Routes>
             <Route path="/agendar/:empresaSlug" element={<AgendamentoWizard />} />
           </Routes>
+        ) : location.pathname.startsWith('/admin/assinatura') ? (
+          <Routes>
+            <Route path="/admin/assinatura" element={<Assinatura />} />
+          </Routes>
         ) : (
           <>
             {currentTab === 'client_dashboard' && (
@@ -195,10 +202,18 @@ function App() {
 
       {/* Rodapé institucional */}
       {(currentTab !== 'landing' || userToken) && (
-        <footer className="py-4 text-center text-xs text-text-muted border-t border-white/5 mt-auto">
-          &copy; {new Date().getFullYear()} Barbeiro_Pro. Todos os direitos reservados i9builder @luciano.saints
+        <footer className="py-4 flex items-center justify-center gap-3 text-xs text-text-muted border-t border-white/5 mt-auto">
+          <img 
+            src={i9builderImg} 
+            alt="i9builder Logo" 
+            className="w-8 h-8 rounded-full object-cover border border-white/10 shadow-sm" 
+          />
+          <span>&copy; {new Date().getFullYear()} Barbeiro_Pro. Todos os direitos reservados i9builder @luciano.saints</span>
         </footer>
       )}
+
+      {/* Botão Flutuante do WhatsApp */}
+      <WhatsAppButton />
     </div>
   )
 }

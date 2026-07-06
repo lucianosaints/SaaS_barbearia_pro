@@ -7,6 +7,9 @@ export default function GestaoConfiguracoes() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
+  const [pagamentoLoading, setPagamentoLoading] = useState(false);
+  
+  const [empresaInfo, setEmpresaInfo] = useState(null);
   
   const [config, setConfig] = useState({
     hora_abertura: '09:00',
@@ -25,7 +28,20 @@ export default function GestaoConfiguracoes() {
           intervalo_almoco_inicio: res.data.intervalo_almoco_inicio ? res.data.intervalo_almoco_inicio.substring(0, 5) : '',
           intervalo_almoco_fim: res.data.intervalo_almoco_fim ? res.data.intervalo_almoco_fim.substring(0, 5) : ''
         });
-      }).catch(err => console.error(err));
+        setEmpresaInfo(res.data);
+      }).catch(err => {
+        console.error(err);
+        // Fallback se a API for bloqueada (ex: trial expirado)
+        if (err.response?.status === 402 || err.response?.status === 403) {
+           setEmpresaInfo({
+               ...userEmpresa,
+               assinatura_ativa: false,
+               em_trial: false
+           });
+        } else {
+           setEmpresaInfo(userEmpresa || { assinatura_ativa: false, em_trial: false });
+        }
+      });
     }
   }, [userEmpresa]);
 
@@ -50,6 +66,31 @@ export default function GestaoConfiguracoes() {
     }
   };
 
+  const getDiasRestantes = () => {
+    if (!empresaInfo || !empresaInfo.data_fim_trial) return null;
+    const fim = new Date(empresaInfo.data_fim_trial);
+    const hoje = new Date();
+    const diffTime = fim - hoje;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
+
+  const handlePagar = async () => {
+    setPagamentoLoading(true);
+    try {
+      const response = await api.post('/api/assinaturas/criar-assinatura/');
+      if (response.data.init_point) {
+        window.location.href = response.data.init_point;
+      } else {
+        alert('Erro ao gerar o link de pagamento.');
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erro ao comunicar com Mercado Pago.');
+    } finally {
+      setPagamentoLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -57,7 +98,11 @@ export default function GestaoConfiguracoes() {
         <p className="text-sm text-text-secondary mt-1">Defina seus horários de funcionamento e intervalo.</p>
       </div>
 
-      <div className="bg-background-paper border border-white/5 p-6 rounded-xl max-w-2xl">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        {/* Painel de Horários */}
+        <div className="bg-background-paper border border-white/5 p-6 rounded-xl w-full">
+          <h3 className="text-lg font-bold text-white mb-4">Horários de Atendimento</h3>
         {success && (
           <div className="bg-green-500/10 border border-green-500/20 text-green-400 p-3 rounded-lg mb-4 text-sm font-semibold">
             ✅ Configurações salvas com sucesso!
@@ -127,6 +172,57 @@ export default function GestaoConfiguracoes() {
             {loading ? 'Salvando...' : 'Salvar Configurações'}
           </button>
         </form>
+        </div>
+
+        {/* Painel de Assinatura */}
+        <div className="bg-background-paper border border-white/5 p-6 rounded-xl w-full flex flex-col justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span className="text-gold">👑</span> Meu Plano Barbeiro_Pro
+            </h3>
+            
+            {empresaInfo ? (
+              <div className="space-y-4 mb-6">
+                <div className="flex justify-between p-3 bg-black/40 rounded-lg border border-white/5">
+                  <span className="text-sm text-gray-400">Status da Assinatura:</span>
+                  <span className={`text-sm font-bold ${empresaInfo.assinatura_ativa ? 'text-green-500' : (empresaInfo.em_trial ? 'text-blue-400' : 'text-red-500')}`}>
+                    {empresaInfo.assinatura_ativa ? 'Ativa' : (empresaInfo.em_trial ? `Em Teste (${getDiasRestantes() !== null ? getDiasRestantes() + ' dias restantes' : 'Ativo'})` : 'Inativa/Bloqueada')}
+                  </span>
+                </div>
+                
+                {empresaInfo.em_trial && !empresaInfo.assinatura_ativa && empresaInfo.data_fim_trial && (
+                  <div className="flex justify-between p-3 bg-black/40 rounded-lg border border-white/5">
+                    <span className="text-sm text-gray-400">Expira em:</span>
+                    <span className="text-sm font-bold text-white">
+                      {new Date(empresaInfo.data_fim_trial).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                )}
+                
+                {!empresaInfo.assinatura_ativa && empresaInfo.em_trial && (
+                  <p className="text-xs text-gray-400 leading-relaxed bg-blue-500/10 p-3 rounded border border-blue-500/20">
+                    Você pode antecipar o pagamento da sua assinatura. Ao pagar, você garante acesso ininterrupto sem aguardar o bloqueio após o período de teste.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500 animate-pulse">Carregando status do plano...</p>
+            )}
+          </div>
+
+          <button
+            onClick={handlePagar}
+            disabled={pagamentoLoading}
+            className="w-full bg-gradient-to-r from-gold-light via-gold to-gold-dark text-background-darker hover:shadow-[0_0_20px_rgba(212,175,55,0.4)] font-bold py-3 px-4 rounded-lg transition-all flex justify-center items-center gap-2 mt-auto"
+          >
+            {pagamentoLoading ? (
+              <span className="w-5 h-5 border-2 border-background-darker/30 border-t-background-darker rounded-full animate-spin"></span>
+            ) : (
+              <>💳 Assinar Sistema (R$ 49,99/mês)</>
+            )}
+          </button>
+        </div>
+
       </div>
     </div>
   );

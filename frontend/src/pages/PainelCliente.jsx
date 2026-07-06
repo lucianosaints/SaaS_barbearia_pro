@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import ClientAgendaCard from '../components/ClientAgendaCard';
+import useAgendamentoStore from '../store/useAgendamentoStore';
 
 export default function PainelCliente() {
+  const { userEmpresa } = useAgendamentoStore();
   const [agendamentos, setAgendamentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -77,10 +79,22 @@ export default function PainelCliente() {
 
   return (
     <div className="w-full max-w-4xl mx-auto py-8 px-4 space-y-10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+        <div>
+          <h2 className="text-2xl font-bold text-text-primary mb-2">Próximos Agendamentos</h2>
+          <p className="text-text-muted text-sm">Confira seus horários marcados ou efetue o cancelamento se necessário.</p>
+        </div>
+        {userEmpresa && userEmpresa.slug && (
+          <button
+            onClick={() => window.open(`/agendar/${userEmpresa.slug}`, '_blank')}
+            className="btn-gold px-6 py-2.5 text-sm"
+          >
+            + Novo Agendamento
+          </button>
+        )}
+      </div>
+
       <div>
-        <h2 className="text-2xl font-bold text-text-primary mb-2">Próximos Agendamentos</h2>
-        <p className="text-text-muted text-sm mb-6">Confira seus horários marcados ou efetue o cancelamento se necessário.</p>
-        
         {futuros.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {futuros.map(a => <ClientAgendaCard key={a.id} agendamento={a} isFuturo={true} onCancel={handleOpenCancelModal} />)}

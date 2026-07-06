@@ -113,7 +113,13 @@ def registrar_cliente(request):
             'id': usuario.id,
             'nome': usuario.get_full_name() or usuario.username,
             'email': usuario.email,
-            'tipo': usuario.tipo
+            'tipo': usuario.tipo,
+            'empresa': {
+                'id': usuario.empresa.id,
+                'slug': usuario.empresa.slug,
+                'em_trial': usuario.empresa.em_trial,
+                'assinatura_ativa': usuario.empresa.assinatura_ativa
+            } if usuario.empresa else None
         }
     }, status=status.HTTP_201_CREATED)
 

@@ -43,6 +43,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Se o erro for 402 (Payment Required), redireciona para a tela de assinatura
+    if (error.response?.status === 402) {
+      window.location.href = '/admin/assinatura';
+      return Promise.reject(error);
+    }
+
     // Se o erro for 401 (Unauthorized) e não for uma tentativa repetida de obter token
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (originalRequest.url === '/api/token/' || originalRequest.url === '/api/token/refresh/') {

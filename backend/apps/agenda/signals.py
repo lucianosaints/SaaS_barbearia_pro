@@ -49,6 +49,20 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, created: bool,
             fail_silently=False,
         )
         logger.info(f"E-mail de confirmação enviado para {instance.cliente.email} referente ao agendamento {instance.id}.")
+
+        # NOTIFICAÇÃO DO BARBEIRO VIA WAHA
+        if instance.profissional and instance.profissional.telefone:
+            from services.waha_service import enviar_mensagem_whatsapp
+            msg_barbeiro = (
+                f"💈 *Novo Agendamento!*\n\n"
+                f"Você tem um novo horário marcado:\n"
+                f"👤 Cliente: {cliente_nome}\n"
+                f"📅 Data/Hora: {data_formatada}\n"
+                f"✂️ Serviço(s): {lista_servicos}\n\n"
+                f"Tenha um ótimo trabalho!"
+            )
+            enviar_mensagem_whatsapp(instance.profissional.telefone, msg_barbeiro)
+            
     except Exception as e:
         # Registra o log do erro para diagnóstico sem travar a requisição HTTP de agendamento (erro 500)
         logger.error(f"Falha ao enviar e-mail de confirmação para agendamento {instance.id}: {str(e)}")
@@ -89,6 +103,18 @@ def sniper_de_desistencias(sender, instance: Agendamento, created: bool, **kwarg
         data = instance.data_hora_inicio.date()
         horario = instance.data_hora_inicio.time()
         
+        # Avisa o barbeiro sobre o cancelamento
+        if instance.profissional and instance.profissional.telefone:
+            from services.waha_service import enviar_mensagem_whatsapp
+            cliente_nome = instance.cliente.get_full_name() or instance.cliente.username if instance.cliente else "Desconhecido"
+            data_formatada = instance.data_hora_inicio.strftime('%d/%m/%Y às %H:%M')
+            msg_barbeiro = (
+                f"❌ *Agendamento Cancelado*\n\n"
+                f"O cliente *{cliente_nome}* cancelou o horário de {data_formatada}.\n"
+                f"O horário está livre agora."
+            )
+            enviar_mensagem_whatsapp(instance.profissional.telefone, msg_barbeiro)
+            
         espera = FilaEspera.objects.filter(
             empresa=instance.empresa,
             data_desejada=data,
@@ -101,3 +127,12 @@ def sniper_de_desistencias(sender, instance: Agendamento, created: bool, **kwarg
             espera.save()
             print(f"\n[SNIPER] Notificando {espera.cliente_nome} no WhatsApp {espera.cliente_telefone} sobre a vaga liberada!\n")
             logger.info(f"Notificando {espera.cliente_nome} ({espera.cliente_telefone}) sobre vaga liberada em {data} às {horario}.")
+            
+            # Notifica o cliente da fila de espera
+            from services.waha_service import enviar_mensagem_whatsapp
+            msg_fila = (
+                f"Olá, {espera.cliente_nome}!\n\n"
+                f"Uma vaga acabou de ser liberada na barbearia para o dia {data.strftime('%d/%m/%Y')} às {horario.strftime('%H:%M')}!\n"
+                f"Acesse o app para agendar antes que outra pessoa pegue."
+            )
+            enviar_mensagem_whatsapp(espera.cliente_telefone, msg_fila)

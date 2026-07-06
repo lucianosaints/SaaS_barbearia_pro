@@ -35,7 +35,7 @@ export default function OnboardingModal({ isOpen, onClose }) {
       localStorage.setItem('refresh_token', response.data.refresh);
       
       // Se sucesso, faz login automaticamente passando todos os argumentos
-      login(token, user.id, user.nome || user.email, user.tipo, { id: user.empresa_id });
+      login(token, user.id, user.nome || user.email, user.tipo, user.empresa);
       onClose(); // Fecha o modal e deixa o App.jsx redirecionar
     } catch (err) {
       console.error(err);

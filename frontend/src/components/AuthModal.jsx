@@ -59,6 +59,7 @@ export default function AuthModal({ onAuthSuccess }) {
         email,
         senha,
         telefone,
+        empresa_id: empresaId || null,
       });
 
       const token = response.data.access;
@@ -66,7 +67,7 @@ export default function AuthModal({ onAuthSuccess }) {
 
       localStorage.setItem('access_token', token);
       localStorage.setItem('refresh_token', refresh);
-      login(token, response.data.user.id, response.data.user.nome, response.data.user.tipo);
+      login(token, response.data.user.id, response.data.user.nome, response.data.user.tipo, response.data.user.empresa);
 
       if (onAuthSuccess) onAuthSuccess();
     } catch (err) {

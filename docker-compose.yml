@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: barbeiro_pro_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app  # Para espelhar as mudanças locais durante o desenvolvimento
+      # Se for usar SQLite, manter isso mapeado preservará os dados no disco host
+    env_file:
+      - ./backend/.env
+    # Se mudar para postgres futuramente, habilitar o depends_on:
+    # depends_on:
+    #   - db
+    networks:
+      - barbeiro_pro_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: barbeiro_pro_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - barbeiro_pro_net
+
+  waha:
+    image: devlikeapro/waha
+    container_name: barbeiro_pro_waha
+    restart: unless-stopped
+    ports:
+      - "3001:3000" # Expondo externamente na 3001 para não conflitar, internamente é 3000
+    environment:
+      - WHATSAPP_DEFAULT_ENGINE=WEBJS
+    networks:
+      - barbeiro_pro_net
+    volumes:
+      - waha_data:/app/.waha
+
+volumes:
+  waha_data:
+  # db_data: (Se habilitar postgres futuramente)
+
+networks:
+  barbeiro_pro_net:
+    driver: bridge

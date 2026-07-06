@@ -68,3 +68,24 @@ class MercadoPagoWebhookView(APIView):
 
         # Sempre retorne 200/201 OK para o Mercado Pago não tentar reenviar indefinidamente
         return Response({"status": "success"}, status=status.HTTP_200_OK)
+
+class CriarPagamentoAssinaturaView(APIView):
+    """
+    Gera o link de pagamento do Mercado Pago para a assinatura da empresa logada.
+    """
+    def post(self, request, *args, **kwargs):
+        usuario = request.user
+        if not hasattr(usuario, 'empresa') or not usuario.empresa:
+            return Response({"error": "Usuário não pertence a nenhuma empresa."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        empresa = usuario.empresa
+        # Valor padrão de 49.99
+        valor_mensalidade = 49.99 
+        
+        try:
+            from services.mercado_pago_service import criar_preferencia_assinatura
+            link = criar_preferencia_assinatura(str(empresa.id), empresa.nome, valor_mensalidade)
+            return Response({"init_point": link}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
