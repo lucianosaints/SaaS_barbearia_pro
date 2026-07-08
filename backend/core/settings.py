@@ -16,7 +16,14 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 # Security
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-gold-barber-key-change-in-prod')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = ['*']
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://140.82.30.186',
+    'http://140.82.30.186:8000',
+    'http://barbeiropro.duckdns.org',
+    'https://barbeiropro.duckdns.org'
+]
 
 # Apps
 INSTALLED_APPS = [
@@ -158,7 +165,7 @@ SIMPLE_JWT = {
 }
 
 # CORS configuration
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all only in development mode
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
