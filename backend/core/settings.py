@@ -18,6 +18,9 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-gold-barber-ke
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['*']
 
+# Informa ao Django que ele está atrás de um proxy seguro (Nginx com SSL)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 CSRF_TRUSTED_ORIGINS = [
     'http://140.82.30.186',
     'http://140.82.30.186:8000',
