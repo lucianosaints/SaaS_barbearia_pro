@@ -83,9 +83,9 @@ class CriarPagamentoAssinaturaView(APIView):
         valor_mensalidade = 49.99 
         
         try:
-            from services.mercado_pago_service import criar_preferencia_assinatura
-            link = criar_preferencia_assinatura(str(empresa.id), empresa.nome, valor_mensalidade)
-            return Response({"init_point": link}, status=status.HTTP_200_OK)
+            from services.mercado_pago_service import criar_pagamento_pix
+            dados_pix = criar_pagamento_pix(str(empresa.id), empresa.nome, valor_mensalidade, usuario.email)
+            return Response(dados_pix, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

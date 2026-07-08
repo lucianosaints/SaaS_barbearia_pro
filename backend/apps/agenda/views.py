@@ -1,5 +1,6 @@
 from datetime import datetime, time, timedelta
 from django.utils import timezone
+from rest_framework.throttling import ScopedRateThrottle
 from django.db.models import Sum
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
@@ -419,6 +420,8 @@ class FilaEsperaViewSet(viewsets.ModelViewSet):
     serializer_class = FilaEsperaSerializer
     filter_backends = [filters.DjangoFilterBackend]
     filterset_fields = ['data_desejada', 'notificado']
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'fila_espera'
 
     def get_permissions(self):
         if self.action == 'create':

@@ -36,3 +36,45 @@ def criar_preferencia_assinatura(empresa_id: str, empresa_nome: str, valor: floa
         return preference_response["response"]["init_point"]
     
     raise Exception(f"Erro ao criar preferência no Mercado Pago: {preference_response}")
+
+
+def criar_pagamento_pix(empresa_id: str, empresa_nome: str, valor: float, email: str) -> dict:
+    """
+    Cria um pagamento via PIX no Mercado Pago e retorna o QR Code em Base64 e o link do ticket.
+    """
+    mp_access_token = getattr(settings, 'MERCADOPAGO_ACCESS_TOKEN', os.environ.get('MERCADOPAGO_ACCESS_TOKEN', ''))
+    
+    if not mp_access_token:
+        raise ValueError("MERCADOPAGO_ACCESS_TOKEN não está configurado.")
+        
+    sdk = mercadopago.SDK(mp_access_token)
+    
+    payment_data = {
+        "transaction_amount": float(valor),
+        "description": f"Assinatura Mensal - {empresa_nome}",
+        "payment_method_id": "pix",
+        "payer": {
+            "email": email,
+            "first_name": "Usuário",
+            "last_name": "Teste",
+            "identification": {
+                "type": "CPF",
+                "number": "19119119100"
+            }
+        },
+        "external_reference": str(empresa_id),
+    }
+    
+    payment_response = sdk.payment().create(payment_data)
+    
+    if "response" in payment_response and payment_response["status"] == 201:
+        res = payment_response["response"]
+        poi = res.get("point_of_interaction", {}).get("transaction_data", {})
+        return {
+            "ticket_url": poi.get("ticket_url"),
+            "qr_code_base64": poi.get("qr_code_base64"),
+            "qr_code": poi.get("qr_code"),
+            "payment_id": res.get("id")
+        }
+    
+    raise Exception(f"Erro ao criar pagamento PIX no Mercado Pago: {payment_response}")

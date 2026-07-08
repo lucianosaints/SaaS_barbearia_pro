@@ -15,7 +15,9 @@ function Assinatura() {
     setError(null);
     try {
       const response = await api.post('/api/assinaturas/criar-assinatura/');
-      if (response.data.init_point) {
+      if (response.data.ticket_url) {
+        window.location.href = response.data.ticket_url;
+      } else if (response.data.init_point) {
         window.location.href = response.data.init_point;
       } else {
         setError('Erro ao gerar o link de pagamento.');
