@@ -67,7 +67,9 @@ def enviar_mensagem_whatsapp(telefone: str, mensagem: str) -> bool:
         logger.info(f"Mensagem WhatsApp enviada com sucesso para {telefone} na sessão {waha_session}")
         return True
     except requests.exceptions.RequestException as e:
-        error_details = e.response.text if hasattr(e, 'response') and e.response else str(e)
+        error_details = str(e)
+        if hasattr(e, 'response') and e.response is not None:
+            error_details = f"{e.response.status_code} - {e.response.text}"
         logger.error(f"Erro de comunicação WAHA [Telefone: {telefone}]: {error_details}")
         return False
     except Exception as e:
