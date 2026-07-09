@@ -50,7 +50,7 @@ def enviar_mensagem_whatsapp(telefone: str, mensagem: str) -> bool:
         "session": waha_session
     }
     
-    api_key = os.getenv('WAHA_API_KEY') or getattr(settings, 'WAHA_API_KEY', '')
+    api_key = getattr(settings, 'WAHA_API_KEY', '') or os.getenv('WAHA_API_KEY', '')
     
     headers = {
         "Content-Type": "application/json",
@@ -60,15 +60,14 @@ def enviar_mensagem_whatsapp(telefone: str, mensagem: str) -> bool:
     if api_key:
         headers["X-Api-Key"] = api_key
 
-    
     try:
         response = requests.post(endpoint, json=payload, headers=headers, timeout=10)
         if not response.ok:
-            logger.error(f"WAHA retornou erro [Telefone: {telefone}]: {response.status_code} - JSON: {response.text}")
+            logger.error(f"WAHA retornou erro [Telefone Formatado: {waha_phone}]: {response.status_code} - JSON: {response.text}")
             return False
             
-        logger.info(f"Mensagem WhatsApp enviada com sucesso para {telefone} na sessão {waha_session}")
+        logger.info(f"Mensagem WhatsApp enviada com sucesso para {waha_phone} na sessão {waha_session}")
         return True
     except Exception as e:
-        logger.error(f"Erro inesperado ao enviar WhatsApp via WAHA: {str(e)}")
+        logger.error(f"Erro inesperado ao enviar WhatsApp via WAHA para {waha_phone}: {str(e)}")
         return False
