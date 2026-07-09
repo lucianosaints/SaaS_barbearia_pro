@@ -44,6 +44,7 @@ services:
       - ./backend/.env
     environment:
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
+      - WHATSAPP_API_KEY=${WAHA_API_KEY}
     networks:
       - barbeiro_pro_net
     volumes:
