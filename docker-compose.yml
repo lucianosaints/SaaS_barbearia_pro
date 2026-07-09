@@ -40,6 +40,8 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3000" # Expondo externamente na 3001 para não conflitar, internamente é 3000
+    env_file:
+      - ./backend/.env
     environment:
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
     networks:
