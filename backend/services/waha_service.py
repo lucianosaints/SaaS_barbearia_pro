@@ -63,15 +63,12 @@ def enviar_mensagem_whatsapp(telefone: str, mensagem: str) -> bool:
     
     try:
         response = requests.post(endpoint, json=payload, headers=headers, timeout=10)
-        response.raise_for_status()
+        if not response.ok:
+            logger.error(f"WAHA retornou erro [Telefone: {telefone}]: {response.status_code} - JSON: {response.text}")
+            return False
+            
         logger.info(f"Mensagem WhatsApp enviada com sucesso para {telefone} na sessão {waha_session}")
         return True
-    except requests.exceptions.RequestException as e:
-        error_details = str(e)
-        if hasattr(e, 'response') and e.response is not None:
-            error_details = f"{e.response.status_code} - {e.response.text}"
-        logger.error(f"Erro de comunicação WAHA [Telefone: {telefone}]: {error_details}")
-        return False
     except Exception as e:
         logger.error(f"Erro inesperado ao enviar WhatsApp via WAHA: {str(e)}")
         return False
