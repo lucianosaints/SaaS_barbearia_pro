@@ -44,6 +44,8 @@ services:
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
       - WAHA_API_KEY=SenhaWaha123
       - WHATSAPP_API_KEY=SenhaWaha123
+      - WHATSAPP_SWAGGER_USERNAME=admin
+      - WHATSAPP_SWAGGER_PASSWORD=SenhaWaha123
     networks:
       - barbeiro_pro_net
     volumes:
