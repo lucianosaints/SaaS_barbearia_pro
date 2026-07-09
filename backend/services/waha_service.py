@@ -15,13 +15,18 @@ def format_waha_phone(phone: str) -> str:
     if not phone:
         return ""
     
-    clean_phone = re.sub(r'\D', '', phone)
+    phone_number = str(phone)
     
-    # Se tiver entre 10 ou 11 digitos (ex: 11999999999), assume Brasil (55)
-    if len(clean_phone) >= 10 and not clean_phone.startswith('55'):
-        clean_phone = '55' + clean_phone
+    # Remove caracteres especiais (parênteses, traços, espaços), preservando letras caso já tenha @c.us
+    # Mas para ser mais seguro conforme a sua instrução, vamos aplicar a regra:
+    clean_phone = re.sub(r'\D', '', phone_number)
+    
+    if not clean_phone.startswith('55'):
+        clean_phone = f"55{clean_phone}"
         
-    return f"{clean_phone}@c.us"
+    phone_number = f"{clean_phone}@c.us"
+        
+    return phone_number
 
 def enviar_mensagem_whatsapp(telefone: str, mensagem: str) -> bool:
     """
