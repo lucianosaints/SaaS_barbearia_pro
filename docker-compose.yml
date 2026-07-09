@@ -42,7 +42,8 @@ services:
       - "3001:3000" # Expondo externamente na 3001 para não conflitar, internamente é 3000
     environment:
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
-      - WAHA_API_KEY=BarbeariaPro!2026
+      - WAHA_API_KEY=SenhaWaha123
+      - WHATSAPP_API_KEY=SenhaWaha123
     networks:
       - barbeiro_pro_net
     volumes:
