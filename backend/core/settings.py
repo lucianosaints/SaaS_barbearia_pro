@@ -180,4 +180,5 @@ DEFAULT_FROM_EMAIL = 'notificacoes@goldenbarber.com.br'
 # WAHA API Configuration
 WAHA_API_URL = os.environ.get('WAHA_API_URL', 'http://waha:3000')
 WAHA_SESSION = os.environ.get('WAHA_SESSION', 'default')
+WAHA_API_KEY = os.environ.get('WAHA_API_KEY', '')
 

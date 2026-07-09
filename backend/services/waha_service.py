@@ -47,7 +47,8 @@ def enviar_mensagem_whatsapp(telefone: str, mensagem: str) -> bool:
     
     headers = {
         "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json",
+        "X-Api-Key": getattr(settings, 'WAHA_API_KEY', '')
     }
     
     try:
