@@ -45,11 +45,16 @@ def enviar_mensagem_whatsapp(telefone: str, mensagem: str) -> bool:
         "session": waha_session
     }
     
+    api_key = os.getenv('WAHA_API_KEY') or getattr(settings, 'WAHA_API_KEY', '')
+    
     headers = {
         "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-Api-Key": getattr(settings, 'WAHA_API_KEY', '')
+        "Accept": "application/json"
     }
+    
+    if api_key:
+        headers["X-Api-Key"] = api_key
+
     
     try:
         response = requests.post(endpoint, json=payload, headers=headers, timeout=10)
