@@ -8,7 +8,7 @@ import api from '../services/api';
  * Interface flutuante para Login e Cadastro Rápido do cliente final.
  */
 export default function AuthModal({ onAuthSuccess }) {
-  const { authModalOpen, setAuthModalOpen, login } = useAgendamentoStore();
+  const { authModalOpen, setAuthModalOpen, login, empresaId } = useAgendamentoStore();
   const [activeTab, setActiveTab] = useState('login'); // 'login' ou 'cadastro'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

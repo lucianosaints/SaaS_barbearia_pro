@@ -374,7 +374,7 @@ export default function AdminDashboard() {
       {userEmpresa && (
         <PlacaQRCode 
           ref={placaRef} 
-          nomeBarbearia={userEmpresa.nome} 
+          nomeBarbearia={userEmpresa.nome || userEmpresa.slug || 'SUA BARBEARIA'} 
           linkAgendamento={`${window.location.origin}/agendar/${userEmpresa.slug}`} 
         />
       )}
