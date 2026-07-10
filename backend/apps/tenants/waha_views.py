@@ -55,13 +55,26 @@ class WahaQRCodeView(APIView):
         
         try:
             # Requisitando a imagem do QR Code
-            qr_response = requests.get(qr_url, headers=headers, timeout=45)
+            qr_headers = headers.copy()
+            qr_headers["Accept"] = "image/png"
+            qr_response = requests.get(qr_url, headers=qr_headers, timeout=45)
             
             if qr_response.status_code == 200:
-                # Retorna o status 200 OK do WAHA e a imagem no body em bytes
-                # Vamos converter para base64 para facilitar a exibição no React
-                image_bytes = qr_response.content
-                base64_encoded = base64.b64encode(image_bytes).decode('utf-8')
+                # Verifica se o retorno veio em JSON acidentalmente
+                content_type = qr_response.headers.get("Content-Type", "")
+                
+                if "application/json" in content_type:
+                    # Se for JSON, o WAHA provavelmente enviou a string base64 dentro de algum campo
+                    data = qr_response.json()
+                    # Pode vir em data['qrcode'] ou data['url'] ou etc. Tenta achar o base64
+                    base64_encoded = data.get('qrcode', '')
+                    # Se já vier com o prefixo 'data:image/png;base64,', vamos limpar para o React colocar depois
+                    if "base64," in base64_encoded:
+                        base64_encoded = base64_encoded.split("base64,")[1]
+                else:
+                    # Se for imagem real, converte
+                    image_bytes = qr_response.content
+                    base64_encoded = base64.b64encode(image_bytes).decode('utf-8')
                 
                 return Response({
                     "status": "WAITING_FOR_SCAN",
