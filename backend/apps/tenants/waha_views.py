@@ -37,8 +37,8 @@ class WahaQRCodeView(APIView):
         
         try:
             # Chama o endpoint para iniciar/garantir a sessão.
-            # O timeout é um pouco maior aqui pois a sessão pode demorar a inicializar
-            requests.post(start_session_url, json=session_payload, headers=headers, timeout=15)
+            # Timeout aumentado para 45s porque o motor do WAHA (especialmente no primeiro start) pode demorar muito
+            requests.post(start_session_url, json=session_payload, headers=headers, timeout=45)
         except Exception as e:
             logger.error(f"WAHA: Falha ao tentar iniciar sessão {waha_session}. Erro: {str(e)}")
             return Response(
@@ -51,7 +51,7 @@ class WahaQRCodeView(APIView):
         
         try:
             # Requisitando a imagem do QR Code
-            qr_response = requests.get(qr_url, headers=headers, timeout=10)
+            qr_response = requests.get(qr_url, headers=headers, timeout=45)
             
             if qr_response.status_code == 200:
                 # Retorna o status 200 OK do WAHA e a imagem no body em bytes
@@ -70,12 +70,13 @@ class WahaQRCodeView(APIView):
                 # (dependendo da configuração do WAHA).
                 # Vamos verificar o status real da sessão
                 status_url = f"{waha_url}/api/sessions"
-                status_response = requests.get(status_url, headers=headers, timeout=10)
+                status_response = requests.get(status_url, headers=headers, timeout=15)
                 if status_response.ok:
                     sessions = status_response.json()
                     # Encontrar a nossa sessão específica
                     my_session = next((s for s in sessions if s.get('name') == waha_session), None)
-                    if my_session and my_session.get('status') == 'WORKING':
+                    # No WAHA o status pode ser WORKING, CONNECTED, etc.
+                    if my_session and my_session.get('status') in ['WORKING', 'CONNECTED']:
                         return Response({
                             "status": "WORKING",
                             "message": "O WhatsApp já está conectado e pronto para uso!"
