@@ -11,6 +11,7 @@ from rest_framework_simplejwt.views import (
 from apps.tenants.views import EmpresaViewSet
 from apps.accounts.views import UsuarioViewSet, registrar_cliente, registrar_saas, CustomTokenObtainPairView
 from apps.agenda.views import ServicoViewSet, AgendamentoViewSet, obter_disponibilidade, FinancasDashboardView, BloqueioHorarioViewSet, FilaEsperaViewSet
+from apps.tenants.waha_views import WahaQRCodeView
 
 # Inicializando o roteador principal do DRF
 router = DefaultRouter()
@@ -29,6 +30,9 @@ urlpatterns = [
     
     # Endpoint consolidado financeiro do Dashboard
     path('api/financas/dashboard/', FinancasDashboardView.as_view(), name='financas_dashboard'),
+    
+    # Endpoint do WhatsApp QR Code
+    path('api/whatsapp/qrcode/', WahaQRCodeView.as_view(), name='whatsapp_qrcode'),
     
     # Endpoint de registro de cliente
     path('api/clientes/registrar/', registrar_cliente, name='registrar_cliente'),

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import useAgendamentoStore from '../store/useAgendamentoStore';
+import WhatsAppIntegration from '../components/WhatsAppIntegration';
 
 export default function GestaoConfiguracoes() {
   const { userEmpresa } = useAgendamentoStore();
@@ -100,7 +101,7 @@ export default function GestaoConfiguracoes() {
         <p className="text-sm text-text-secondary mt-1">Defina seus horários de funcionamento e intervalo.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Painel de Horários */}
         <div className="bg-background-paper border border-white/5 p-6 rounded-xl w-full">
@@ -224,6 +225,9 @@ export default function GestaoConfiguracoes() {
             )}
           </button>
         </div>
+
+        {/* Painel do WhatsApp */}
+        <WhatsAppIntegration />
 
       </div>
     </div>
