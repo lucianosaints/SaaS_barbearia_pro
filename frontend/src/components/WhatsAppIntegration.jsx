@@ -27,6 +27,19 @@ const WhatsAppIntegration = () => {
         }
     };
 
+    const handleDisconnect = async () => {
+        setQrCodeStatus('LOADING');
+        setMessage('Desconectando WhatsApp...');
+        try {
+            await api.delete('/api/whatsapp/qrcode/');
+            // Após desconectar, tenta buscar novamente para gerar novo QR Code
+            fetchQRCode();
+        } catch (error) {
+            setQrCodeStatus('WORKING');
+            setMessage('Erro ao tentar desconectar. Tente novamente.');
+        }
+    };
+
     useEffect(() => {
         fetchQRCode();
     }, []);
@@ -62,8 +75,21 @@ const WhatsAppIntegration = () => {
 
             {/* Sucesso - Sessão Conectada */}
             {qrCodeStatus === 'WORKING' && (
-                <div className="text-green-500 font-bold text-sm bg-green-500/10 border border-green-500/20 p-3 rounded-lg w-full mt-auto">
-                    ✅ Conectado e operando!
+                <div className="flex flex-col items-center justify-center w-full mt-2 space-y-6">
+                    <div className="w-20 h-20 bg-green-500/10 text-green-500 border border-green-500/20 rounded-full flex items-center justify-center text-4xl shadow-[0_0_15px_rgba(34,197,94,0.3)]">
+                        ✅
+                    </div>
+                    
+                    <div className="text-green-500 font-bold text-center">
+                        Status: Sistema Conectado com Sucesso!
+                    </div>
+
+                    <button 
+                        onClick={handleDisconnect}
+                        className="w-full bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-400 font-bold py-3 px-4 rounded-lg transition-all text-sm"
+                    >
+                        Desconectar WhatsApp
+                    </button>
                 </div>
             )}
         </div>

@@ -37,8 +37,12 @@ class WahaQRCodeView(APIView):
         
         try:
             # Chama o endpoint para iniciar/garantir a sessão.
-            # Timeout aumentado para 45s porque o motor do WAHA (especialmente no primeiro start) pode demorar muito
+            # Timeout aumentado para 45s porque o motor do WAHA pode demorar muito
             requests.post(start_session_url, json=session_payload, headers=headers, timeout=45)
+            
+            # Garante que a sessão vai iniciar mesmo que já existisse mas estivesse parada (STOPPED)
+            start_engine_url = f"{waha_url}/api/sessions/{waha_session}/start"
+            requests.post(start_engine_url, headers=headers, timeout=15)
         except Exception as e:
             logger.error(f"WAHA: Falha ao tentar iniciar sessão {waha_session}. Erro: {str(e)}")
             return Response(
@@ -98,4 +102,28 @@ class WahaQRCodeView(APIView):
             return Response(
                 {"error": "Falha de comunicação interna com o motor de WhatsApp."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+
+    def delete(self, request, *args, **kwargs):
+        waha_url = getattr(settings, 'WAHA_API_URL', 'http://localhost:3000').rstrip('/')
+        waha_session = getattr(settings, 'WAHA_SESSION', 'default')
+        api_key = getattr(settings, 'WAHA_API_KEY', '') or os.getenv('WAHA_API_KEY', '')
+
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+        if api_key:
+            headers["X-Api-Key"] = api_key
+
+        logout_url = f"{waha_url}/api/sessions/{waha_session}/logout"
+        
+        try:
+            requests.post(logout_url, headers=headers, timeout=15)
+            return Response({"message": "WhatsApp desconectado com sucesso."}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"WAHA: Erro ao desconectar WhatsApp. Erro: {str(e)}")
+            return Response(
+                {"error": "Erro ao tentar desconectar o WhatsApp."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
