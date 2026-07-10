@@ -120,7 +120,7 @@ export default function StepBarbeiros() {
               }`}>
                 {barbeiro.foto ? (
                   <img 
-                    src={barbeiro.foto.startsWith('http') ? barbeiro.foto : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${barbeiro.foto}`} 
+                    src={barbeiro.foto.startsWith('http') ? barbeiro.foto : `${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:8000')}${barbeiro.foto}`} 
                     alt={nomeCompleto} 
                     className="w-full h-full object-cover" 
                   />
