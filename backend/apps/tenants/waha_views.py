@@ -31,8 +31,8 @@ class WahaQRCodeView(APIView):
         if api_key:
             headers["X-Api-Key"] = api_key
 
-        # 1. Iniciar a Sessão (garante que ela existe ou acorda ela)
-        start_session_url = f"{waha_url}/api/sessions/start"
+        # 1. Iniciar a Sessão (garante que ela existe)
+        start_session_url = f"{waha_url}/api/sessions"
         session_payload = {"name": waha_session}
         
         try:
@@ -92,9 +92,11 @@ class WahaQRCodeView(APIView):
                 }, status=status.HTTP_200_OK)
                 
             else:
-                logger.error(f"WAHA retornou erro ao buscar QR Code: {qr_response.status_code} - {qr_response.text}")
+                erro_txt = f"WAHA retornou {qr_response.status_code}: {qr_response.text}"
+                logger.error(erro_txt)
+                # Retorna o erro real para facilitar o debug na tela
                 return Response({
-                    "error": "Erro ao buscar QR Code do WhatsApp."
+                    "error": erro_txt
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         except Exception as e:
