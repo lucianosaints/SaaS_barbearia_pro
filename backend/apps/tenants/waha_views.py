@@ -65,9 +65,9 @@ class WahaQRCodeView(APIView):
                     "message": "Leia o QR Code com o seu WhatsApp para conectar."
                 }, status=status.HTTP_200_OK)
                 
-            elif qr_response.status_code == 404:
-                # O endpoint retorna 404 quando o motor ainda está inicializando ou quando a sessão já está conectada
-                # (dependendo da configuração do WAHA).
+            elif qr_response.status_code in [404, 422]:
+                # O endpoint retorna 404 quando o motor ainda está inicializando.
+                # Retorna 422 quando a sessão já está conectada (WORKING) e não tem QR code.
                 # Vamos verificar o status real da sessão
                 status_url = f"{waha_url}/api/sessions"
                 status_response = requests.get(status_url, headers=headers, timeout=15)
