@@ -101,19 +101,28 @@ class WahaQRCodeView(APIView):
                     sessions = status_response.json()
                     # Encontrar a nossa sessão específica
                     my_session = next((s for s in sessions if s.get('name') == waha_session), None)
-                    # No WAHA o status pode ser WORKING, CONNECTED, etc.
-                    if my_session:
-                        current_status = my_session.get('status', 'DESCONHECIDO')
-                        if current_status in ['WORKING', 'CONNECTED']:
-                            return Response({
-                                "status": "WORKING",
-                                "message": "O WhatsApp já está conectado e pronto para uso!"
-                            }, status=status.HTTP_200_OK)
-                        else:
-                            return Response({
-                                "status": "STARTING",
-                                "message": f"A sessão está {current_status}. Aguarde alguns segundos e atualize..."
-                            }, status=status.HTTP_200_OK)
+                    if not my_session or my_session.get('status') in ['FAILED', 'STOPPED']:
+                        try:
+                            start_engine_url = f"{waha_url}/api/sessions/{waha_session}/start"
+                            requests.post(start_engine_url, headers=headers, timeout=15)
+                        except Exception as e:
+                            logger.error(f"WAHA: Erro ao forçar start no fallback. {e}")
+                        return Response({
+                            "status": "STARTING",
+                            "message": "A sessão do WhatsApp estava parada. Iniciando novamente, aguarde alguns segundos e atualize..."
+                        }, status=status.HTTP_200_OK)
+
+                    current_status = my_session.get('status', 'DESCONHECIDO')
+                    if current_status in ['WORKING', 'CONNECTED']:
+                        return Response({
+                            "status": "WORKING",
+                            "message": "O WhatsApp já está conectado e pronto para uso!"
+                        }, status=status.HTTP_200_OK)
+                    else:
+                        return Response({
+                            "status": "STARTING",
+                            "message": f"A sessão está {current_status}. Aguarde alguns segundos e atualize..."
+                        }, status=status.HTTP_200_OK)
                 
                 return Response({
                     "status": "STARTING",

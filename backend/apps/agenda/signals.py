@@ -19,6 +19,7 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, created: bool,
     def disparar_notificacoes():
         # Busca a instância atualizada para ter acesso correto aos campos ManyToMany
         inst = Agendamento.objects.get(pk=instance.pk)
+        inst.refresh_from_db()
         
         cliente_nome = inst.cliente.get_full_name() or inst.cliente.username if inst.cliente else "Cliente"
         barbeiro_nome = inst.profissional.get_full_name() or inst.profissional.username if inst.profissional else "Profissional"
