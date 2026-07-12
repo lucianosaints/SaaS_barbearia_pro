@@ -1,83 +1,81 @@
-from django.db.models.signals import post_save, pre_save
-from django.dispatch import receiver
-from django.core.mail import send_mail
-from django.conf import settings
-from apps.agenda.models import Agendamento, FilaEspera
-import logging
-
-logger = logging.getLogger(__name__)
+from django.db.models.signals import post_save, pre_save, m2m_changed
 
 @receiver(post_save, sender=Agendamento)
-def enviar_confirmacao_agendamento(sender, instance: Agendamento, created: bool, **kwargs) -> None:
+def marcar_agendamento_criado(sender, instance: Agendamento, created: bool, **kwargs) -> None:
+    if created:
+        instance._just_created = True
+
+@receiver(m2m_changed, sender=Agendamento.servicos.through)
+def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, **kwargs) -> None:
     """
-    Escuta a criação de agendamentos e dispara um e-mail de confirmação para o cliente
+    Escuta a adição de serviços ao agendamento recém-criado e dispara um e-mail de confirmação para o cliente
     e uma notificação de WhatsApp para o barbeiro.
     """
-    if not created:
-        return
+    if action == "post_add" and getattr(instance, '_just_created', False):
+        # Previne disparos duplicados na mesma instância
+        instance._just_created = False
 
-    def disparar_notificacoes():
-        # Busca a instância atualizada para ter acesso correto aos campos ManyToMany
-        inst = Agendamento.objects.get(pk=instance.pk)
-        inst.refresh_from_db()
-        
-        cliente_nome = inst.cliente.get_full_name() or inst.cliente.username if inst.cliente else "Cliente"
-        barbeiro_nome = inst.profissional.get_full_name() or inst.profissional.username if inst.profissional else "Profissional"
-        data_formatada = inst.data_hora_inicio.strftime('%d/%m/%Y às %H:%M')
-        
-        # Constrói a listagem dos serviços
-        servicos = inst.servicos.all()
-        lista_servicos = ", ".join([s.nome for s in servicos]) if servicos.exists() else "Serviços contratados"
-        
-        # Forma de pagamento
-        forma_pagamento = inst.get_metodo_pagamento_display() or "Não informado"
+        def disparar_notificacoes():
+            # Busca a instância atualizada para ter acesso correto aos campos ManyToMany
+            inst = Agendamento.objects.get(pk=instance.pk)
+            
+            cliente_nome = inst.cliente.get_full_name() or inst.cliente.username if inst.cliente else "Cliente"
+            barbeiro_nome = inst.profissional.get_full_name() or inst.profissional.username if inst.profissional else "Profissional"
+            data_formatada = inst.data_hora_inicio.strftime('%d/%m/%Y às %H:%M')
+            
+            # Constrói a listagem dos serviços
+            servicos = inst.servicos.all()
+            lista_servicos = ", ".join([s.nome for s in servicos]) if servicos.exists() else "Serviços contratados"
+            
+            # Forma de pagamento
+            forma_pagamento = inst.get_metodo_pagamento_display() or "Não informado"
 
-        if inst.cliente and inst.cliente.email:
+            if inst.cliente and inst.cliente.email:
+                try:
+                    assunto = f"Confirmação de Agendamento - Salão Pro"
+                    corpo_mensagem = (
+                        f"Olá, {cliente_nome}!\n\n"
+                        f"Seu agendamento no Salão Pro foi registrado com sucesso!\n\n"
+                        f"Detalhes do seu horário:\n"
+                        f"- Profissional: {barbeiro_nome}\n"
+                        f"- Serviços: {lista_servicos}\n"
+                        f"- Pagamento: {forma_pagamento}\n"
+                        f"- Data e Horário: {data_formatada}\n\n"
+                        f"Caso precise remarcar ou cancelar, entre em contato conosco ou acesse nosso app.\n"
+                        f"Agradecemos a preferência!"
+                    )
+
+                    send_mail(
+                        subject=assunto,
+                        message=corpo_mensagem,
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[inst.cliente.email],
+                        fail_silently=False,
+                    )
+                    logger.info(f"E-mail de confirmação enviado para {inst.cliente.email} referente ao agendamento {inst.id}.")
+                except Exception as e:
+                    logger.error(f"Falha ao enviar e-mail de confirmação para agendamento {inst.id}: {str(e)}")
+
+            # NOTIFICAÇÃO DO BARBEIRO VIA WAHA
             try:
-                assunto = f"Confirmação de Agendamento - Salão Pro"
-                corpo_mensagem = (
-                    f"Olá, {cliente_nome}!\n\n"
-                    f"Seu agendamento no Salão Pro foi registrado com sucesso!\n\n"
-                    f"Detalhes do seu horário:\n"
-                    f"- Profissional: {barbeiro_nome}\n"
-                    f"- Serviços: {lista_servicos}\n"
-                    f"- Pagamento: {forma_pagamento}\n"
-                    f"- Data e Horário: {data_formatada}\n\n"
-                    f"Caso precise remarcar ou cancelar, entre em contato conosco ou acesse nosso app.\n"
-                    f"Agradecemos a preferência!"
-                )
-
-                send_mail(
-                    subject=assunto,
-                    message=corpo_mensagem,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[inst.cliente.email],
-                    fail_silently=False,
-                )
-                logger.info(f"E-mail de confirmação enviado para {inst.cliente.email} referente ao agendamento {inst.id}.")
+                if inst.profissional and getattr(inst.profissional, 'telefone', None):
+                    from services.waha_service import enviar_mensagem_whatsapp
+                    msg_barbeiro = (
+                        f"💈 *Novo Agendamento no Salão Pro!*\n\n"
+                        f"Você tem um novo horário marcado:\n"
+                        f"👤 Cliente: {cliente_nome}\n"
+                        f"📅 Data/Hora: {data_formatada}\n"
+                        f"✂️ Serviço(s): {lista_servicos}\n"
+                        f"💳 Forma de Pagamento: {forma_pagamento}\n\n"
+                        f"Tenha um ótimo trabalho!"
+                    )
+                    session_id = f"tenant_{inst.empresa.id}" if inst.empresa else 'default'
+                    enviar_mensagem_whatsapp(inst.profissional.telefone, msg_barbeiro, waha_session=session_id)
             except Exception as e:
-                logger.error(f"Falha ao enviar e-mail de confirmação para agendamento {inst.id}: {str(e)}")
+                logger.error(f"Falha ao enviar WAHA para agendamento {inst.id}: {str(e)}")
 
-        # NOTIFICAÇÃO DO BARBEIRO VIA WAHA
-        try:
-            if inst.profissional and getattr(inst.profissional, 'telefone', None):
-                from services.waha_service import enviar_mensagem_whatsapp
-                msg_barbeiro = (
-                    f"💈 *Novo Agendamento no Salão Pro!*\n\n"
-                    f"Você tem um novo horário marcado:\n"
-                    f"👤 Cliente: {cliente_nome}\n"
-                    f"📅 Data/Hora: {data_formatada}\n"
-                    f"✂️ Serviço(s): {lista_servicos}\n"
-                    f"💳 Forma de Pagamento: {forma_pagamento}\n\n"
-                    f"Tenha um ótimo trabalho!"
-                )
-                session_id = f"tenant_{inst.empresa.id}" if inst.empresa else 'default'
-                enviar_mensagem_whatsapp(inst.profissional.telefone, msg_barbeiro, waha_session=session_id)
-        except Exception as e:
-            logger.error(f"Falha ao enviar WAHA para agendamento {inst.id}: {str(e)}")
-
-    from django.db import transaction
-    transaction.on_commit(disparar_notificacoes)
+        from django.db import transaction
+        transaction.on_commit(disparar_notificacoes)
 
 
 @receiver(pre_save, sender=Agendamento)

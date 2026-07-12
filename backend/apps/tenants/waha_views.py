@@ -42,15 +42,15 @@ class WahaQRCodeView(APIView):
         
         try:
             # Chama o endpoint para iniciar/garantir a sessão.
-            # Timeout aumentado para 45s porque o motor do WAHA pode demorar muito
-            resp1 = requests.post(start_session_url, json=session_payload, headers=headers, timeout=45)
-            if not resp1.ok and resp1.status_code != 409: # Ignora erro 409 (sessão já existe)
+            # Timeout aumentado para 60s porque o motor do WAHA pode demorar muito
+            resp1 = requests.post(start_session_url, json=session_payload, headers=headers, timeout=60)
+            if not resp1.ok and resp1.status_code not in [409, 422]: # Ignora erro 409/422 (sessão já existe)
                 logger.warning(f"WAHA: Erro ao criar sessão. Status: {resp1.status_code}. Response: {resp1.text}")
             
             # Garante que a sessão vai iniciar mesmo que já existisse mas estivesse parada (STOPPED)
             start_engine_url = f"{waha_url}/api/sessions/{waha_session}/start"
-            resp2 = requests.post(start_engine_url, headers=headers, timeout=15)
-            if not resp2.ok:
+            resp2 = requests.post(start_engine_url, headers=headers, timeout=60)
+            if not resp2.ok and resp2.status_code not in [409, 422]:
                 logger.warning(f"WAHA: Erro ao iniciar motor. Status: {resp2.status_code}. Response: {resp2.text}")
         except Exception as e:
             logger.error(f"WAHA: Falha ao tentar iniciar sessão {waha_session}. Erro: {str(e)}")
@@ -66,7 +66,7 @@ class WahaQRCodeView(APIView):
             # Requisitando a imagem do QR Code
             qr_headers = headers.copy()
             qr_headers["Accept"] = "image/png"
-            qr_response = requests.get(qr_url, headers=qr_headers, timeout=45)
+            qr_response = requests.get(qr_url, headers=qr_headers, timeout=60)
             
             if qr_response.status_code == 200:
                 # Verifica se o retorno veio em JSON acidentalmente
@@ -96,7 +96,7 @@ class WahaQRCodeView(APIView):
                 # Retorna 422 quando a sessão já está conectada (WORKING) e não tem QR code.
                 # Vamos verificar o status real da sessão
                 status_url = f"{waha_url}/api/sessions"
-                status_response = requests.get(status_url, headers=headers, timeout=15)
+                status_response = requests.get(status_url, headers=headers, timeout=30)
                 if status_response.ok:
                     sessions = status_response.json()
                     # Encontrar a nossa sessão específica
@@ -104,7 +104,7 @@ class WahaQRCodeView(APIView):
                     if not my_session or my_session.get('status') in ['FAILED', 'STOPPED']:
                         try:
                             start_engine_url = f"{waha_url}/api/sessions/{waha_session}/start"
-                            requests.post(start_engine_url, headers=headers, timeout=15)
+                            requests.post(start_engine_url, headers=headers, timeout=30)
                         except Exception as e:
                             logger.error(f"WAHA: Erro ao forçar start no fallback. {e}")
                         return Response({
