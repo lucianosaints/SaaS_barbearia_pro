@@ -28,13 +28,12 @@ def format_waha_phone(phone: str) -> str:
         
     return phone_number
 
-def enviar_mensagem_whatsapp(telefone: str, mensagem: str) -> bool:
+def enviar_mensagem_whatsapp(telefone: str, mensagem: str, waha_session: str = 'default') -> bool:
     """
     Envia uma mensagem de texto utilizando a WAHA API.
     A falha no envio não deve interromper a execução do fluxo (fail_silently).
     """
     waha_url = getattr(settings, 'WAHA_API_URL', 'http://localhost:3000').rstrip('/')
-    waha_session = getattr(settings, 'WAHA_SESSION', 'default')
     
     if not telefone:
         logger.warning("Tentativa de envio de WhatsApp falhou: Telefone não fornecido.")

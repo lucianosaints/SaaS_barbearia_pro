@@ -70,7 +70,8 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, created: bool,
                     f"💳 Forma de Pagamento: {forma_pagamento}\n\n"
                     f"Tenha um ótimo trabalho!"
                 )
-                enviar_mensagem_whatsapp(inst.profissional.telefone, msg_barbeiro)
+                session_id = f"tenant_{inst.empresa.id}" if inst.empresa else 'default'
+                enviar_mensagem_whatsapp(inst.profissional.telefone, msg_barbeiro, waha_session=session_id)
         except Exception as e:
             logger.error(f"Falha ao enviar WAHA para agendamento {inst.id}: {str(e)}")
 

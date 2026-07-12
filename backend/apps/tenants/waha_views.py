@@ -21,7 +21,12 @@ class WahaQRCodeView(APIView):
 
     def get(self, request, *args, **kwargs):
         waha_url = getattr(settings, 'WAHA_API_URL', 'http://localhost:3000').rstrip('/')
-        waha_session = getattr(settings, 'WAHA_SESSION', 'default')
+        
+        if hasattr(request.user, 'empresa') and request.user.empresa:
+            waha_session = f"tenant_{request.user.empresa.id}"
+        else:
+            return Response({"error": "Usuário não vinculado a uma empresa."}, status=status.HTTP_400_BAD_REQUEST)
+            
         api_key = getattr(settings, 'WAHA_API_KEY', '') or os.getenv('WAHA_API_KEY', '')
 
         headers = {
@@ -132,7 +137,12 @@ class WahaQRCodeView(APIView):
 
     def delete(self, request, *args, **kwargs):
         waha_url = getattr(settings, 'WAHA_API_URL', 'http://localhost:3000').rstrip('/')
-        waha_session = getattr(settings, 'WAHA_SESSION', 'default')
+        
+        if hasattr(request.user, 'empresa') and request.user.empresa:
+            waha_session = f"tenant_{request.user.empresa.id}"
+        else:
+            return Response({"error": "Usuário não vinculado a uma empresa."}, status=status.HTTP_400_BAD_REQUEST)
+            
         api_key = getattr(settings, 'WAHA_API_KEY', '') or os.getenv('WAHA_API_KEY', '')
 
         headers = {
