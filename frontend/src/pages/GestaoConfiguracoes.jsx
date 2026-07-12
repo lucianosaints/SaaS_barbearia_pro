@@ -181,7 +181,7 @@ export default function GestaoConfiguracoes() {
         <div className="bg-background-paper border border-white/5 p-6 rounded-xl w-full flex flex-col justify-between">
           <div>
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <span className="text-gold">👑</span> Meu Plano Sal�o Pro
+              <span className="text-gold">👑</span> Meu Plano Salão Pro
             </h3>
             
             {empresaInfo ? (
