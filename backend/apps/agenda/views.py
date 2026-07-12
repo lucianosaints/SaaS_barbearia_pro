@@ -338,18 +338,32 @@ class FinancasDashboardView(APIView):
             )
 
         hoje = timezone.localdate()
+        data_inicio_str = request.query_params.get('data_inicio')
+        data_fim_str = request.query_params.get('data_fim')
         
-        # Filtra os agendamentos concluídos do mês atual para a empresa
-        agendamentos_mes = Agendamento.objects.filter(
-            status='CONCLUIDO',
-            data_hora_inicio__year=hoje.year,
-            data_hora_inicio__month=hoje.month
-        )
+        # Filtra os agendamentos concluídos
+        agendamentos = Agendamento.objects.filter(status='CONCLUIDO')
+        
+        if data_inicio_str and data_fim_str:
+            try:
+                # Opcional: try/except em datetime.strptime caso a data venha inválida
+                agendamentos = agendamentos.filter(
+                    data_hora_inicio__date__gte=data_inicio_str,
+                    data_hora_inicio__date__lte=data_fim_str
+                )
+            except Exception:
+                pass
+        else:
+            agendamentos = agendamentos.filter(
+                data_hora_inicio__year=hoje.year,
+                data_hora_inicio__month=hoje.month
+            )
+            
         if not user.is_superuser:
-            agendamentos_mes = agendamentos_mes.filter(empresa=empresa)
+            agendamentos = agendamentos.filter(empresa=empresa)
 
         # Consolidado financeiro
-        consolidado = agendamentos_mes.aggregate(
+        consolidado = agendamentos.aggregate(
             faturamento_bruto=Sum('valor_total'),
             total_comissoes=Sum('valor_comissao'),
             lucro_liquido=Sum('lucro_liquido')
@@ -366,7 +380,7 @@ class FinancasDashboardView(APIView):
             barbeiros = barbeiros.filter(empresa=empresa)
             
         for barbeiro in barbeiros:
-            agendamentos_barbeiro = agendamentos_mes.filter(profissional=barbeiro)
+            agendamentos_barbeiro = agendamentos.filter(profissional=barbeiro)
             consolidado_barbeiro = agendamentos_barbeiro.aggregate(
                 faturamento=Sum('valor_total'),
                 comissao=Sum('valor_comissao')

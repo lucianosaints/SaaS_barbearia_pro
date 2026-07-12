@@ -57,11 +57,11 @@ function App() {
             <div className="flex items-center gap-3">
               <img 
                 src={logoImg} 
-                alt="Ãcone Barbeiro_Pro" 
+                alt="Ãcone Salão Pro" 
                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-gold shadow-[0_0_15px_rgba(212,175,55,0.3)]" 
               />
               <span className="font-extrabold tracking-wider bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent uppercase">
-                Barbeiro_Pro
+                Salão Pro
               </span>
             </div>
 
@@ -208,7 +208,7 @@ function App() {
             alt="i9builder Logo" 
             className="w-8 h-8 rounded-full object-cover border border-white/10 shadow-sm" 
           />
-          <span>&copy; {new Date().getFullYear()} Barbeiro_Pro. Todos os direitos reservados i9builder @luciano.saints</span>
+          <span>&copy; {new Date().getFullYear()} Salão Pro. Todos os direitos reservados i9builder @luciano.saints</span>
         </footer>
       )}
 

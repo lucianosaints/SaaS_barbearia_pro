@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import useAgendamentoStore from '../store/useAgendamentoStore';
-import videoBackground from '../imagem/barbeiro_pro.mp4';
+import videoBackground from '../imagem/Salão Pro.mp4';
 import logoImg from '../imagem/logo.png';
 import i9builderImg from '../imagem/i9builder.png';
 import OnboardingModal from '../components/OnboardingModal';
@@ -22,7 +22,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <img 
               src={logoImg} 
-              alt="Ãcone Barbeiro_Pro" 
+              alt="Ãcone Salão Pro" 
               className="w-10 h-10 rounded-full object-cover border-2 border-gold shadow-[0_0_15px_rgba(212,175,55,0.3)]" 
             />
             <span className="text-xl font-bold tracking-wide text-white uppercase">
@@ -220,7 +220,7 @@ export default function LandingPage() {
               className="w-8 h-8 rounded-full object-cover border border-white/10 shadow-sm" 
             />
             <p>
-              Copyright Â© {new Date().getFullYear()} Barbeiro_Pro. <br className="md:hidden" />
+              Copyright Â© {new Date().getFullYear()} Salão Pro. <br className="md:hidden" />
               Todos os direitos reservados <span className="text-white font-semibold">i9builder</span>
             </p>
           </div>

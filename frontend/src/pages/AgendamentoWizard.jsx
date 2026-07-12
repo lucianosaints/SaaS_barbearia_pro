@@ -167,7 +167,7 @@ export default function AgendamentoWizard() {
     <div className="w-full max-w-md mx-auto py-4 sm:py-8 px-4">
       {/* Banner da Barbearia */}
       <div className="w-full h-24 sm:h-32 rounded-2xl overflow-hidden border border-white/5 mb-4 sm:mb-6 relative shadow-lg shadow-black/35">
-        <img src={bannerImg} alt="Barbeiro Pro" className="w-full h-full object-cover opacity-70" />
+        <img src={bannerImg} alt="Salão Pro" className="w-full h-full object-cover opacity-70" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-black/10 to-transparent"></div>
         <div className="absolute bottom-3 left-4">
           <span className="text-[9px] uppercase font-bold tracking-widest text-gold bg-background-darker/70 px-2 py-0.5 rounded border border-gold/25">Ambiente Premium</span>

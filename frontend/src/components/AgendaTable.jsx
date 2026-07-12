@@ -12,6 +12,12 @@ export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
     return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const data = new Date(dateStr);
+    return data.toLocaleDateString('pt-BR');
+  };
+
   const formatMoeda = (valor) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
   };
@@ -76,6 +82,7 @@ export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gold/20 bg-black/40 text-xs font-bold text-gold uppercase tracking-wider">
+              <th className="px-6 py-4">Data</th>
               <th className="px-6 py-4">Horário</th>
               <th className="px-6 py-4">Cliente</th>
               <th className="px-6 py-4">Serviço</th>
@@ -103,6 +110,11 @@ export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
 
               return (
                 <tr key={agendamento.id} className="hover:bg-white/[0.03] transition-colors">
+                  {/* Data */}
+                  <td className="px-6 py-4 font-bold text-md text-gray-300">
+                    {formatDate(agendamento.data_hora_inicio)}
+                  </td>
+                  
                   {/* Horário */}
                   <td className="px-6 py-4 font-bold text-lg text-white">
                     {formatTime(agendamento.data_hora_inicio)}

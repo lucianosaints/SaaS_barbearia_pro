@@ -175,7 +175,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 # Email configuration for local development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'notificacoes@goldenbarber.com.br'
+DEFAULT_FROM_EMAIL = 'Salão Pro <notificacoes@salaopro.com.br>'
 
 # WAHA API Configuration
 WAHA_API_URL = os.environ.get('WAHA_API_URL', 'http://waha:3000')

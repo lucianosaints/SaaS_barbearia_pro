@@ -4,6 +4,8 @@ import {
   PieChart, Pie, Cell 
 } from 'recharts';
 import api from '../services/api';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 /**
  * Componente FinanceiroDashboard.
@@ -13,24 +15,31 @@ export default function FinanceiroDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
+
+  const fetchFinanceData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = {};
+      if (dataInicio && dataFim) {
+        params.data_inicio = dataInicio;
+        params.data_fim = dataFim;
+      }
+      const response = await api.get('/api/financas/dashboard/', { params });
+      setData(response.data);
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.error || 'Erro ao carregar os dados financeiros.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchFinanceData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await api.get('/api/financas/dashboard/');
-        setData(response.data);
-      } catch (err) {
-        console.error(err);
-        setError(err.response?.data?.error || 'Erro ao carregar os dados financeiros.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchFinanceData();
-  }, []);
+  }, [dataInicio, dataFim]);
 
   if (loading) {
     return (
@@ -66,16 +75,84 @@ export default function FinanceiroDashboard() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
 
+  const exportarPDF = () => {
+    if (!data || data.desempenho_profissionais.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('Relatório Financeiro - Salão Pro', 14, 22);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Período: ${dataInicio ? dataInicio.split('-').reverse().join('/') : 'Início do mês'} até ${dataFim ? dataFim.split('-').reverse().join('/') : 'Hoje'}`, 14, 30);
+    
+    doc.text(`Faturamento Bruto: ${formatCurrency(faturamento_bruto)}`, 14, 38);
+    doc.text(`Comissões Pagas: ${formatCurrency(total_comissoes)}`, 14, 44);
+    doc.text(`Lucro Líquido: ${formatCurrency(lucro_liquido)}`, 14, 50);
+
+    const tableColumn = ["Profissional", "Faturamento Gerado", "Comissão Devida"];
+    const tableRows = [];
+
+    data.desempenho_profissionais.forEach(barbeiro => {
+      const rowData = [
+        barbeiro.nome,
+        formatCurrency(barbeiro.faturamento),
+        formatCurrency(barbeiro.comissao)
+      ];
+      tableRows.push(rowData);
+    });
+
+    doc.autoTable({
+      startY: 58,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: { fillColor: [212, 175, 55], textColor: 0 },
+    });
+
+    doc.save('relatorio-financeiro-salaopro.pdf');
+  };
+
   return (
     <div className="w-full max-w-6xl mx-auto py-6 px-4 space-y-6">
       {/* Cabeçalho */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">
-          Dashboard Financeiro
-        </h1>
-        <p className="text-text-muted text-xs sm:text-sm">
-          Acompanhamento de faturamento bruto, custos comissionados e lucros do mês corrente.
-        </p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">
+            Dashboard Financeiro
+          </h1>
+          <p className="text-text-muted text-xs sm:text-sm">
+            Acompanhamento de faturamento bruto, custos comissionados e lucros.
+          </p>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-background-paper border border-white/10 rounded-lg px-3 py-1.5">
+            <span className="text-xs text-text-secondary">De:</span>
+            <input 
+              type="date" 
+              value={dataInicio} 
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="bg-transparent text-sm text-white outline-none"
+            />
+            <span className="text-xs text-text-secondary ml-2">Até:</span>
+            <input 
+              type="date" 
+              value={dataFim} 
+              onChange={(e) => setDataFim(e.target.value)}
+              className="bg-transparent text-sm text-white outline-none"
+            />
+          </div>
+          <button 
+            onClick={exportarPDF}
+            className="bg-gold text-background-darker hover:bg-gold-light px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+          >
+            📄 Exportar PDF
+          </button>
+        </div>
       </div>
 
       {/* Cards de Resumo */}
