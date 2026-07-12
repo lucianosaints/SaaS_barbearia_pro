@@ -1,4 +1,11 @@
 from django.db.models.signals import post_save, pre_save, m2m_changed
+from django.dispatch import receiver
+from django.core.mail import send_mail
+from django.conf import settings
+from apps.agenda.models import Agendamento, FilaEspera
+import logging
+
+logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=Agendamento)
 def marcar_agendamento_criado(sender, instance: Agendamento, created: bool, **kwargs) -> None:
