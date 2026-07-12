@@ -214,7 +214,7 @@ export default function AdminDashboard() {
                 : 'bg-background-paper border border-white/5 text-text-secondary hover:text-white hover:border-white/20'
               }`}
             >
-              👥 Equipe (Barbeiros)
+              👥 Cadastro de Equipe
             </button>
             <button
               onClick={() => setActiveTab('financeiro')}

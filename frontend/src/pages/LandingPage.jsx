@@ -26,7 +26,7 @@ export default function LandingPage() {
               className="w-10 h-10 rounded-full object-cover border-2 border-gold shadow-[0_0_15px_rgba(212,175,55,0.3)]" 
             />
             <span className="text-xl font-bold tracking-wide text-white uppercase">
-              Barbeiro_<span className="text-gold">Pro</span>
+              Salão <span className="text-gold">Pro</span>
             </span>
           </div>
 
@@ -75,7 +75,7 @@ export default function LandingPage() {
             </div>
             
             <h1 className="text-5xl lg:text-7xl font-extrabold text-white leading-tight">
-              A Gestão da sua Barbearia no <span className="bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent drop-shadow-sm">Próximo Nível.</span>
+              A Gestão da sua Barbearia e Salão no <span className="bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent drop-shadow-sm">Próximo Nível.</span>
             </h1>
             
             <p className="text-lg lg:text-2xl text-gray-300 max-w-2xl mx-auto leading-relaxed drop-shadow">
