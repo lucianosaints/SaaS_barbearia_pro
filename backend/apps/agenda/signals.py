@@ -121,20 +121,42 @@ def sniper_de_desistencias(sender, instance: Agendamento, created: bool, **kwarg
     por alguém que queria esse horário e simula a notificação.
     """
     if instance.status == 'CANCELADO':
+        from zoneinfo import ZoneInfo
+        fuso_local = ZoneInfo('America/Sao_Paulo')
+        datetime_local = instance.data_hora_inicio.astimezone(fuso_local)
+        data_formatada = datetime_local.strftime('%d/%m/%Y às %H:%M')
+        
         data = instance.data_hora_inicio.date()
         horario = instance.data_hora_inicio.time()
         
+        session_id = f"tenant_{instance.empresa.id}" if instance.empresa else 'default'
+        cliente_nome = instance.cliente.get_full_name() or instance.cliente.username if instance.cliente else "Desconhecido"
+        
+        from services.waha_service import enviar_mensagem_whatsapp
+        
         # Avisa o barbeiro sobre o cancelamento
         if instance.profissional and instance.profissional.telefone:
-            from services.waha_service import enviar_mensagem_whatsapp
-            cliente_nome = instance.cliente.get_full_name() or instance.cliente.username if instance.cliente else "Desconhecido"
-            data_formatada = instance.data_hora_inicio.strftime('%d/%m/%Y às %H:%M')
             msg_barbeiro = (
                 f"❌ *Agendamento Cancelado*\n\n"
                 f"O cliente *{cliente_nome}* cancelou o horário de {data_formatada}.\n"
                 f"O horário está livre agora."
             )
-            enviar_mensagem_whatsapp(instance.profissional.telefone, msg_barbeiro)
+            try:
+                enviar_mensagem_whatsapp(instance.profissional.telefone, msg_barbeiro, waha_session=session_id)
+            except Exception as e:
+                logger.error(f"Erro ao notificar barbeiro do cancelamento: {e}")
+                
+        # Avisa o cliente sobre o cancelamento
+        if instance.cliente and instance.cliente.telefone:
+            msg_cliente = (
+                f"Olá, {cliente_nome}!\n\n"
+                f"Seu agendamento para o dia {data_formatada} foi *cancelado* com sucesso.\n"
+                f"Esperamos ver você em breve no Salão Pro!"
+            )
+            try:
+                enviar_mensagem_whatsapp(instance.cliente.telefone, msg_cliente, waha_session=session_id)
+            except Exception as e:
+                logger.error(f"Erro ao notificar cliente do cancelamento: {e}")
             
         espera = FilaEspera.objects.filter(
             empresa=instance.empresa,
