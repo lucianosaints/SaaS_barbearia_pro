@@ -7,13 +7,16 @@ const WhatsAppIntegration = () => {
     const [message, setMessage] = useState('Carregando status do WhatsApp...');
 
     const fetchQRCode = async () => {
+        const fetchUrl = `/api/whatsapp/qrcode/?t=${new Date().getTime()}`;
+        console.log("Iniciando requisição do QR Code...", fetchUrl);
         setQrCodeStatus('LOADING');
         setMessage('Buscando status da conexão...');
         setQrCodeImage(null);
         
         try {
             // Adiciona timestamp para evitar cache do navegador e garantir que a requisição chegue ao Gunicorn
-            const response = await api.get(`/api/whatsapp/qrcode/?t=${new Date().getTime()}`);
+            const response = await api.get(fetchUrl);
+            console.log("Resposta recebida do backend:", response.data);
             const data = response.data;
 
             setQrCodeStatus(data.status || 'SUCCESS');
@@ -23,6 +26,7 @@ const WhatsAppIntegration = () => {
                 setQrCodeImage(`data:image/png;base64,${data.qrcode_base64}`);
             }
         } catch (error) {
+            console.error("Erro na requisição Axios:", error);
             setQrCodeStatus('ERROR');
             const erroApi = error.response?.data?.error || 'Erro ao conectar com o serviço do WhatsApp.';
             setMessage(erroApi);
