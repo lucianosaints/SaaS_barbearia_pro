@@ -143,10 +143,10 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '5/minute',
-        'user': '60/minute',
-        'login': '3/minute',
-        'fila_espera': '3/minute'
+        'anon': '100/minute',
+        'user': '1000/day',
+        'login': '100/minute',
+        'fila_espera': '100/minute'
     }
 }
 

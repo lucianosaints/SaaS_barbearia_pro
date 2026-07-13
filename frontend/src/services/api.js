@@ -52,10 +52,13 @@ api.interceptors.response.use(
     // Se o erro for 401 (Unauthorized) e não for uma tentativa repetida de obter token
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (originalRequest.url === '/api/token/' || originalRequest.url === '/api/token/refresh/') {
-        // Se falhar na própria autenticação ou renovação, limpa os tokens, redireciona e rejeita
+        // Se falhar na própria autenticação ou renovação, limpa os tokens e rejeita
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        // Só redireciona se já não estivermos na página de login, para evitar loops
+        if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+        }
         return Promise.reject(error);
       }
 
@@ -81,7 +84,9 @@ api.interceptors.response.use(
         isRefreshing = false;
         // Sem refresh token, força deslogar
         localStorage.removeItem('access_token');
-        window.location.href = '/login';
+        if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+        }
         return Promise.reject(error);
       }
 
@@ -118,7 +123,9 @@ api.interceptors.response.use(
         
         // Dispara evento global ou redirecionamento de login se necessário
         window.dispatchEvent(new Event('auth_expired'));
-        window.location.href = '/login';
+        if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+        }
         
         return Promise.reject(refreshError);
       }
