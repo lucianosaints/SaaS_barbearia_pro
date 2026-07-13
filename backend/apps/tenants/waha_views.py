@@ -118,9 +118,14 @@ class WahaQRCodeView(APIView):
                             "status": "WORKING",
                             "message": "O WhatsApp já está conectado e pronto para uso!"
                         }, status=status.HTTP_200_OK)
+                    elif current_status == 'SCAN_QR_CODE':
+                        return Response({
+                            "status": "WAITING_FOR_SCAN",
+                            "message": "Gerando QR Code, aguarde um instante e atualize a página..."
+                        }, status=status.HTTP_200_OK)
                     else:
                         return Response({
-                            "status": "STARTING",
+                            "status": current_status,
                             "message": f"A sessão está {current_status}. Aguarde alguns segundos e atualize..."
                         }, status=status.HTTP_200_OK)
                 
