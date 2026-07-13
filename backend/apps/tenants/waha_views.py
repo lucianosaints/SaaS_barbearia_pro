@@ -110,7 +110,7 @@ class WahaQRCodeView(APIView):
                             logger.error(f"WAHA: Erro ao forçar start no fallback. {e}")
                         return Response({
                             "status": "LOADING",
-                            "message": "A sessão do WhatsApp estava parada. Iniciando novamente, aguarde alguns segundos e atualize..."
+                            "message": "O WhatsApp está preparando o seu QR Code, aguarde 5 segundos..."
                         }, status=status.HTTP_200_OK)
 
                     current_status = my_session.get('status', 'DESCONHECIDO')
@@ -129,7 +129,7 @@ class WahaQRCodeView(APIView):
                 
                 return Response({
                     "status": "LOADING",
-                    "message": "A sessão do WhatsApp está inicializando, tente novamente em alguns segundos..."
+                    "message": "O WhatsApp está preparando o seu QR Code, aguarde 5 segundos..."
                 }, status=status.HTTP_200_OK)
                 
             else:
