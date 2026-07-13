@@ -28,7 +28,13 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
             
             cliente_nome = inst.cliente.get_full_name() or inst.cliente.username if inst.cliente else "Cliente"
             barbeiro_nome = inst.profissional.get_full_name() or inst.profissional.username if inst.profissional else "Profissional"
-            data_formatada = inst.data_hora_inicio.strftime('%d/%m/%Y às %H:%M')
+            
+            # Formata a data para o fuso do Brasil
+            from django.utils import timezone
+            import pytz
+            fuso_local = pytz.timezone('America/Sao_Paulo')
+            datetime_local = inst.data_hora_inicio.astimezone(fuso_local)
+            data_formatada = datetime_local.strftime('%d/%m/%Y às %H:%M')
             
             # Constrói a listagem dos serviços
             servicos = inst.servicos.all()
