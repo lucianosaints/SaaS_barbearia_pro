@@ -7,7 +7,9 @@ const WhatsAppIntegration = () => {
     const [message, setMessage] = useState('Carregando status do WhatsApp...');
 
     const fetchQRCode = async () => {
-        const fetchUrl = `/api/whatsapp/qrcode/?t=${new Date().getTime()}`;
+        // Alterando temporariamente a URL para incluir um segmento dinâmico na rota
+        // Isso burla regras agressivas de cache do Nginx baseadas no path da rota principal
+        const fetchUrl = `/api/whatsapp/qrcode/${Date.now()}/?t=${new Date().getTime()}`;
         console.log("Iniciando requisição do QR Code...", fetchUrl);
         setQrCodeStatus('LOADING');
         setMessage('Buscando status da conexão...');

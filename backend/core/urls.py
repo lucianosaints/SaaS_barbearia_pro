@@ -33,8 +33,8 @@ urlpatterns = [
     # Endpoint consolidado financeiro do Dashboard
     path('api/financas/dashboard/', FinancasDashboardView.as_view(), name='financas_dashboard'),
     
-    # Endpoint do WhatsApp QR Code
-    path('api/whatsapp/qrcode/', WahaQRCodeView.as_view(), name='whatsapp_qrcode'),
+    # Endpoint do WhatsApp QR Code com regex para aceitar parâmetro dinâmico de cache buster
+    re_path(r'^api/whatsapp/qrcode/(?:(?P<cache_buster>[^/]+)/)?$', WahaQRCodeView.as_view(), name='whatsapp_qrcode'),
     
     # Endpoint de registro de cliente
     path('api/clientes/registrar/', registrar_cliente, name='registrar_cliente'),
