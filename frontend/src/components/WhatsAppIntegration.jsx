@@ -9,9 +9,11 @@ const WhatsAppIntegration = () => {
     const fetchQRCode = async () => {
         setQrCodeStatus('LOADING');
         setMessage('Buscando status da conexão...');
+        setQrCodeImage(null);
         
         try {
-            const response = await api.get('/api/whatsapp/qrcode/');
+            // Adiciona timestamp para evitar cache do navegador e garantir que a requisição chegue ao Gunicorn
+            const response = await api.get(`/api/whatsapp/qrcode/?t=${new Date().getTime()}`);
             const data = response.data;
 
             setQrCodeStatus(data.status || 'SUCCESS');
