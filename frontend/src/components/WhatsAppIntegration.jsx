@@ -69,13 +69,17 @@ const WhatsAppIntegration = () => {
                 </div>
             )}
 
-            {/* Exibe botão de atualizar caso expire ou demore muito */}
-            {['STARTING', 'WAITING_FOR_SCAN', 'ERROR'].includes(qrCodeStatus) && (
+            {/* Exibe botão de atualizar caso expire, demore muito, ou esteja carregando */}
+            {['LOADING', 'STARTING', 'WAITING_FOR_SCAN', 'ERROR'].includes(qrCodeStatus) && (
                 <button 
                     onClick={fetchQRCode}
-                    className="w-full bg-background-darker border border-white/10 hover:border-gold text-white font-bold py-2 px-4 rounded-lg transition-all text-sm mt-auto"
+                    disabled={qrCodeStatus === 'LOADING'}
+                    className={`w-full font-bold py-2 px-4 rounded-lg transition-all text-sm mt-auto border 
+                        ${qrCodeStatus === 'LOADING' 
+                            ? 'bg-gray-700 border-gray-600 text-gray-400 cursor-not-allowed' 
+                            : 'bg-background-darker border-white/10 hover:border-gold text-white'}`}
                 >
-                    🔄 Atualizar QR Code
+                    {qrCodeStatus === 'LOADING' ? '⏳ Carregando...' : '🔄 Atualizar QR Code'}
                 </button>
             )}
 

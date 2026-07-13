@@ -104,10 +104,17 @@ class WahaQRCodeView(APIView):
                     
                     if not my_session or my_session.get('status') in ['FAILED', 'STOPPED']:
                         try:
+                            # Auto-healing agressivo: se for FAILED, a sessão travou e precisa ser recriada
+                            if my_session and my_session.get('status') == 'FAILED':
+                                delete_url = f"{waha_url}/api/sessions/{waha_session}"
+                                requests.delete(delete_url, headers=headers, timeout=15)
+                                session_payload = {"name": waha_session}
+                                requests.post(f"{waha_url}/api/sessions", json=session_payload, headers=headers, timeout=30)
+                                
                             start_engine_url = f"{waha_url}/api/sessions/{waha_session}/start"
                             requests.post(start_engine_url, headers=headers, timeout=30)
                         except Exception as e:
-                            logger.error(f"WAHA: Erro ao forçar start no fallback. {e}")
+                            logger.error(f"WAHA: Erro ao forçar start/delete no fallback. {e}")
                         return Response({
                             "status": "LOADING",
                             "message": "O WhatsApp está preparando o seu QR Code, aguarde 5 segundos..."
