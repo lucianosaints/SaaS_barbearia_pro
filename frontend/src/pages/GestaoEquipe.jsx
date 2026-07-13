@@ -111,7 +111,8 @@ export default function GestaoEquipe() {
         payload.append('password', formData.password);
       }
       
-      if (formData.foto) {
+      // Só envia a foto se ela for de fato um novo arquivo (File) selecionado no input
+      if (formData.foto && formData.foto instanceof File) {
         payload.append('foto', formData.foto);
       }
 
