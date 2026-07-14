@@ -97,16 +97,21 @@ export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
           <tbody className="divide-y divide-white/5 text-sm text-gray-200">
             {agendamentos.map((agendamento) => {
               const servicos = agendamento.servicos_detalhes || [];
-              const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-              
-              const getFotoUrl = (path) => {
-                  if (!path) return null;
-                  if (path.startsWith('http')) return path;
-                  return `${baseUrl}${path}`;
+              const obterUrlImagem = (urlOriginal) => {
+                if (!urlOriginal) return null;
+                // Se a URL apontar para o host interno do Docker, corrige para o domínio público
+                if (urlOriginal.includes('backend:8000') || urlOriginal.includes('localhost:8000')) {
+                  return urlOriginal.replace(/http:\/\/backend:8000|http:\/\/localhost:8000/, 'https://barbeiropro.duckdns.org');
+                }
+                // Se a URL for relativa (começar apenas com /media/), adiciona o domínio público na frente
+                if (urlOriginal.startsWith('/media/')) {
+                  return `https://barbeiropro.duckdns.org${urlOriginal}`;
+                }
+                return urlOriginal;
               };
 
-              const clienteFoto = getFotoUrl(agendamento.cliente_foto);
-              const barbeiroFoto = getFotoUrl(agendamento.profissional_foto);
+              const clienteFoto = obterUrlImagem(agendamento.cliente_foto);
+              const barbeiroFoto = obterUrlImagem(agendamento.profissional_foto);
 
               return (
                 <tr key={agendamento.id} className="hover:bg-white/[0.03] transition-colors">
