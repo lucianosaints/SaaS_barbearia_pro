@@ -71,15 +71,49 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
             try:
                 if inst.profissional and getattr(inst.profissional, 'telefone', None):
                     from services.waha_service import enviar_mensagem_whatsapp
+                    
+                    import re
+                    cliente_telefone_raw = getattr(inst.cliente, 'telefone', '') if inst.cliente else ''
+                    numero_limpo = re.sub(r'\D', '', str(cliente_telefone_raw))
+                    
+                    telefone_formatado = "Não informado"
+                    link_wa = ""
+                    
+                    if numero_limpo:
+                        num_sem_ddi = numero_limpo[2:] if numero_limpo.startswith('55') else numero_limpo
+                        if len(num_sem_ddi) >= 10:
+                            ddd = num_sem_ddi[:2]
+                            resto = num_sem_ddi[2:]
+                            if len(resto) == 9:
+                                telefone_formatado = f"({ddd}) {resto[:5]}-{resto[5:]}"
+                            else:
+                                telefone_formatado = f"({ddd}) {resto[:4]}-{resto[4:]}"
+                        else:
+                            telefone_formatado = cliente_telefone_raw
+                        
+                        numero_link = numero_limpo if numero_limpo.startswith('55') else f"55{numero_limpo}"
+                        link_wa = f"https://wa.me/{numero_link}"
+                    
                     msg_barbeiro = (
                         f"💈 *Novo Agendamento no Salão Pro!*\n\n"
                         f"Você tem um novo horário marcado:\n"
                         f"👤 Cliente: {cliente_nome}\n"
+                    )
+                    
+                    if link_wa:
+                        msg_barbeiro += f"📞 WhatsApp: {telefone_formatado}\n"
+                        
+                    msg_barbeiro += (
                         f"📅 Data/Hora: {data_formatada}\n"
                         f"✂️ Serviço(s): {lista_servicos}\n"
                         f"💳 Forma de Pagamento: {forma_pagamento}\n\n"
-                        f"Tenha um ótimo trabalho!"
                     )
+                    
+                    if link_wa:
+                        msg_barbeiro += f"💬 Falar com o cliente: {link_wa}\n\n"
+                        
+                    msg_barbeiro += "Tenha um ótimo trabalho!"
+
                     session_id = f"tenant_{inst.empresa.id}" if inst.empresa else 'default'
                     enviar_mensagem_whatsapp(inst.profissional.telefone, msg_barbeiro, waha_session=session_id)
             except Exception as e:
