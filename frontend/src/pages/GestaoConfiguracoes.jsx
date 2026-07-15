@@ -16,7 +16,8 @@ export default function GestaoConfiguracoes() {
     hora_abertura: '09:00',
     hora_fechamento: '19:00',
     intervalo_almoco_inicio: '12:00',
-    intervalo_almoco_fim: '13:00'
+    intervalo_almoco_fim: '13:00',
+    dias_retorno_lembrete: 25
   });
 
   useEffect(() => {
@@ -27,7 +28,8 @@ export default function GestaoConfiguracoes() {
           hora_abertura: res.data.hora_abertura ? res.data.hora_abertura.substring(0, 5) : '09:00',
           hora_fechamento: res.data.hora_fechamento ? res.data.hora_fechamento.substring(0, 5) : '19:00',
           intervalo_almoco_inicio: res.data.intervalo_almoco_inicio ? res.data.intervalo_almoco_inicio.substring(0, 5) : '',
-          intervalo_almoco_fim: res.data.intervalo_almoco_fim ? res.data.intervalo_almoco_fim.substring(0, 5) : ''
+          intervalo_almoco_fim: res.data.intervalo_almoco_fim ? res.data.intervalo_almoco_fim.substring(0, 5) : '',
+          dias_retorno_lembrete: res.data.dias_retorno_lembrete || 25
         });
         setEmpresaInfo(res.data);
       }).catch(err => {
@@ -166,6 +168,20 @@ export default function GestaoConfiguracoes() {
             </div>
           </div>
           <p className="text-xs text-text-muted mb-4">Deixe o intervalo em branco caso não tenha pausa.</p>
+
+          <div className="pt-4 border-t border-white/5">
+            <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Dias para Lembrete de Retorno</label>
+            <input
+              type="number"
+              name="dias_retorno_lembrete"
+              value={config.dias_retorno_lembrete}
+              onChange={handleChange}
+              min="1"
+              required
+              className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:border-gold outline-none"
+            />
+            <p className="text-xs text-text-muted mt-1 mb-4">Tempo para disparar WhatsApp chamando o cliente de volta.</p>
+          </div>
 
           <button
             type="submit"

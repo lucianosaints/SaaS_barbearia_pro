@@ -71,6 +71,11 @@ class Empresa(models.Model):
         verbose_name=_("Fim do Período de Teste"),
         help_text=_("Data em que o período de teste expira.")
     )
+    dias_retorno_lembrete = models.IntegerField(
+        default=25, 
+        verbose_name=_("Dias para lembrete de retorno"),
+        help_text=_("Quantidade de dias após o último serviço para enviar o lembrete automático via WhatsApp.")
+    )
 
     class Meta:
         verbose_name = _("Empresa")
