@@ -260,13 +260,14 @@ export default function GestaoConfiguracoes() {
               <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Tema Visual do Cartão</label>
               <select
                 name="fidelidade_estilo"
-                value={config.fidelidade_estilo}
+                value={config.fidelidade_estilo === 'goku' ? 'estrela' : config.fidelidade_estilo}
                 onChange={handleChange}
                 className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:border-gold outline-none disabled:opacity-50"
                 disabled={!config.fidelidade_ativo}
               >
-                <option value="goku">Goku Super Saiyajin ⚡</option>
-                <option value="classic">Clássico (Joinhas 👍)</option>
+                <option value="estrela">Estrela (Elegante / Unissex) ⭐</option>
+                <option value="cuidado">Cuidado (Feminino / Delicado) 💖</option>
+                <option value="classic">Clássico (Neutro / Universal) ✅</option>
               </select>
             </div>
 

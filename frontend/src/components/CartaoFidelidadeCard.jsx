@@ -44,39 +44,8 @@ export default function CartaoFidelidadeCard() {
   const selosVisiveis = Math.min(qtd_selos_atual, meta);
   const progressoPercent = (selosVisiveis / meta) * 100;
 
-  // Lógica de Renderização do Goku
-  const renderGokuAvatar = () => {
-    let emoji = "🧑🏻"; // Base
-    let title = "Goku Base";
-    
-    if (selosVisiveis >= 9) {
-      emoji = "🧑🏻‍🦳✨"; // Instinto Superior
-      title = "Goku Instinto Superior";
-    } else if (selosVisiveis >= 6) {
-      emoji = "⚡👱🔥"; // SSJ3
-      title = "Goku Super Saiyajin 3";
-    } else if (selosVisiveis >= 3) {
-      emoji = "👱💛"; // SSJ1
-      title = "Goku Super Saiyajin 1";
-    }
-
-    if (selosVisiveis >= meta) {
-      emoji = "🏆";
-      title = "Recompensa Atingida!";
-    }
-
-    return (
-      <div className="flex flex-col items-center">
-        <div className="text-5xl md:text-6xl mb-2 animate-bounce hover:scale-110 transition-transform cursor-pointer" title={title}>
-          {emoji}
-        </div>
-        <p className="text-xs font-bold text-gold uppercase tracking-widest">{title}</p>
-      </div>
-    );
-  };
-
-  // Lógica de Renderização do Classic (Grid de Joinhas/Tesouras)
-  const renderClassicGrid = () => {
+  // Tema 'Estrela' (Elegante / Unissex)
+  const renderEstrela = () => {
     const items = [];
     for (let i = 1; i <= meta; i++) {
       const isFilled = i <= selosVisiveis;
@@ -89,7 +58,49 @@ export default function CartaoFidelidadeCard() {
               : 'bg-background-darker border-white/10 text-white/20'
           }`}
         >
-          {isFilled ? '👍' : '✂️'}
+          {isFilled ? (i === meta ? '💎' : '⭐') : '⭐'}
+        </div>
+      );
+    }
+    return <div className="flex flex-wrap justify-center gap-3">{items}</div>;
+  };
+
+  // Tema 'Cuidado' (Feminino / Delicado)
+  const renderCuidado = () => {
+    const items = [];
+    for (let i = 1; i <= meta; i++) {
+      const isFilled = i <= selosVisiveis;
+      items.push(
+        <div 
+          key={i} 
+          className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-lg md:text-xl border-2 transition-all ${
+            isFilled 
+              ? 'bg-rose-500 border-rose-500 text-white scale-110 shadow-[0_0_15px_rgba(244,63,94,0.4)]' 
+              : 'bg-background-darker border-white/10 text-white/20'
+          }`}
+        >
+          {isFilled ? (i === meta ? '💖' : '🤍') : '🤍'}
+        </div>
+      );
+    }
+    return <div className="flex flex-wrap justify-center gap-3">{items}</div>;
+  };
+
+  // Tema 'Clássico' (Neutro / Universal)
+  const renderClassicGrid = () => {
+    const items = [];
+    for (let i = 1; i <= meta; i++) {
+      const isFilled = i <= selosVisiveis;
+      items.push(
+        <div 
+          key={i} 
+          className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-lg md:text-xl border-2 transition-all ${
+            isFilled 
+              ? 'bg-emerald-500 border-emerald-500 text-white scale-110 shadow-[0_0_15px_rgba(16,185,129,0.4)]' 
+              : 'bg-background-darker border-white/10 text-white/20'
+          }`}
+        >
+          {isFilled ? (i === meta ? '🎁' : '✅') : '◯'}
         </div>
       );
     }
@@ -99,6 +110,13 @@ export default function CartaoFidelidadeCard() {
         {items}
       </div>
     );
+  };
+
+  const renderVisual = () => {
+    if (estilo === 'cuidado') return renderCuidado();
+    if (estilo === 'classic') return renderClassicGrid();
+    // Padrão: estrela (incluindo o fallback para 'goku' mantendo compatibilidade)
+    return renderEstrela();
   };
 
   return (
@@ -126,7 +144,7 @@ export default function CartaoFidelidadeCard() {
 
         {/* Visual do Progresso */}
         <div className="flex-1 w-full max-w-sm flex justify-center md:justify-end">
-          {estilo === 'goku' ? renderGokuAvatar() : renderClassicGrid()}
+          {renderVisual()}
         </div>
       </div>
 

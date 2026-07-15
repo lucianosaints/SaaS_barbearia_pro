@@ -87,13 +87,15 @@ class Empresa(models.Model):
         help_text=_("Quantidade de selos necessários para o cliente ganhar o prêmio.")
     )
     ESTILOS_FIDELIDADE = [
-        ('goku', 'Goku Super Saiyajin'),
-        ('classic', 'Clássico (Joinhas / Tesouras)')
+        ('estrela', 'Estrela (Elegante / Unissex)'),
+        ('cuidado', 'Cuidado (Feminino / Delicado)'),
+        ('classic', 'Clássico (Neutro / Universal)'),
+        ('goku', 'Goku (Legado)') # Mantido para não quebrar compatibilidade
     ]
     fidelidade_estilo = models.CharField(
         max_length=50,
         choices=ESTILOS_FIDELIDADE,
-        default='goku',
+        default='estrela',
         verbose_name=_("Estilo Visual do Cartão"),
         help_text=_("Tema visual que será renderizado no painel do cliente.")
     )
