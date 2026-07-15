@@ -11,14 +11,18 @@ export default function ClientAgendaCard({ agendamento, isFuturo, onCancel }) {
   const nomesServicos = detalhes.map(s => s.nome).join(', ') || 'Serviços não listados';
   const valorTotal = detalhes.reduce((acc, curr) => acc + parseFloat(curr.preco), 0);
 
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-  const getFotoUrl = (path) => {
-      if (!path) return null;
-      if (path.startsWith('http')) return path;
-      return `${baseUrl}${path}`;
+  const obterUrlImagem = (urlOriginal) => {
+    if (!urlOriginal) return null;
+    if (urlOriginal.includes('backend:8000') || urlOriginal.includes('localhost:8000')) {
+      return urlOriginal.replace(/http:\/\/backend:8000|http:\/\/localhost:8000/, 'https://barbeiropro.duckdns.org');
+    }
+    if (urlOriginal.startsWith('/media/')) {
+      return `https://barbeiropro.duckdns.org${urlOriginal}`;
+    }
+    return urlOriginal;
   };
 
-  const profissionalFoto = getFotoUrl(agendamento.profissional_foto);
+  const profissionalFoto = obterUrlImagem(agendamento.profissional_foto);
 
   const formatMoeda = (valor) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0);
