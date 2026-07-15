@@ -27,7 +27,7 @@ export default function FinanceiroDashboard() {
         params.data_inicio = dataInicio;
         params.data_fim = dataFim;
       }
-      const response = await api.get('/api/financas/dashboard/', { params });
+      const response = await api.get('/api/financeiro/comissoes/', { params });
       setData(response.data);
     } catch (err) {
       console.error(err);

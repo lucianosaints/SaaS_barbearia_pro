@@ -22,7 +22,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'password',
-            'empresa', 'tipo', 'telefone', 'foto', 'avaliacao', 'taxa_comissao',
+            'empresa', 'tipo', 'telefone', 'foto', 'avaliacao', 'taxa_comissao', 'comissao_percentual',
             'aceitou_termos', 'data_aceite_termos', 'ip_aceite_termos',
             'is_staff', 'is_active', 'date_joined'
         ]

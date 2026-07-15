@@ -42,6 +42,12 @@ class Usuario(AbstractUser):
         verbose_name=_("Taxa de Comissão"),
         help_text=_("Percentual de comissão individual do profissional (ex: 40.0)")
     )
+    comissao_percentual = models.DecimalField(
+        max_digits=5, 
+        decimal_places=2, 
+        default=50.00, 
+        verbose_name="Percentual de Comissão"
+    )
     foto = models.ImageField(
         upload_to='profissionais/',
         null=True,

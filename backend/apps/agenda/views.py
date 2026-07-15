@@ -403,6 +403,79 @@ class FinancasDashboardView(APIView):
         })
 
 
+class ComissoesView(APIView):
+    """
+    Endpoint isolado para relatório de comissões.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.tipo != 'ADMINISTRADOR' and not user.is_superuser:
+            return Response(
+                {"error": "Apenas administradores podem visualizar o relatório de comissões."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        empresa = user.empresa
+        
+        data_inicio_str = request.query_params.get('data_inicio')
+        data_fim_str = request.query_params.get('data_fim')
+        
+        agendamentos = Agendamento.objects.filter(status='CONCLUIDO')
+        if not user.is_superuser:
+            agendamentos = agendamentos.filter(empresa=empresa)
+            
+        if data_inicio_str and data_fim_str:
+            try:
+                agendamentos = agendamentos.filter(
+                    data_hora_inicio__date__gte=data_inicio_str,
+                    data_hora_inicio__date__lte=data_fim_str
+                )
+            except Exception:
+                pass
+                
+        profissionais_data = []
+        barbeiros = Usuario.objects.filter(tipo='PROFISSIONAL')
+        if not user.is_superuser:
+            barbeiros = barbeiros.filter(empresa=empresa)
+            
+        total_faturamento = 0.0
+        total_comissoes_geral = 0.0
+        total_lucro_liquido = 0.0
+            
+        for barbeiro in barbeiros:
+            agendamentos_barbeiro = agendamentos.filter(profissional=barbeiro)
+            faturamento_bruto = agendamentos_barbeiro.aggregate(total=Sum('valor_total'))['total'] or 0.0
+            
+            percentual = float(barbeiro.comissao_percentual) if hasattr(barbeiro, 'comissao_percentual') else 50.0
+            valor_comissao = float(faturamento_bruto) * (percentual / 100.0)
+            lucro_liquido = float(faturamento_bruto) - valor_comissao
+            
+            total_faturamento += float(faturamento_bruto)
+            total_comissoes_geral += valor_comissao
+            total_lucro_liquido += lucro_liquido
+            
+            profissionais_data.append({
+                "profissional_id": barbeiro.id,
+                "nome": barbeiro.get_full_name() or barbeiro.username,
+                "comissao_percentual": percentual,
+                "faturamento": float(faturamento_bruto),
+                "comissao": valor_comissao,
+                "lucro_liquido": lucro_liquido
+            })
+            
+        profissionais_data.sort(key=lambda x: x['faturamento'], reverse=True)
+            
+        return Response({
+            "faturamento_bruto": total_faturamento,
+            "total_comissoes": total_comissoes_geral,
+            "lucro_liquido": total_lucro_liquido,
+            "desempenho_profissionais": profissionais_data
+        })
+
+
+
 class BloqueioHorarioViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gerenciar os bloqueios de horário.
