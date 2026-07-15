@@ -50,9 +50,11 @@ class Command(BaseCommand):
                     cliente_nome = cliente.get_full_name() or cliente.username
                     url_agendamento = "https://barbeiropro.duckdns.org"
                     
+                    dias_texto = "1 dia" if dias_retorno == 1 else f"{dias_retorno} dias"
+                    
                     msg = (
-                        f"Fala, {cliente_nome}! Já faz {dias_retorno} dias desde o seu último corte no Salão Pro. 💈 "
-                        f"Que tal agendar um horário para manter o visual alinhado? "
+                        f"Fala, {cliente_nome}! Já faz {dias_texto} desde o seu último atendimento na {empresa.nome}. ✨ "
+                        f"Que tal agendar um horário para manter o seu visual em dia? "
                         f"Clique aqui para agendar: {url_agendamento}"
                     )
                     
