@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import ClientAgendaCard from '../components/ClientAgendaCard';
 import useAgendamentoStore from '../store/useAgendamentoStore';
+import CartaoFidelidadeCard from '../components/CartaoFidelidadeCard';
 
 export default function PainelCliente() {
   const { userEmpresa } = useAgendamentoStore();
@@ -79,6 +80,8 @@ export default function PainelCliente() {
 
   return (
     <div className="w-full max-w-4xl mx-auto py-8 px-4 space-y-10">
+      <CartaoFidelidadeCard />
+      
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
         <div>
           <h2 className="text-2xl font-bold text-text-primary mb-2">Próximos Agendamentos</h2>

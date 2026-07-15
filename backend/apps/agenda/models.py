@@ -270,3 +270,42 @@ class FilaEspera(models.Model):
     def __str__(self):
         return f"{self.cliente_nome} aguardando {self.data_desejada.strftime('%d/%m/%Y')} às {self.horario_desejado.strftime('%H:%M')}"
 
+
+class CartaoFidelidade(models.Model):
+    """
+    Representa o progresso do Cartão Fidelidade Digital de um cliente.
+    """
+    empresa = models.ForeignKey(
+        Empresa,
+        on_delete=models.CASCADE,
+        related_name="cartoes_fidelidade",
+        verbose_name=_("Empresa")
+    )
+    cliente = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="cartoes_fidelidade",
+        verbose_name=_("Cliente")
+    )
+    qtd_selos_atual = models.IntegerField(
+        default=0,
+        verbose_name=_("Quantidade de Selos Atual")
+    )
+    premios_disponiveis = models.IntegerField(
+        default=0,
+        verbose_name=_("Prêmios Disponíveis"),
+        help_text=_("Incrementado quando o cliente atinge a meta de selos da empresa.")
+    )
+    atualizado_em = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Última Atualização")
+    )
+
+    class Meta:
+        verbose_name = _("Cartão Fidelidade")
+        verbose_name_plural = _("Cartões Fidelidade")
+        unique_together = ('empresa', 'cliente')
+
+    def __str__(self):
+        return f"Fidelidade de {self.cliente} - {self.qtd_selos_atual} selos"
+

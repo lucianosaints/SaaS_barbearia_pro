@@ -475,6 +475,43 @@ class ComissoesView(APIView):
         })
 
 
+class MeuCartaoFidelidadeView(APIView):
+    """
+    Endpoint para o cliente visualizar o progresso do seu Cartão Fidelidade.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        empresa = user.empresa
+
+        if not empresa:
+            return Response(
+                {"error": "Usuário não associado a nenhuma empresa."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not empresa.fidelidade_ativo:
+            return Response({
+                "ativo": False,
+                "mensagem": "O programa de fidelidade está inativo no momento."
+            })
+
+        from apps.agenda.models import CartaoFidelidade
+        cartao, _ = CartaoFidelidade.objects.get_or_create(
+            empresa=empresa,
+            cliente=user
+        )
+
+        return Response({
+            "ativo": True,
+            "estilo": empresa.fidelidade_estilo,
+            "meta": empresa.fidelidade_meta,
+            "qtd_selos_atual": cartao.qtd_selos_atual,
+            "premios_disponiveis": cartao.premios_disponiveis
+        })
+
+
 
 class BloqueioHorarioViewSet(viewsets.ModelViewSet):
     """

@@ -130,6 +130,15 @@ def calcular_valores_financeiros(sender, instance: Agendamento, **kwargs) -> Non
     muda para 'CONCLUIDO'. O valor_total já é preenchido pelo signal m2m_changed
     em models.py no momento da associação dos serviços.
     """
+    # Verifica se a instância já existe no banco (para podermos comparar o status antigo)
+    status_anterior = None
+    if instance.pk:
+        try:
+            old_instance = Agendamento.objects.get(pk=instance.pk)
+            status_anterior = old_instance.status
+        except Agendamento.DoesNotExist:
+            pass
+
     if instance.status == 'CONCLUIDO' and instance.pk:
         # Se valor_total ainda não foi preenchido, tenta calcular agora
         if not instance.valor_total:
@@ -146,6 +155,23 @@ def calcular_valores_financeiros(sender, instance: Agendamento, **kwargs) -> Non
             comissao = (instance.valor_total * taxa) / 100
             instance.valor_comissao = comissao
             instance.lucro_liquido = instance.valor_total - comissao
+
+        # Atualiza o Cartão Fidelidade se o status acabou de mudar para CONCLUIDO
+        if status_anterior != 'CONCLUIDO' and instance.cliente and instance.empresa:
+            if instance.empresa.fidelidade_ativo:
+                from apps.agenda.models import CartaoFidelidade
+                cartao, _ = CartaoFidelidade.objects.get_or_create(
+                    empresa=instance.empresa,
+                    cliente=instance.cliente
+                )
+                cartao.qtd_selos_atual += 1
+                
+                # Se bateu a meta, zera e dá o prêmio
+                if cartao.qtd_selos_atual >= instance.empresa.fidelidade_meta:
+                    cartao.premios_disponiveis += 1
+                    cartao.qtd_selos_atual = 0
+                    
+                cartao.save()
 
 
 @receiver(post_save, sender=Agendamento)

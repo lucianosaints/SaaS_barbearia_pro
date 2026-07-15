@@ -76,6 +76,27 @@ class Empresa(models.Model):
         verbose_name=_("Dias para lembrete de retorno"),
         help_text=_("Quantidade de dias após o último serviço para enviar o lembrete automático via WhatsApp.")
     )
+    fidelidade_ativo = models.BooleanField(
+        default=True,
+        verbose_name=_("Programa de Fidelidade Ativo"),
+        help_text=_("Ativa ou desativa o cartão fidelidade digital para os clientes.")
+    )
+    fidelidade_meta = models.IntegerField(
+        default=10,
+        verbose_name=_("Meta de Selos"),
+        help_text=_("Quantidade de selos necessários para o cliente ganhar o prêmio.")
+    )
+    ESTILOS_FIDELIDADE = [
+        ('goku', 'Goku Super Saiyajin'),
+        ('classic', 'Clássico (Joinhas / Tesouras)')
+    ]
+    fidelidade_estilo = models.CharField(
+        max_length=50,
+        choices=ESTILOS_FIDELIDADE,
+        default='goku',
+        verbose_name=_("Estilo Visual do Cartão"),
+        help_text=_("Tema visual que será renderizado no painel do cliente.")
+    )
 
     class Meta:
         verbose_name = _("Empresa")
