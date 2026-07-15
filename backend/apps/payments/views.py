@@ -74,6 +74,16 @@ class CriarPagamentoAssinaturaView(APIView):
     Gera o link de pagamento do Mercado Pago para a assinatura da empresa logada.
     """
     def post(self, request, *args, **kwargs):
+        from django.http import JsonResponse
+        import os
+        
+        PERMITIR_PAGAMENTOS = os.getenv('PERMITIR_PAGAMENTOS', 'True').lower() == 'true'
+        if not PERMITIR_PAGAMENTOS:
+            return JsonResponse(
+                {"erro": "A página de pagamentos está temporariamente em manutenção. Tente novamente mais tarde."}, 
+                status=403
+            )
+
         usuario = request.user
         if not hasattr(usuario, 'empresa') or not usuario.empresa:
             return Response({"error": "Usuário não pertence a nenhuma empresa."}, status=status.HTTP_400_BAD_REQUEST)
