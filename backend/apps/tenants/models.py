@@ -81,6 +81,25 @@ class Empresa(models.Model):
         verbose_name=_("Programa de Fidelidade Ativo"),
         help_text=_("Ativa ou desativa o cartão fidelidade digital para os clientes.")
     )
+    exigir_sinal = models.BooleanField(
+        default=False,
+        verbose_name=_("Exigir Sinal (50%)"),
+        help_text=_("Exige confirmação via PIX de 50% do valor do serviço.")
+    )
+    chave_pix = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name=_("Chave PIX"),
+        help_text=_("Chave PIX para recebimento do sinal.")
+    )
+    beneficiario_pix = models.CharField(
+        max_length=150,
+        blank=True,
+        default="",
+        verbose_name=_("Beneficiário do PIX"),
+        help_text=_("Nome da pessoa ou empresa que receberá o PIX.")
+    )
     fidelidade_meta = models.IntegerField(
         default=10,
         verbose_name=_("Meta de Selos"),

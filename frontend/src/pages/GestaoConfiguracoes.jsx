@@ -20,7 +20,10 @@ export default function GestaoConfiguracoes() {
     dias_retorno_lembrete: 25,
     fidelidade_ativo: true,
     fidelidade_meta: 10,
-    fidelidade_estilo: 'goku'
+    fidelidade_estilo: 'goku',
+    exigir_sinal: false,
+    chave_pix: '',
+    beneficiario_pix: ''
   });
 
   useEffect(() => {
@@ -35,7 +38,10 @@ export default function GestaoConfiguracoes() {
           dias_retorno_lembrete: res.data.dias_retorno_lembrete || 25,
           fidelidade_ativo: res.data.fidelidade_ativo !== undefined ? res.data.fidelidade_ativo : true,
           fidelidade_meta: res.data.fidelidade_meta || 10,
-          fidelidade_estilo: res.data.fidelidade_estilo || 'goku'
+          fidelidade_estilo: res.data.fidelidade_estilo || 'goku',
+          exigir_sinal: res.data.exigir_sinal !== undefined ? res.data.exigir_sinal : false,
+          chave_pix: res.data.chave_pix || '',
+          beneficiario_pix: res.data.beneficiario_pix || ''
         });
         setEmpresaInfo(res.data);
       }).catch(err => {
@@ -118,6 +124,27 @@ export default function GestaoConfiguracoes() {
     } catch (err) {
       console.error(err);
       setError('Erro ao salvar as configurações de fidelidade.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSavePix = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setSuccess(false);
+    setError(null);
+    try {
+      await api.patch(`/api/empresas/${userEmpresa.id}/`, {
+        exigir_sinal: config.exigir_sinal,
+        chave_pix: config.chave_pix,
+        beneficiario_pix: config.beneficiario_pix
+      });
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+      setError('Erro ao salvar as configurações de PIX.');
     } finally {
       setLoading(false);
     }
@@ -277,6 +304,67 @@ export default function GestaoConfiguracoes() {
               className="btn-gold w-full py-3 mt-4"
             >
               {loading ? 'Salvando...' : 'Salvar Fidelidade'}
+            </button>
+          </form>
+        </div>
+
+        {/* Painel do PIX (Sinal 50%) */}
+        <div className="bg-background-paper border border-white/5 p-6 rounded-xl w-full">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <span className="text-gold">💲</span> Pagamento de Sinal (PIX)
+          </h3>
+          <p className="text-xs text-text-muted mb-4">Exija o pagamento de 50% do valor do serviço antecipadamente para confirmar o agendamento.</p>
+
+          <form onSubmit={handleSavePix} className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-black/40 rounded-lg border border-white/5">
+              <span className="text-sm font-semibold text-text-primary">Exigir Sinal (50%)</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  name="exigir_sinal"
+                  checked={config.exigir_sinal}
+                  onChange={(e) => setConfig({ ...config, exigir_sinal: e.target.checked })}
+                  className="sr-only peer" 
+                />
+                <div className="w-11 h-6 bg-background-darker peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold"></div>
+              </label>
+            </div>
+
+            {config.exigir_sinal && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="pt-2">
+                  <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Chave PIX</label>
+                  <input
+                    type="text"
+                    name="chave_pix"
+                    value={config.chave_pix}
+                    onChange={handleChange}
+                    required
+                    placeholder="E-mail, CPF/CNPJ, Celular ou Aleatória"
+                    className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:border-gold outline-none"
+                  />
+                </div>
+                <div className="pt-2">
+                  <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Nome do Beneficiário</label>
+                  <input
+                    type="text"
+                    name="beneficiario_pix"
+                    value={config.beneficiario_pix}
+                    onChange={handleChange}
+                    required
+                    placeholder="Nome completo de quem vai receber"
+                    className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:border-gold outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-gold w-full py-3 mt-4"
+            >
+              {loading ? 'Salvando...' : 'Salvar Dados PIX'}
             </button>
           </form>
         </div>

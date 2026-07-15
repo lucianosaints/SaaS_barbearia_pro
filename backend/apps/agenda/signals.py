@@ -119,6 +119,48 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
             except Exception as e:
                 logger.error(f"Falha ao enviar WAHA para agendamento {inst.id}: {str(e)}")
 
+            # NOTIFICAÇÃO DO CLIENTE VIA WAHA
+            try:
+                if inst.cliente and getattr(inst.cliente, 'telefone', None):
+                    from services.waha_service import enviar_mensagem_whatsapp
+                    
+                    msg_cliente = (
+                        f"Olá, {cliente_nome}!\n\n"
+                        f"Seu agendamento no *Salão Pro* foi registrado!\n\n"
+                        f"💈 *Detalhes do seu horário:*\n"
+                        f"👤 Profissional: {barbeiro_nome}\n"
+                        f"📅 Data/Hora: {data_formatada}\n"
+                        f"✂️ Serviço(s): {lista_servicos}\n"
+                    )
+
+                    empresa = inst.empresa
+                    if empresa and getattr(empresa, 'exigir_sinal', False) and getattr(empresa, 'chave_pix', ''):
+                        total_servicos = sum(s.preco for s in inst.servicos.all())
+                        valor_sinal = total_servicos / 2
+                        chave = empresa.chave_pix
+                        beneficiario = getattr(empresa, 'beneficiario_pix', '')
+                        
+                        msg_cliente += (
+                            f"\n⚠️ *ATENÇÃO: CONFIRMAÇÃO NECESSÁRIA*\n"
+                            f"Para garantir sua vaga, exigimos o pagamento de um sinal de 50% do valor do serviço.\n\n"
+                            f"💰 *Valor do Sinal:* R$ {valor_sinal:.2f}\n"
+                            f"🔑 *Chave PIX:* `{chave}`\n"
+                        )
+                        if beneficiario:
+                            msg_cliente += f"👤 *Beneficiário:* {beneficiario}\n"
+                        
+                        msg_cliente += (
+                            f"\nEnvie o comprovante de pagamento em até *15 minutos* para que sua vaga não seja cancelada.\n"
+                        )
+                    else:
+                        msg_cliente += f"\nCaso precise remarcar ou cancelar, acesse nosso app.\n"
+                        msg_cliente += f"Agradecemos a preferência!"
+
+                    session_id = f"tenant_{inst.empresa.id}" if inst.empresa else 'default'
+                    enviar_mensagem_whatsapp(inst.cliente.telefone, msg_cliente, waha_session=session_id)
+            except Exception as e:
+                logger.error(f"Falha ao enviar WAHA para cliente no agendamento {inst.id}: {str(e)}")
+
         from django.db import transaction
         transaction.on_commit(disparar_notificacoes)
 
