@@ -33,7 +33,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         # Filtro de listagem pública por empresa para o Wizard
         empresa_id = self.request.query_params.get('empresa_id')
         if empresa_id:
-            return Usuario.objects.filter(empresa_id=empresa_id, tipo='PROFISSIONAL', is_active=True)
+            return Usuario.objects.filter(empresa_id=empresa_id, tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], is_active=True)
 
         user = self.request.user
         if user.is_authenticated and user.tipo != 'CLIENTE':
@@ -44,7 +44,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             return Usuario.objects.filter(id=user.id)
             
         # Se for consulta anônima ou cliente final logado, lista todos os profissionais ativos no MVP
-        return Usuario.objects.filter(tipo='PROFISSIONAL', is_active=True)
+        return Usuario.objects.filter(tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], is_active=True)
 
     def perform_create(self, serializer):
         user = self.request.user
