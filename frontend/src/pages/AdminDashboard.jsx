@@ -22,6 +22,7 @@ import PlacaQRCode from '../components/PlacaQRCode';
 export default function AdminDashboard() {
   const { userEmpresa, userTipo } = useAgendamentoStore();
   const [activeTab, setActiveTab] = useState('agenda'); // 'agenda', 'servicos', 'equipe', 'financeiro', 'configuracoes'
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [bloqueioModalOpen, setBloqueioModalOpen] = useState(false);
   const [cancelamentoModal, setCancelamentoModal] = useState({ isOpen: false, agendamento: null });
   
@@ -149,41 +150,142 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-8">
-      {/* Cabeçalho Principal do Admin */}
-      <div className="mb-6 border-b border-white/10 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">
-            Painel de Gestão
-          </h1>
-          <p className="text-text-muted text-sm mt-1">Controle completo do seu negócio.</p>
+    <div className="flex flex-col sm:flex-row w-full flex-1 min-h-[calc(100vh-80px)]">
+      
+      {/* SIDEBAR DESKTOP */}
+      <aside className={`hidden sm:flex flex-col bg-background-paper border-r border-white/5 transition-all duration-300 ease-in-out shrink-0 ${isSidebarCollapsed ? 'w-20' : 'w-64'}`}>
+        <div className={`flex items-center p-4 border-b border-white/5 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+          {!isSidebarCollapsed && <span className="font-bold text-gold text-lg tracking-wide truncate">Menu Gestão</span>}
+          <button 
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+            className="text-text-secondary hover:text-gold transition-colors p-2 rounded-lg hover:bg-white/5"
+            title="Recolher/Expandir Menu"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
         </div>
         
-        {userEmpresa && userEmpresa.slug && (
-          <div className="bg-background-darker border border-white/10 p-3 rounded-lg text-left sm:text-right w-full sm:w-auto">
-            <p className="text-xs text-text-secondary mb-1">Seu Link de Agendamento:</p>
-            <a 
-              href={`/agendar/${userEmpresa.slug}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-gold font-bold hover:underline break-all text-sm sm:text-base"
-            >
-              {window.location.origin}/agendar/{userEmpresa.slug}
-            </a>
-            
-            <button 
-              onClick={gerarPDF} 
-              disabled={gerandoPDF}
-              className="mt-4 w-full sm:w-auto bg-white text-black hover:bg-gray-200 px-4 py-2 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-            >
-              🖨️ {gerandoPDF ? 'Gerando PDF...' : 'Baixar Placa QR Code (PDF)'}
-            </button>
-          </div>
-        )}
-      </div>
+        <nav className="flex-1 flex flex-col gap-2 p-3 mt-2 overflow-y-auto overflow-x-hidden">
+          <button
+            onClick={() => setActiveTab('agenda')}
+            className={`flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-lg transition-all ${
+              activeTab === 'agenda' 
+              ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
+              : 'text-text-secondary hover:text-white hover:bg-white/5'
+            } ${isSidebarCollapsed ? 'justify-center' : 'justify-start'}`}
+            title="Agenda e Operação"
+          >
+            <span className="text-xl">📅</span>
+            {!isSidebarCollapsed && <span>Agenda e Operação</span>}
+          </button>
 
-      {/* Menu de Navegação (Tabs) */}
-      <div className="flex flex-wrap gap-2 sm:gap-4 mb-8 pb-2">
+          {userTipo === 'ADMINISTRADOR' && (
+            <>
+              <button
+                onClick={() => setActiveTab('servicos')}
+                className={`flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-lg transition-all ${
+                  activeTab === 'servicos' 
+                  ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
+                  : 'text-text-secondary hover:text-white hover:bg-white/5'
+                } ${isSidebarCollapsed ? 'justify-center' : 'justify-start'}`}
+                title="Serviços"
+              >
+                <span className="text-xl">✂️</span>
+                {!isSidebarCollapsed && <span>Serviços</span>}
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('equipe')}
+                className={`flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-lg transition-all ${
+                  activeTab === 'equipe' 
+                  ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
+                  : 'text-text-secondary hover:text-white hover:bg-white/5'
+                } ${isSidebarCollapsed ? 'justify-center' : 'justify-start'}`}
+                title="Cadastro de Equipe"
+              >
+                <span className="text-xl">👥</span>
+                {!isSidebarCollapsed && <span>Equipe</span>}
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('clientes')}
+                className={`flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-lg transition-all ${
+                  activeTab === 'clientes' 
+                  ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
+                  : 'text-text-secondary hover:text-white hover:bg-white/5'
+                } ${isSidebarCollapsed ? 'justify-center' : 'justify-start'}`}
+                title="Gestão de Clientes"
+              >
+                <span className="text-xl">🤝</span>
+                {!isSidebarCollapsed && <span>Clientes</span>}
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('financeiro')}
+                className={`flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-lg transition-all ${
+                  activeTab === 'financeiro' 
+                  ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
+                  : 'text-text-secondary hover:text-white hover:bg-white/5'
+                } ${isSidebarCollapsed ? 'justify-center' : 'justify-start'}`}
+                title="Financeiro"
+              >
+                <span className="text-xl">💰</span>
+                {!isSidebarCollapsed && <span>Financeiro</span>}
+              </button>
+              
+              <button
+                onClick={() => setActiveTab('configuracoes')}
+                className={`flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-lg transition-all ${
+                  activeTab === 'configuracoes' 
+                  ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
+                  : 'text-text-secondary hover:text-white hover:bg-white/5'
+                } ${isSidebarCollapsed ? 'justify-center' : 'justify-start'}`}
+                title="Configurações"
+              >
+                <span className="text-xl">⚙️</span>
+                {!isSidebarCollapsed && <span>Configurações</span>}
+              </button>
+            </>
+          )}
+        </nav>
+      </aside>
+
+      {/* ÁREA DE CONTEÚDO PRINCIPAL */}
+      <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-8 py-8 overflow-y-auto">
+        {/* Cabeçalho Principal do Admin */}
+        <div className="mb-6 border-b border-white/10 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">
+              Painel de Gestão
+            </h1>
+            <p className="text-text-muted text-sm mt-1">Controle completo do seu negócio.</p>
+          </div>
+          
+          {userEmpresa && userEmpresa.slug && (
+            <div className="bg-background-darker border border-white/10 p-3 rounded-lg text-left sm:text-right w-full sm:w-auto">
+              <p className="text-xs text-text-secondary mb-1">Seu Link de Agendamento:</p>
+              <a 
+                href={`/agendar/${userEmpresa.slug}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gold font-bold hover:underline break-all text-sm sm:text-base"
+              >
+                {window.location.origin}/agendar/{userEmpresa.slug}
+              </a>
+              
+              <button 
+                onClick={gerarPDF} 
+                disabled={gerandoPDF}
+                className="mt-4 w-full sm:w-auto bg-white text-black hover:bg-gray-200 px-4 py-2 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              >
+                🖨️ {gerandoPDF ? 'Gerando PDF...' : 'Baixar Placa QR Code (PDF)'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Menu de Navegação (Tabs) - Exibido apenas no Mobile */}
+        <div className="flex sm:hidden flex-wrap gap-2 mb-8 pb-2">
         <button
           onClick={() => setActiveTab('agenda')}
           className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
@@ -395,6 +497,7 @@ export default function AdminDashboard() {
           linkAgendamento={`${window.location.origin}/agendar/${userEmpresa.slug}`} 
         />
       )}
+      </div>
     </div>
   );
 }
