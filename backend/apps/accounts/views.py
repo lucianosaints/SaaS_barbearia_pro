@@ -9,6 +9,7 @@ from apps.accounts.models import Usuario
 from apps.accounts.serializers import UsuarioSerializer, CustomTokenObtainPairSerializer
 from apps.accounts.permissions import IsAdminUserOrReadOnly
 from apps.tenants.permissions import IsEmpresaAtiva
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
@@ -26,29 +27,39 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     Garante o isolamento multi-tenant, permitindo listar apenas usuários
     pertencentes à mesma empresa do usuário logado ou filtrar profissionais publicamente.
     """
+    authentication_classes = [JWTAuthentication]
     serializer_class = UsuarioSerializer
     permission_classes = [IsAdminUserOrReadOnly, IsEmpresaAtiva]
 
     def get_queryset(self):
         user = self.request.user
+        print(f"\n=== DEBUG USUARIO VIEWSET ===")
+        print(f"USER: {user} | AUTENTICADO: {getattr(user, 'is_authenticated', False)}")
+        print(f"HEADER AUTH: {self.request.headers.get('Authorization', 'NENHUM')}")
         
         # Se for rota pública (wizard de agendamento), deve receber o empresa_id via query params
         empresa_id_param = self.request.query_params.get('empresa_id')
         if empresa_id_param:
+            print(f"ROTA PÚBLICA - Filtrando estritamente pelo param empresa_id: {empresa_id_param}")
             return Usuario.objects.filter(empresa_id=empresa_id_param, tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], is_active=True)
             
         # Se for rota do painel administrativo (usuário autenticado)
         if user and user.is_authenticated:
             # Se for superusuário, pode ver tudo (opcional)
             if user.is_superuser:
+                print("ROTA PRIVADA - Usuário é SUPERUSER. Retornando TODOS os usuários.")
                 return Usuario.objects.all()
                 
             # Para usuários comuns/administradores da empresa, filtra estritamente pelo ID da empresa deles
             empresa_id = getattr(user, 'empresa_id', None)
+            print(f"ROTA PRIVADA - Usuário Autenticado. empresa_id do usuário: {empresa_id}")
             if empresa_id:
                 return Usuario.objects.filter(empresa_id=empresa_id)
+            print("ALERTA: Usuário logado mas sem empresa_id associada!")
+            return Usuario.objects.none()
                 
         # Caso falte autenticação ou parâmetro, bloqueia o retorno de dados globais
+        print("BLOQUEIO: Requisição anônima sem parâmetro de empresa. Retornando NADA.")
         return Usuario.objects.none()
 
     def perform_create(self, serializer):

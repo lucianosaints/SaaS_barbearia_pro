@@ -9,6 +9,7 @@ from django_filters import rest_framework as filters
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from apps.agenda.models import Servico, Agendamento, BloqueioHorario, FilaEspera
 from apps.agenda.serializers import ServicoSerializer, AgendamentoSerializer, BloqueioHorarioSerializer, FilaEsperaSerializer
 from apps.accounts.models import Usuario
@@ -24,29 +25,39 @@ class ServicoViewSet(viewsets.ModelViewSet):
     ViewSet para listar, criar e gerenciar Serviços.
     Garante isolamento multi-tenant e visualização pública.
     """
+    authentication_classes = [JWTAuthentication]
     serializer_class = ServicoSerializer
     permission_classes = [IsAdminUserOrReadOnly, IsEmpresaAtiva]
 
     def get_queryset(self):
         user = self.request.user
+        print(f"\n=== DEBUG SERVICO VIEWSET ===")
+        print(f"USER: {user} | AUTENTICADO: {getattr(user, 'is_authenticated', False)}")
+        print(f"HEADER AUTH: {self.request.headers.get('Authorization', 'NENHUM')}")
         
         # Se for rota pública (wizard de agendamento), deve receber o empresa_id via query params
         empresa_id_param = self.request.query_params.get('empresa_id')
         if empresa_id_param:
+            print(f"ROTA PÚBLICA - Filtrando estritamente pelo param empresa_id: {empresa_id_param}")
             return Servico.objects.filter(empresa_id=empresa_id_param, ativo=True)
         
         # Se for rota do painel administrativo (usuário autenticado)
         if user and user.is_authenticated:
             # Se for superusuário, pode ver tudo (opcional)
             if user.is_superuser:
+                print("ROTA PRIVADA - Usuário é SUPERUSER. Retornando TODOS os serviços.")
                 return Servico.objects.all()
                 
             # Para usuários comuns/administradores da empresa, filtra estritamente pelo ID da empresa deles
             empresa_id = getattr(user, 'empresa_id', None)
+            print(f"ROTA PRIVADA - Usuário Autenticado. empresa_id do usuário: {empresa_id}")
             if empresa_id:
                 return Servico.objects.filter(empresa_id=empresa_id)
+            print("ALERTA: Usuário logado mas sem empresa_id associada!")
+            return Servico.objects.none()
                 
         # Caso falte autenticação ou parâmetro, bloqueia o retorno de dados globais
+        print("BLOQUEIO: Requisição anônima sem parâmetro de empresa. Retornando NADA.")
         return Servico.objects.none()
 
     def perform_create(self, serializer):
