@@ -154,6 +154,7 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
                         
                         msg_cliente += (
                             f"\nEnvie o comprovante de pagamento em até *15 minutos* para que sua vaga não seja cancelada.\n"
+                            f"⚠️ Atenção: Em caso de cancelamento com menos de 24h de antecedência, o sinal não será reembolsável.\n"
                         )
                     else:
                         msg_cliente += f"\nCaso precise remarcar ou cancelar, acesse nosso app.\n"

@@ -25,6 +25,10 @@ export default function AgendamentoWizard() {
   const [loadingEmpresa, setLoadingEmpresa] = useState(true);
   const [empresaNotFound, setEmpresaNotFound] = useState(false);
 
+  // State para aceite da política
+  const [aceitouPolitica, setAceitouPolitica] = useState(false);
+  const [politicaModalOpen, setPoliticaModalOpen] = useState(false);
+
   const { empresaSlug } = useParams();
   const navigate = useNavigate();
 
@@ -221,6 +225,30 @@ export default function AgendamentoWizard() {
         )}
       </div>
 
+      {/* Aceite de Política */}
+      {step === 4 && (
+        <div className="mb-4 flex items-start gap-2 bg-background-paper p-3 rounded-xl border border-white/5">
+          <input 
+            type="checkbox" 
+            id="politica"
+            checked={aceitouPolitica}
+            onChange={(e) => setAceitouPolitica(e.target.checked)}
+            className="mt-1 w-4 h-4 shrink-0 rounded bg-background-darker border-white/10 text-gold focus:ring-gold"
+          />
+          <label htmlFor="politica" className="text-xs text-text-secondary leading-snug cursor-pointer select-none">
+            Estou de acordo com a{' '}
+            <button 
+              type="button" 
+              onClick={(e) => { e.preventDefault(); setPoliticaModalOpen(true); }}
+              className="text-gold underline hover:text-gold-light"
+            >
+              Política de Agendamento e Cancelamento
+            </button>
+            {' '}do salão.
+          </label>
+        </div>
+      )}
+
       {/* Botões de Ação de Navegação */}
       <div className="flex gap-4">
         {step > 1 && (
@@ -251,7 +279,7 @@ export default function AgendamentoWizard() {
           <button
             type="button"
             onClick={handleConfirmar}
-            disabled={!isStepValid() || submitting}
+            disabled={!isStepValid() || submitting || !aceitouPolitica}
             className="btn-accent flex-1 py-3 text-sm font-semibold disabled:opacity-50"
           >
             {submitting ? 'Confirmando...' : 'Confirmar Agendamento ✂️'}
@@ -261,6 +289,25 @@ export default function AgendamentoWizard() {
 
       {/* Modal de Autenticação do Cliente */}
       <AuthModal onAuthSuccess={handleFinalizarAgendamento} />
+
+      {/* Modal da Política de Agendamento */}
+      {politicaModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-background-paper border border-gold/30 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 max-h-[85vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-gold mb-4 text-center">Política de Agendamento</h3>
+            <div className="text-sm text-text-secondary space-y-4 leading-relaxed text-justify">
+              <p>Como esse horário foi reservado exclusivamente para você, infelizmente não conseguimos disponibilizá-lo para outra cliente a tempo. Por isso, nossa política de agendamentos foi criada para manter a agenda organizada e garantir um atendimento de qualidade a todos.</p>
+              <p>Para a reserva do horário, é necessário o pagamento de um sinal correspondente a 50% do valor do serviço. Em caso de cancelamento ou remarcação com, no mínimo, 24 horas de antecedência, esse valor permanecerá como crédito para um novo agendamento. Já em casos de ausência ou cancelamento fora desse prazo, o sinal não é reembolsável, sendo destinado à profissional em razão do horário reservado.</p>
+            </div>
+            <button 
+              onClick={() => setPoliticaModalOpen(false)}
+              className="mt-6 w-full py-3 btn-gold font-bold"
+            >
+              Entendi e Fechar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
