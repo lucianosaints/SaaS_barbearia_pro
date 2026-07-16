@@ -23,7 +23,8 @@ export default function GestaoConfiguracoes() {
     fidelidade_estilo: 'goku',
     exigir_sinal: false,
     chave_pix: '',
-    beneficiario_pix: ''
+    beneficiario_pix: '',
+    horas_limite_cancelamento: 24
   });
 
   useEffect(() => {
@@ -41,7 +42,8 @@ export default function GestaoConfiguracoes() {
           fidelidade_estilo: res.data.fidelidade_estilo || 'goku',
           exigir_sinal: res.data.exigir_sinal !== undefined ? res.data.exigir_sinal : false,
           chave_pix: res.data.chave_pix || '',
-          beneficiario_pix: res.data.beneficiario_pix || ''
+          beneficiario_pix: res.data.beneficiario_pix || '',
+          horas_limite_cancelamento: res.data.horas_limite_cancelamento || 24
         });
         setEmpresaInfo(res.data);
       }).catch(err => {
@@ -235,6 +237,20 @@ export default function GestaoConfiguracoes() {
               className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:border-gold outline-none"
             />
             <p className="text-xs text-text-muted mt-1 mb-4">Tempo para disparar WhatsApp chamando o cliente de volta.</p>
+          </div>
+
+          <div className="pt-4 border-t border-white/5">
+            <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Horas Limite para Cancelamento Automático</label>
+            <input
+              type="number"
+              name="horas_limite_cancelamento"
+              value={config.horas_limite_cancelamento}
+              onChange={handleChange}
+              min="1"
+              required
+              className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:border-gold outline-none"
+            />
+            <p className="text-xs text-text-muted mt-1 mb-4">Impede que o cliente cancele o agendamento no app faltando poucas horas.</p>
           </div>
 
           <button

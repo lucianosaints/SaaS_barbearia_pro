@@ -11,5 +11,5 @@ class EmpresaSerializer(serializers.ModelSerializer):
                   'hora_abertura', 'hora_fechamento', 'intervalo_almoco_inicio', 'intervalo_almoco_fim',
                   'em_trial', 'assinatura_ativa', 'data_fim_trial', 'dias_retorno_lembrete',
                   'fidelidade_ativo', 'fidelidade_meta', 'fidelidade_estilo',
-                  'exigir_sinal', 'chave_pix', 'beneficiario_pix']
+                  'exigir_sinal', 'chave_pix', 'beneficiario_pix', 'horas_limite_cancelamento']
         read_only_fields = ['id', 'data_criacao', 'em_trial', 'assinatura_ativa', 'data_fim_trial']

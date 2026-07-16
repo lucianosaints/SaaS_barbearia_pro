@@ -134,7 +134,10 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
                     )
 
                     empresa = inst.empresa
-                    if empresa and getattr(empresa, 'exigir_sinal', False) and getattr(empresa, 'chave_pix', ''):
+                    cliente_exige_sinal = (inst.cliente and getattr(inst.cliente, 'status', 'ATIVO') == 'EXIGIR_SINAL')
+                    empresa_exige_sinal = getattr(empresa, 'exigir_sinal', False)
+                    
+                    if empresa and (empresa_exige_sinal or cliente_exige_sinal) and getattr(empresa, 'chave_pix', ''):
                         total_servicos = sum(s.preco for s in inst.servicos.all())
                         valor_sinal = total_servicos / 2
                         chave = empresa.chave_pix

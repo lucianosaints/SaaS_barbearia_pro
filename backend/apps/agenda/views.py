@@ -121,17 +121,22 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        # Se for cliente, associa-o automaticamente ao agendamento
+        
+        # Determina o cliente e a empresa
         if user.tipo == 'CLIENTE':
+            cliente = user
             profissional = serializer.validated_data.get('profissional')
             empresa = profissional.empresa if profissional else user.empresa
-            serializer.save(cliente=user, empresa=empresa)
         else:
-            # Admin/Profissional: se cliente não for informado (ex: usando o wizard do cliente),
-            # assume que ele está agendando para si mesmo.
             cliente = serializer.validated_data.get('cliente', user)
             empresa = user.empresa or serializer.validated_data.get('empresa')
-            serializer.save(cliente=cliente, empresa=empresa)
+
+        # Validação de Cliente Bloqueado
+        if cliente and getattr(cliente, 'status', 'ATIVO') == 'BLOQUEADO':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Conta restrita. Por favor, entre em contato via WhatsApp para agendamentos.")
+
+        serializer.save(cliente=cliente, empresa=empresa)
 
     @action(detail=True, methods=['patch'])
     def cancelar(self, request, pk=None):
@@ -149,6 +154,19 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
                 {"error": "Você não tem permissão para cancelar este agendamento."},
                 status=status.HTTP_403_FORBIDDEN
             )
+
+        # Regra de horas limite para cancelamento (apenas restringe o cliente final)
+        if request.user.tipo == 'CLIENTE':
+            empresa = agendamento.empresa
+            limite_horas = getattr(empresa, 'horas_limite_cancelamento', 24)
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            if agendamento.data_hora_inicio - timezone.now() < timedelta(hours=limite_horas):
+                return Response(
+                    {"error": f"O cancelamento automático não é permitido com menos de {limite_horas} horas de antecedência. Entre em contato direto pelo WhatsApp para realizar a alteração."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             
         if agendamento.status == 'CANCELADO':
             return Response(

@@ -100,6 +100,11 @@ class Empresa(models.Model):
         verbose_name=_("Beneficiário do PIX"),
         help_text=_("Nome da pessoa ou empresa que receberá o PIX.")
     )
+    horas_limite_cancelamento = models.PositiveIntegerField(
+        default=24,
+        verbose_name=_("Horas Limite para Cancelamento Automático"),
+        help_text=_("Impede que o cliente cancele sozinho se faltar menos que X horas para o serviço.")
+    )
     fidelidade_meta = models.IntegerField(
         default=10,
         verbose_name=_("Meta de Selos"),

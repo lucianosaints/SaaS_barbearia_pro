@@ -6,6 +6,7 @@ import FilterBar from '../components/FilterBar';
 import AgendaTable from '../components/AgendaTable';
 import GestaoServicos from './GestaoServicos';
 import GestaoEquipe from './GestaoEquipe';
+import GestaoClientes from './GestaoClientes';
 import FinanceiroDashboard from './FinanceiroDashboard';
 import GestaoConfiguracoes from './GestaoConfiguracoes';
 import BloqueioHorarioModal from '../components/BloqueioHorarioModal';
@@ -217,6 +218,16 @@ export default function AdminDashboard() {
               👥 Cadastro de Equipe
             </button>
             <button
+              onClick={() => setActiveTab('clientes')}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
+                activeTab === 'clientes' 
+                ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
+                : 'bg-background-paper border border-white/5 text-text-secondary hover:text-white hover:border-white/20'
+              }`}
+            >
+              👥 Gestão de Clientes
+            </button>
+            <button
               onClick={() => setActiveTab('financeiro')}
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
                 activeTab === 'financeiro' 
@@ -344,8 +355,14 @@ export default function AdminDashboard() {
         {activeTab === 'financeiro' && <FinanceiroDashboard />}
 
         {/* ABA: CONFIGURACOES */}
-        {activeTab === 'configuracoes' && <GestaoConfiguracoes />}
-
+        {activeTab === 'configuracoes' && userTipo === 'ADMINISTRADOR' && (
+          <GestaoConfiguracoes />
+        )}
+        
+        {/* ABA: CLIENTES */}
+        {activeTab === 'clientes' && userTipo === 'ADMINISTRADOR' && (
+          <GestaoClientes />
+        )}
       </div>
 
       {/* MODAL DE BLOQUEIO */}

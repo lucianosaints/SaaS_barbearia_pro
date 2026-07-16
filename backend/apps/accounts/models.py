@@ -20,6 +20,17 @@ class Usuario(AbstractUser):
         default='CLIENTE',
         verbose_name=_("Tipo de Usuário")
     )
+    STATUS_CHOICES = [
+        ('ATIVO', _('Ativo')),
+        ('EXIGIR_SINAL', _('Exigir Sinal (PIX)')),
+        ('BLOQUEADO', _('Bloqueado')),
+    ]
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='ATIVO',
+        verbose_name=_("Status da Conta")
+    )
     telefone = models.CharField(
         max_length=20,
         null=True,
