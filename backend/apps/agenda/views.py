@@ -28,21 +28,24 @@ class ServicoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminUserOrReadOnly, IsEmpresaAtiva]
 
     def get_queryset(self):
-        # Filtro de listagem pública por empresa para o Wizard
         empresa_id = self.request.query_params.get('empresa_id')
-        if empresa_id:
-            return Servico.objects.filter(empresa_id=empresa_id, ativo=True)
-
         user = self.request.user
+
         if user.is_authenticated and user.tipo != 'CLIENTE':
             if user.is_superuser:
+                if empresa_id:
+                    return Servico.objects.filter(empresa_id=empresa_id)
                 return Servico.objects.all()
             if user.empresa:
                 return Servico.objects.filter(empresa=user.empresa)
             return Servico.objects.none()
             
-        # Se for consulta anônima ou cliente final logado, lista todos os serviços ativos no MVP
-        return Servico.objects.filter(ativo=True)
+        # Para consulta pública (agendamento) e cliente final:
+        # É OBRIGATÓRIO informar o empresa_id para não misturar serviços de outros salões
+        if empresa_id:
+            return Servico.objects.filter(empresa_id=empresa_id, ativo=True)
+            
+        return Servico.objects.none()
 
     def perform_create(self, serializer):
         user = self.request.user

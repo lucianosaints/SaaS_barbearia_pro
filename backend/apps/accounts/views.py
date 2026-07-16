@@ -30,21 +30,24 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminUserOrReadOnly, IsEmpresaAtiva]
 
     def get_queryset(self):
-        # Filtro de listagem pública por empresa para o Wizard
         empresa_id = self.request.query_params.get('empresa_id')
-        if empresa_id:
-            return Usuario.objects.filter(empresa_id=empresa_id, tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], is_active=True)
-
         user = self.request.user
+
         if user.is_authenticated and user.tipo != 'CLIENTE':
             if user.is_superuser:
+                if empresa_id:
+                    return Usuario.objects.filter(empresa_id=empresa_id)
                 return Usuario.objects.all()
             if user.empresa:
                 return Usuario.objects.filter(empresa=user.empresa)
             return Usuario.objects.filter(id=user.id)
             
-        # Se for consulta anônima ou cliente final logado, lista todos os profissionais ativos no MVP
-        return Usuario.objects.filter(tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], is_active=True)
+        # Para consulta pública (agendamento) e cliente final:
+        # É OBRIGATÓRIO informar o empresa_id para não misturar profissionais de outros salões
+        if empresa_id:
+            return Usuario.objects.filter(empresa_id=empresa_id, tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], is_active=True)
+            
+        return Usuario.objects.none()
 
     def perform_create(self, serializer):
         user = self.request.user
