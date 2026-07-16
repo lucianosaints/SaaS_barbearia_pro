@@ -134,7 +134,7 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
         # Validação de Cliente Bloqueado
         if cliente and getattr(cliente, 'status', 'ATIVO') == 'BLOQUEADO':
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Conta restrita. Por favor, entre em contato via WhatsApp para agendamentos.")
+            raise PermissionDenied("Não foi possível processar seu agendamento de forma automática no momento. Fale conosco pelo WhatsApp para garantir sua vaga rapidinho!")
 
         serializer.save(cliente=cliente, empresa=empresa)
 
