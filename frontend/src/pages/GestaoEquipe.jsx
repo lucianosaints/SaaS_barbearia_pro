@@ -228,148 +228,179 @@ export default function GestaoEquipe() {
         </table>
       </div>
 
-      {/* Modal de Formulário */}
+      {/* Modal de Formulário (Cartão Focado) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-background-paper border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold text-text-primary mb-4">
-              {formData.id ? 'Editar Profissional' : 'Novo Profissional'}
-            </h3>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-background-paper border border-gold/30 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+            {/* O cabeçalho agora está integrado ao design do cartão centralizado abaixo */}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              
+              {/* SECTION: PERFIL (Centralizado) */}
+              <div className="flex flex-col items-center text-center space-y-4 pb-6 border-b border-white/10">
+                {/* Avatar Interativo */}
+                <div className="relative w-28 h-28 rounded-full overflow-hidden border-[3px] border-gold shadow-[0_0_20px_rgba(212,175,55,0.2)] bg-background-darker flex items-center justify-center group">
+                  {formData.foto ? (
+                    typeof formData.foto === 'string' ? (
+                      <img src={formData.foto.startsWith('http') ? formData.foto : `${import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:8000')}${formData.foto}`} alt="Perfil" className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={URL.createObjectURL(formData.foto)} alt="Perfil" className="w-full h-full object-cover" />
+                    )
+                  ) : (
+                    <span className="text-4xl font-bold text-gold-light">
+                      {(formData.first_name?.[0] || '?').toUpperCase()}
+                    </span>
+                  )}
+                  <label className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                    <span className="text-[11px] text-white font-bold uppercase tracking-wider">Mudar Foto</span>
+                    <input type="file" name="foto" accept="image/*" onChange={handleInputChange} className="hidden" />
+                  </label>
+                </div>
+                
+                {/* Textos Principais */}
                 <div>
-                  <label className="block text-xs font-semibold text-text-secondary uppercase mb-1">Nome</label>
+                  <h3 className="text-2xl font-bold text-white tracking-tight">
+                    {formData.first_name || 'Nome'} {formData.last_name || 'do Profissional'}
+                  </h3>
+                  <p className="text-gold text-sm font-semibold mt-1 uppercase tracking-wider">Especialista Premium</p>
+                  <p className="text-text-muted text-xs mt-1">Serviços oferecidos: Corte, Barba e Tratamentos</p>
+                </div>
+
+                {/* Dropdown / Checkbox de Visibilidade */}
+                <div className="mt-2 w-full max-w-[280px]">
+                  <div className="flex items-center justify-between gap-3 bg-background border border-gold/20 px-4 py-3 rounded-xl shadow-inner transition-colors hover:border-gold/40">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        name="is_active"
+                        id="is_active"
+                        checked={formData.is_active}
+                        onChange={handleInputChange}
+                        className="w-4 h-4 rounded bg-background border-gold/50 text-gold focus:ring-gold focus:ring-offset-background"
+                      />
+                      <label htmlFor="is_active" className="text-xs font-bold text-text-primary cursor-pointer">
+                        Exibir meu perfil na agenda
+                      </label>
+                    </div>
+                    <span className="text-gold text-[10px] border border-gold/30 rounded-full w-4 h-4 flex items-center justify-center cursor-help" title="Se desmarcado, os clientes não poderão ver nem agendar com você.">
+                      ?
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION: DADOS TÉCNICOS */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-text-secondary uppercase mb-1">Nome</label>
+                    <input
+                      type="text"
+                      name="first_name"
+                      required
+                      value={formData.first_name}
+                      onChange={handleInputChange}
+                      placeholder="Ex: Carlos"
+                      className="w-full bg-background border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-text-secondary uppercase mb-1">Sobrenome</label>
+                    <input
+                      type="text"
+                      name="last_name"
+                      value={formData.last_name}
+                      onChange={handleInputChange}
+                      placeholder="Ex: Silva"
+                      className="w-full bg-background border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-text-secondary uppercase mb-1">E-mail (Login)</label>
                   <input
-                    type="text"
-                    name="first_name"
+                    type="email"
+                    name="email"
                     required
-                    value={formData.first_name}
+                    value={formData.email}
                     onChange={handleInputChange}
-                    placeholder="Ex: Carlos"
-                    className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
+                    placeholder="Ex: carlos@barbearia.com"
+                    className="w-full bg-background border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
                   />
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-text-secondary uppercase mb-1">Telefone</label>
+                    <input
+                      type="tel"
+                      name="telefone"
+                      value={formData.telefone}
+                      onChange={handleInputChange}
+                      placeholder="(11) 99999-9999"
+                      className="w-full bg-background border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-text-secondary uppercase mb-1">Avaliação (Estrelas)</label>
+                    <input
+                      type="number"
+                      name="avaliacao"
+                      min="1.0"
+                      max="5.0"
+                      step="0.1"
+                      value={formData.avaliacao}
+                      onChange={handleInputChange}
+                      className="w-full bg-background border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-text-secondary uppercase mb-1">Sobrenome</label>
+                  <label className="block text-[10px] font-bold text-text-secondary uppercase mb-1">
+                    {formData.id ? 'Nova Senha (deixe em branco para não mudar)' : 'Senha Inicial'}
+                  </label>
                   <input
-                    type="text"
-                    name="last_name"
-                    value={formData.last_name}
+                    type="password"
+                    name="password"
+                    required={!formData.id}
+                    value={formData.password}
                     onChange={handleInputChange}
-                    placeholder="Ex: Silva"
-                    className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
+                    placeholder="******"
+                    className="w-full bg-background border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary uppercase mb-1">E-mail (Login)</label>
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="Ex: carlos@barbearia.com"
-                  className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary uppercase mb-1">Telefone</label>
-                <input
-                  type="tel"
-                  name="telefone"
-                  value={formData.telefone}
-                  onChange={handleInputChange}
-                  placeholder="(11) 99999-9999"
-                  className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-text-secondary uppercase mb-1">
-                  {formData.id ? 'Nova Senha (deixe em branco para não mudar)' : 'Senha Inicial'}
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  required={!formData.id} // Obrigatório apenas na criação
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="******"
-                  className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary uppercase mb-1">Foto de Perfil</label>
-                  <input
-                    type="file"
-                    name="foto"
-                    accept="image/*"
-                    onChange={handleInputChange}
-                    className="w-full bg-background-darker border border-white/10 rounded-lg px-2 py-1.5 text-sm text-text-primary focus:outline-none focus:border-gold file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-gold file:text-background-darker hover:file:bg-gold-light"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-text-secondary uppercase mb-1">Comissão Antiga (%)</label>
+                    <input
+                      type="number"
+                      name="taxa_comissao"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={formData.taxa_comissao}
+                      onChange={handleInputChange}
+                      placeholder="Ex: 40.0"
+                      className="w-full bg-background border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-text-secondary uppercase mb-1">Comissão Nova (%)</label>
+                    <input
+                      type="number"
+                      name="comissao_percentual"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={formData.comissao_percentual}
+                      onChange={handleInputChange}
+                      placeholder="Ex: 50.0"
+                      className="w-full bg-background border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary uppercase mb-1">Avaliação (Estrelas)</label>
-                  <input
-                    type="number"
-                    name="avaliacao"
-                    min="1.0"
-                    max="5.0"
-                    step="0.1"
-                    value={formData.avaliacao}
-                    onChange={handleInputChange}
-                    className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary uppercase mb-1">Taxa de Comissão (%) Antiga</label>
-                  <input
-                    type="number"
-                    name="taxa_comissao"
-                    min="0"
-                    max="100"
-                    step="0.5"
-                    value={formData.taxa_comissao}
-                    onChange={handleInputChange}
-                    placeholder="Ex: 40.0"
-                    className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-text-secondary uppercase mb-1">Percentual de Comissão (Novo)</label>
-                  <input
-                    type="number"
-                    name="comissao_percentual"
-                    min="0"
-                    max="100"
-                    step="0.5"
-                    value={formData.comissao_percentual}
-                    onChange={handleInputChange}
-                    placeholder="Ex: 50.0"
-                    className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 mt-4">
-                <input
-                  type="checkbox"
-                  name="is_active"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={handleInputChange}
-                  className="w-4 h-4 rounded bg-background-darker border-white/10 text-gold focus:ring-gold"
-                />
-                <label htmlFor="is_active" className="text-sm text-text-primary">Profissional ativo na barbearia</label>
               </div>
 
               <div className="flex gap-3 pt-4">
