@@ -28,23 +28,25 @@ class ServicoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminUserOrReadOnly, IsEmpresaAtiva]
 
     def get_queryset(self):
-        empresa_id = self.request.query_params.get('empresa_id')
         user = self.request.user
-
-        if user.is_authenticated and user.tipo != 'CLIENTE':
+        
+        # Se for rota pública (wizard de agendamento), deve receber o empresa_id via query params
+        empresa_id_param = self.request.query_params.get('empresa_id')
+        if empresa_id_param:
+            return Servico.objects.filter(empresa_id=empresa_id_param, ativo=True)
+        
+        # Se for rota do painel administrativo (usuário autenticado)
+        if user and user.is_authenticated:
+            # Se for superusuário, pode ver tudo (opcional)
             if user.is_superuser:
-                if empresa_id:
-                    return Servico.objects.filter(empresa_id=empresa_id)
                 return Servico.objects.all()
-            if user.empresa:
-                return Servico.objects.filter(empresa=user.empresa)
-            return Servico.objects.none()
-            
-        # Para consulta pública (agendamento) e cliente final:
-        # É OBRIGATÓRIO informar o empresa_id para não misturar serviços de outros salões
-        if empresa_id:
-            return Servico.objects.filter(empresa_id=empresa_id, ativo=True)
-            
+                
+            # Para usuários comuns/administradores da empresa, filtra estritamente pelo ID da empresa deles
+            empresa_id = getattr(user, 'empresa_id', None)
+            if empresa_id:
+                return Servico.objects.filter(empresa_id=empresa_id)
+                
+        # Caso falte autenticação ou parâmetro, bloqueia o retorno de dados globais
         return Servico.objects.none()
 
     def perform_create(self, serializer):
