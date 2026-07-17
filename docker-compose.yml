@@ -12,6 +12,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app  # Para espelhar as mudanças locais durante o desenvolvimento
+      - django_media:/app/media # Persiste arquivos de mídia (fotos, uploads)
       # Se for usar SQLite, manter isso mapeado preservará os dados no disco host
     env_file:
       - ./backend/.env
@@ -53,6 +54,7 @@ services:
 
 volumes:
   waha_data:
+  django_media:
   # db_data: (Se habilitar postgres futuramente)
 
 networks:
