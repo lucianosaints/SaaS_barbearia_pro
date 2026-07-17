@@ -21,13 +21,10 @@ export default function LandingPage() {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <img 
-              src={logoImg} 
-              alt="Ícone Salão Pro" 
-              className="w-10 h-10 rounded-full object-cover border-2 border-gold shadow-[0_0_15px_rgba(212,175,55,0.3)]" 
+              src="/logo.png" 
+              alt="Salão PRO" 
+              className="h-12 w-auto object-contain drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]" 
             />
-            <span className="text-xl font-bold tracking-wide text-white uppercase">
-              Salão <span className="text-gold">Pro</span>
-            </span>
           </div>
 
           {/* Botão Entrar */}

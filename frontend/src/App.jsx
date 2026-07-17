@@ -56,13 +56,10 @@ function App() {
           <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:flex-row justify-between items-center">
             <div className="flex items-center gap-3">
               <img 
-                src={logoImg} 
-                alt="Ícone Salão Pro" 
-                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-gold shadow-[0_0_15px_rgba(212,175,55,0.3)]" 
+                src="/logo.png" 
+                alt="Salão PRO" 
+                className="h-10 sm:h-12 w-auto object-contain drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]" 
               />
-              <span className="font-extrabold tracking-wider bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent uppercase">
-                Salão Pro
-              </span>
             </div>
 
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
