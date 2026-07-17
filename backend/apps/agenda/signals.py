@@ -43,10 +43,11 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
 
             if inst.cliente and inst.cliente.email:
                 try:
-                    assunto = f"Confirmação de Agendamento - Salão Pro"
+                    nome_salao = inst.empresa.nome if inst.empresa else "Salão Pro"
+                    assunto = f"Confirmação de Agendamento - {nome_salao}"
                     corpo_mensagem = (
                         f"Olá, {cliente_nome}!\n\n"
-                        f"Seu agendamento no Salão Pro foi registrado com sucesso!\n\n"
+                        f"Seu agendamento no {nome_salao} foi registrado com sucesso!\n\n"
                         f"Detalhes do seu horário:\n"
                         f"- Profissional: {barbeiro_nome}\n"
                         f"- Serviços: {lista_servicos}\n"
@@ -94,8 +95,9 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
                         numero_link = numero_limpo if numero_limpo.startswith('55') else f"55{numero_limpo}"
                         link_wa = f"https://wa.me/{numero_link}"
                     
+                    nome_salao = inst.empresa.nome if inst.empresa else "Salão Pro"
                     msg_barbeiro = (
-                        f"💈 *Novo Agendamento no Salão Pro!*\n\n"
+                        f"💈 *Novo Agendamento no {nome_salao}!*\n\n"
                         f"Você tem um novo horário marcado:\n"
                         f"👤 Cliente: {cliente_nome}\n"
                     )
@@ -124,9 +126,10 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
                 if inst.cliente and getattr(inst.cliente, 'telefone', None):
                     from services.waha_service import enviar_mensagem_whatsapp
                     
+                    nome_salao = inst.empresa.nome if inst.empresa else "Salão Pro"
                     msg_cliente = (
                         f"Olá, {cliente_nome}!\n\n"
-                        f"Seu agendamento no *Salão Pro* foi registrado!\n\n"
+                        f"Seu agendamento no *{nome_salao}* foi registrado!\n\n"
                         f"💈 *Detalhes do seu horário:*\n"
                         f"👤 Profissional: {barbeiro_nome}\n"
                         f"📅 Data/Hora: {data_formatada}\n"
@@ -145,7 +148,7 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
                         
                         msg_cliente += (
                             f"\n⚠️ *ATENÇÃO: CONFIRMAÇÃO NECESSÁRIA*\n"
-                            f"Para garantir sua vaga, exigimos o pagamento de um sinal de 50% do valor do serviço.\n\n"
+                            f"Para garantir sua vaga, solicitamos o pagamento de um sinal de 50% do valor do serviço.\n\n"
                             f"💰 *Valor do Sinal:* R$ {valor_sinal:.2f}\n"
                             f"🔑 *Chave PIX:* `{chave}`\n"
                         )
@@ -252,12 +255,14 @@ def sniper_de_desistencias(sender, instance: Agendamento, created: bool, **kwarg
             except Exception as e:
                 logger.error(f"Erro ao notificar barbeiro do cancelamento: {e}")
                 
+        nome_salao = instance.empresa.nome if instance.empresa else "Salão Pro"
+        
         # Avisa o cliente sobre o cancelamento
         if instance.cliente and instance.cliente.telefone:
             msg_cliente = (
                 f"Olá, {cliente_nome}!\n\n"
                 f"Seu agendamento para o dia {data_formatada} foi *cancelado* com sucesso.\n"
-                f"Esperamos ver você em breve no Salão Pro!"
+                f"Esperamos ver você em breve no {nome_salao}!"
             )
             try:
                 enviar_mensagem_whatsapp(instance.cliente.telefone, msg_cliente, waha_session=session_id)
