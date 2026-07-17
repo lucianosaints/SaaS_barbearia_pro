@@ -262,30 +262,32 @@ export default function AdminDashboard() {
           </div>
           
           {userEmpresa && userEmpresa.slug && (
-            <div className="bg-background-darker border border-white/10 p-3 rounded-lg text-left sm:text-right w-full sm:w-auto">
-              <p className="text-xs text-text-secondary mb-1">Seu Link de Agendamento:</p>
-              <a 
-                href={`/agendar/${userEmpresa.slug}`} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-gold font-bold hover:underline break-all text-sm sm:text-base"
-              >
-                {window.location.origin}/agendar/{userEmpresa.slug}
-              </a>
+            <div className="bg-background-darker border border-gold/20 p-3 sm:p-4 rounded-xl text-center sm:text-right w-full sm:w-auto flex flex-col items-center sm:items-end">
+              <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
+                <p className="text-xs text-text-secondary">Link de Agendamento:</p>
+                <a 
+                  href={`/agendar/${userEmpresa.slug}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-gold font-bold hover:underline truncate max-w-[280px] sm:max-w-none text-sm"
+                >
+                  {window.location.origin}/agendar/{userEmpresa.slug}
+                </a>
+              </div>
               
               <button 
                 onClick={gerarPDF} 
                 disabled={gerandoPDF}
-                className="mt-4 w-full sm:w-auto bg-white text-black hover:bg-gray-200 px-4 py-2 rounded-md font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                className="mt-3 w-full sm:w-auto bg-gold/10 text-gold border border-gold/30 hover:bg-gold/20 px-4 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
               >
-                🖨️ {gerandoPDF ? 'Gerando PDF...' : 'Baixar Placa QR Code (PDF)'}
+                🖨️ {gerandoPDF ? 'Gerando...' : 'Baixar Placa QR Code'}
               </button>
             </div>
           )}
         </div>
 
-        {/* Menu de Navegação (Tabs) - Exibido apenas no Mobile */}
-        <div className="flex sm:hidden flex-wrap gap-2 mb-8 pb-2">
+        {/* Menu de Navegação (Tabs) - Exibido apenas no Mobile com Scroll Horizontal */}
+        <div className="flex sm:hidden overflow-x-auto gap-2 mb-6 pb-2 hide-scrollbar">
         <button
           onClick={() => setActiveTab('agenda')}
           className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${

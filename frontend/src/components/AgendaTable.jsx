@@ -78,7 +78,7 @@ export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
 
   return (
     <div className="bg-[#1a1a1a] border border-gold/30 rounded-xl overflow-hidden shadow-2xl">
-      <div className="overflow-x-auto">
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gold/20 bg-black/40 text-xs font-bold text-gold uppercase tracking-wider">
@@ -221,6 +221,119 @@ export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Visão Mobile: Cards */}
+      <div className="block sm:hidden p-4 space-y-4 bg-background">
+        {agendamentos.map((agendamento) => {
+          const data = new Date(agendamento.data_hora_inicio);
+          const dataFormatada = data.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+          const horaFormatada = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          
+          const servicos = agendamento.servicos_detalhes || [];
+          const nomesServicos = servicos.length > 0 ? servicos.map(s => s.nome).join(', ') : 'Serviços não listados';
+          
+          const obterUrlImagem = (urlOriginal) => {
+            if (!urlOriginal) return null;
+            if (urlOriginal.includes('backend:8000') || urlOriginal.includes('localhost:8000')) {
+              return urlOriginal.replace(/http:\/\/backend:8000|http:\/\/localhost:8000/, 'https://barbeiropro.duckdns.org');
+            }
+            if (urlOriginal.startsWith('/media/')) {
+              return `https://barbeiropro.duckdns.org${urlOriginal}`;
+            }
+            return urlOriginal;
+          };
+          
+          const clienteFoto = obterUrlImagem(agendamento.cliente_foto);
+          const isCancelado = agendamento.status === 'CANCELADO';
+
+          return (
+            <div key={agendamento.id} className={`flex flex-col bg-[#1a1a1a] rounded-xl border transition-colors shadow-lg shadow-black/20 ${isCancelado ? 'border-white/5 opacity-60' : 'border-gray-800'}`}>
+              
+              {/* Cabeçalho do Card */}
+              <div className="flex justify-between items-center p-4 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <FiClock className="text-gray-400" size={16} />
+                  <span className="text-gray-300 text-sm font-medium capitalize">{dataFormatada}</span>
+                  <span className="text-gold font-bold text-lg border-l border-white/20 pl-2 ml-1">
+                    {horaFormatada}
+                  </span>
+                </div>
+                <div>
+                  {renderStatusBadge(agendamento.status)}
+                </div>
+              </div>
+
+              {/* Corpo do Card */}
+              <div className="p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-3 mb-2">
+                  <img 
+                    src={clienteFoto || `https://ui-avatars.com/api/?name=${agendamento.cliente_nome || 'Cliente'}&background=333&color=fbbf24`} 
+                    alt="Cliente" 
+                    className="w-10 h-10 rounded-full object-cover border border-gold/50"
+                  />
+                  <div>
+                    <h4 className="font-bold text-white text-base leading-tight">{agendamento.cliente_nome || 'Cliente'}</h4>
+                    <p className="text-xs text-gray-400">Atendido por: <strong className="text-gray-300">{agendamento.profissional_nome || 'Barbeiro'}</strong></p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-sm font-semibold text-gray-300 tracking-tight flex items-center gap-1.5">
+                    <FaCut className="text-gold" size={14} /> 
+                    <span className="truncate">{nomesServicos}</span>
+                  </h3>
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                     <FiClock size={12} /> {calculateDuration(agendamento.data_hora_inicio, agendamento.data_hora_fim)}
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between mt-2 pt-3 border-t border-white/5">
+                  <div className="flex items-center gap-1.5">
+                    {renderPayment(agendamento.metodo_pagamento, agendamento.status_pagamento)}
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5 bg-black/40 px-2.5 py-1 rounded-md border border-gold/20">
+                    <span className="text-gold font-bold text-sm">{formatMoeda(agendamento.valor_total)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rodapé (Ações) */}
+              <div className="p-3 border-t border-gray-800 bg-black/20 flex justify-between items-center rounded-b-xl">
+                <button 
+                  onClick={() => onEdit && onEdit(agendamento)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-gold border border-gold/30 hover:bg-gold/10"
+                >
+                  <FiEdit2 size={14} /> Editar
+                </button>
+
+                <div className="flex gap-2">
+                  {agendamento.cliente_telefone && (
+                    <a 
+                      href={`https://wa.me/55${agendamento.cliente_telefone.replace(/\D/g,'')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-green-500 hover:bg-green-400 text-white shadow-lg shadow-green-500/30"
+                    >
+                      <FaWhatsapp size={14} /> Whats
+                    </a>
+                  )}
+                  
+                  {agendamento.status !== 'CANCELADO' && agendamento.status !== 'CONCLUIDO' && onCancel && (
+                    <button 
+                      onClick={() => onCancel(agendamento)}
+                      className="p-1.5 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-colors"
+                      title="Cancelar"
+                    >
+                      <FiTrash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Footer */}
