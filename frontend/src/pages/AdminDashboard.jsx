@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { FiMenu, FiX } from 'react-icons/fi';
 import FilterBar from '../components/FilterBar';
 import AgendaTable from '../components/AgendaTable';
 import GestaoServicos from './GestaoServicos';
@@ -23,6 +24,7 @@ export default function AdminDashboard() {
   const { userEmpresa, userTipo } = useAgendamentoStore();
   const [activeTab, setActiveTab] = useState('agenda'); // 'agenda', 'servicos', 'equipe', 'financeiro', 'configuracoes'
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [bloqueioModalOpen, setBloqueioModalOpen] = useState(false);
   const [cancelamentoModal, setCancelamentoModal] = useState({ isOpen: false, agendamento: null });
   
@@ -253,12 +255,17 @@ export default function AdminDashboard() {
       {/* ÁREA DE CONTEÚDO PRINCIPAL */}
       <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-8 py-8 overflow-y-auto">
         {/* Cabeçalho Principal do Admin */}
-        <div className="mb-6 border-b border-white/10 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">
-              Painel de Gestão
-            </h1>
-            <p className="text-text-muted text-sm mt-1">Controle completo do seu negócio.</p>
+        <div className="mb-6 border-b border-white/10 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 relative">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="sm:hidden text-gold hover:text-gold-light transition-colors" title="Abrir Menu">
+              <FiMenu size={28} />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">
+                Painel de Gestão
+              </h1>
+              <p className="text-text-muted text-sm mt-1">Controle completo do seu negócio.</p>
+            </div>
           </div>
           
           {userEmpresa && userEmpresa.slug && (
@@ -286,74 +293,79 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Menu de Navegação (Tabs) - Exibido apenas no Mobile com Scroll Horizontal */}
-        <div className="flex sm:hidden overflow-x-auto gap-2 mb-6 pb-2 hide-scrollbar">
-        <button
-          onClick={() => setActiveTab('agenda')}
-          className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
-            activeTab === 'agenda' 
-            ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
-            : 'bg-background-paper border border-white/5 text-text-secondary hover:text-white hover:border-white/20'
-          }`}
-        >
-          📅 Agenda e Operação
-        </button>
-
-        {userTipo === 'ADMINISTRADOR' && (
-          <>
-            <button
-              onClick={() => setActiveTab('servicos')}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
-                activeTab === 'servicos' 
-                ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
-                : 'bg-background-paper border border-white/5 text-text-secondary hover:text-white hover:border-white/20'
-              }`}
-            >
-              ✂️ Serviços
-            </button>
-            <button
-              onClick={() => setActiveTab('equipe')}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
-                activeTab === 'equipe' 
-                ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
-                : 'bg-background-paper border border-white/5 text-text-secondary hover:text-white hover:border-white/20'
-              }`}
-            >
-              👥 Cadastro de Equipe
-            </button>
-            <button
-              onClick={() => setActiveTab('clientes')}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
-                activeTab === 'clientes' 
-                ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
-                : 'bg-background-paper border border-white/5 text-text-secondary hover:text-white hover:border-white/20'
-              }`}
-            >
-              👥 Gestão de Clientes
-            </button>
-            <button
-              onClick={() => setActiveTab('financeiro')}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
-                activeTab === 'financeiro' 
-                ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
-                : 'bg-background-paper border border-white/5 text-text-secondary hover:text-white hover:border-white/20'
-              }`}
-            >
-              💰 Financeiro
-            </button>
-            <button
-              onClick={() => setActiveTab('configuracoes')}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all whitespace-nowrap ${
-                activeTab === 'configuracoes' 
-                ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' 
-                : 'bg-background-paper border border-white/5 text-text-secondary hover:text-white hover:border-white/20'
-              }`}
-            >
-              ⚙️ Configurações
-            </button>
-          </>
-        )}
-      </div>
+      {/* DRAWER MOBILE */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-[100] flex sm:hidden">
+          {/* Overlay escuro */}
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={() => setIsMobileMenuOpen(false)}></div>
+          
+          {/* Menu Lateral */}
+          <div className="relative flex flex-col w-72 max-w-[80vw] h-full bg-background-paper border-r border-gold/20 shadow-2xl animate-in slide-in-from-left duration-300">
+            <div className="flex items-center justify-between p-5 border-b border-white/10">
+              <span className="font-bold text-gold text-xl tracking-wide">Menu Gestão</span>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="text-text-secondary hover:text-white p-2 rounded-lg hover:bg-white/5 transition-colors">
+                <FiX size={24} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto py-4 px-3 space-y-2">
+              <button
+                onClick={() => { setActiveTab('agenda'); setIsMobileMenuOpen(false); }}
+                className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold rounded-lg transition-all ${
+                  activeTab === 'agenda' ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' : 'text-text-secondary hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <span className="text-xl">📅</span> Agenda e Operação
+              </button>
+              
+              {userTipo === 'ADMINISTRADOR' && (
+                <>
+                  <button
+                    onClick={() => { setActiveTab('servicos'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold rounded-lg transition-all ${
+                      activeTab === 'servicos' ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' : 'text-text-secondary hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="text-xl">✂️</span> Serviços
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('equipe'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold rounded-lg transition-all ${
+                      activeTab === 'equipe' ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' : 'text-text-secondary hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="text-xl">👥</span> Cadastro de Equipe
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('clientes'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold rounded-lg transition-all ${
+                      activeTab === 'clientes' ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' : 'text-text-secondary hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="text-xl">🤝</span> Gestão de Clientes
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('financeiro'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold rounded-lg transition-all ${
+                      activeTab === 'financeiro' ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' : 'text-text-secondary hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="text-xl">💰</span> Financeiro
+                  </button>
+                  <button
+                    onClick={() => { setActiveTab('configuracoes'); setIsMobileMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold rounded-lg transition-all ${
+                      activeTab === 'configuracoes' ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' : 'text-text-secondary hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="text-xl">⚙️</span> Configurações
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Conteúdo da Aba Ativa */}
       <div className="animate-in fade-in duration-300">
