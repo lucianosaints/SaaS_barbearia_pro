@@ -2,6 +2,14 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 from apps.tenants.models import Empresa
+import uuid
+import os
+
+def profissional_foto_path(instance, filename):
+    ext = filename.split('.')[-1]
+    # Usa o username e um uuid curto para garantir nome único no cache
+    novo_nome = f"{instance.username}_{uuid.uuid4().hex[:8]}.{ext}"
+    return os.path.join('profissionais/', novo_nome)
 
 class Usuario(AbstractUser):
     """
@@ -60,7 +68,7 @@ class Usuario(AbstractUser):
         verbose_name="Percentual de Comissão"
     )
     foto = models.ImageField(
-        upload_to='profissionais/',
+        upload_to=profissional_foto_path,
         null=True,
         blank=True,
         verbose_name=_("Foto de Perfil")
@@ -100,3 +108,14 @@ class Usuario(AbstractUser):
         if self.empresa:
             return f"{self.get_full_name() or self.username} ({self.empresa.nome})"
         return f"{self.get_full_name() or self.username} [Global]"
+
+    def save(self, *args, **kwargs):
+        # Se já existe (update), verifica se a foto mudou para apagar a antiga do disco
+        if self.pk:
+            try:
+                old = Usuario.objects.get(pk=self.pk)
+                if old.foto and old.foto != self.foto:
+                    old.foto.delete(save=False)
+            except Usuario.DoesNotExist:
+                pass
+        super().save(*args, **kwargs)

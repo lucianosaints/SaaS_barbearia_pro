@@ -100,9 +100,17 @@ class AgendamentoFilter(filters.FilterSet):
         if request and hasattr(request, 'user') and request.user.is_authenticated and not request.user.is_superuser:
             if request.user.tipo != 'CLIENTE':
                 empresa = request.user.empresa
-                self.filters['barbeiro'].queryset = Usuario.objects.filter(empresa=empresa)
+                self.filters['barbeiro'].queryset = Usuario.objects.filter(
+                    empresa=empresa, 
+                    is_staff=False, 
+                    is_superuser=False
+                )
             else:
-                self.filters['barbeiro'].queryset = Usuario.objects.filter(tipo='PROFISSIONAL')
+                self.filters['barbeiro'].queryset = Usuario.objects.filter(
+                    tipo='PROFISSIONAL',
+                    is_staff=False,
+                    is_superuser=False
+                )
 
 
 class AgendamentoViewSet(viewsets.ModelViewSet):

@@ -41,7 +41,13 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         empresa_id_param = self.request.query_params.get('empresa_id')
         if empresa_id_param:
             print(f"ROTA PÚBLICA - Filtrando estritamente pelo param empresa_id: {empresa_id_param}")
-            return Usuario.objects.filter(empresa_id=empresa_id_param, tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], is_active=True)
+            return Usuario.objects.filter(
+                empresa_id=empresa_id_param, 
+                tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], 
+                is_active=True,
+                is_staff=False,
+                is_superuser=False
+            )
             
         # Se for rota do painel administrativo (usuário autenticado)
         if user and user.is_authenticated:
@@ -54,7 +60,11 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             empresa_id = getattr(user, 'empresa_id', None)
             print(f"ROTA PRIVADA - Usuário Autenticado. empresa_id do usuário: {empresa_id}")
             if empresa_id:
-                return Usuario.objects.filter(empresa_id=empresa_id)
+                return Usuario.objects.filter(
+                    empresa_id=empresa_id,
+                    is_staff=False,
+                    is_superuser=False
+                )
             print("ALERTA: Usuário logado mas sem empresa_id associada!")
             return Usuario.objects.none()
                 
