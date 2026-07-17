@@ -46,7 +46,7 @@ services:
       - WAHA_API_KEY=BarbeariaPro!2026
       - WHATSAPP_API_KEY=BarbeariaPro!2026
       - WHATSAPP_SWAGGER_USERNAME=admin
-      - WHATSAPP_SWAGGER_PASSWORD=BarbeariaPro!2026
+      - WHATSAPP_SWAGGER_PASSWORD=SuperWahaAdmin#2026
     networks:
       - barbeiro_pro_net
     volumes:

@@ -41,7 +41,7 @@ def enviar_mensagem_whatsapp(telefone: str, mensagem: str, waha_session: str = '
         
     waha_phone = format_waha_phone(telefone)
     
-    endpoint = f"{waha_url}/api/sendText"
+    endpoint = f"{waha_url}/api/sendText?session={waha_session}"
     
     payload = {
         "chatId": waha_phone,

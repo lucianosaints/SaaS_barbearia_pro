@@ -145,15 +145,23 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
+        empresa = user.empresa or serializer.validated_data.get('empresa')
         
-        # Determina o cliente e a empresa
         if user.tipo == 'CLIENTE':
             cliente = user
             profissional = serializer.validated_data.get('profissional')
-            empresa = profissional.empresa if profissional else user.empresa
         else:
             cliente = serializer.validated_data.get('cliente', user)
-            empresa = user.empresa or serializer.validated_data.get('empresa')
+            profissional = serializer.validated_data.get('profissional')
+
+        # Isolamento Rígido de Tenant (Evita vazamento/cruzamento de dados)
+        if not user.is_superuser:
+            if profissional and profissional.empresa != empresa:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("Operação não permitida: O profissional não pertence a esta barbearia.")
+            if cliente and getattr(cliente, 'empresa', None) and cliente.empresa != empresa:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("Operação não permitida: O cliente não pertence a esta barbearia.")
 
         # Validação de Cliente Bloqueado
         if cliente and getattr(cliente, 'status', 'ATIVO') == 'BLOQUEADO':

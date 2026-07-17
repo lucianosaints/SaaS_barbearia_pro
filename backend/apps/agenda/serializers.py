@@ -44,8 +44,8 @@ class AgendamentoSerializer(serializers.ModelSerializer):
         # Clientes finais são usuários globais do SaaS e podem agendar em qualquer barbearia.
         request = self.context.get('request')
         if request and hasattr(request, 'user') and request.user.is_authenticated and not request.user.is_superuser:
-            if request.user.tipo != 'CLIENTE':
-                empresa = request.user.empresa
+            empresa = request.user.empresa
+            if empresa:
                 self.fields['servicos'].queryset = Servico.objects.filter(empresa=empresa, ativo=True)
                 self.fields['cliente'].queryset = Usuario.objects.filter(empresa=empresa)
                 self.fields['profissional'].queryset = Usuario.objects.filter(empresa=empresa)
