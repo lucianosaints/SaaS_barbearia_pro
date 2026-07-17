@@ -24,8 +24,8 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [
     'http://140.82.30.186',
     'http://140.82.30.186:8000',
-    'http://barbeiropro.duckdns.org',
-    'https://barbeiropro.duckdns.org'
+    'http://salaopro.site',
+    'https://salaopro.site'
 ]
 
 # Apps

@@ -12,9 +12,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
     def get_foto(self, obj):
         if obj.foto:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.foto.url)
             return obj.foto.url
         return None
 
