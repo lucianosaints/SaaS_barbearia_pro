@@ -48,7 +48,7 @@ class Command(BaseCommand):
                 
                 if not tem_agendamento_futuro:
                     cliente_nome = cliente.get_full_name() or cliente.username
-                    url_agendamento = "https://barbeiropro.duckdns.org"
+                    url_agendamento = "https://salaopro.site"
                     
                     dias_texto = "1 dia" if dias_retorno == 1 else f"{dias_retorno} dias"
                     
