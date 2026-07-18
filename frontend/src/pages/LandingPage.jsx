@@ -85,7 +85,7 @@ export default function LandingPage() {
                 onClick={() => setIsOnboardingOpen(true)}
                 className="px-10 py-5 rounded-2xl font-bold text-background-darker bg-gradient-to-r from-gold-light via-gold to-gold-dark hover:shadow-[0_0_35px_rgba(212,175,55,0.6)] transform hover:-translate-y-1 transition-all duration-300 text-lg md:text-xl"
               >
-                Começar Teste Grátis de 7 Dias
+                Começar Teste Grátis de 30 Dias
               </button>
               <p className="text-sm text-gray-400 mt-5 font-medium drop-shadow">Preço justo: <strong className="text-gold">R$ 49,99/mês</strong></p>
             </div>

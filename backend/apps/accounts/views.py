@@ -182,7 +182,7 @@ def registrar_saas(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Criar a Empresa com 7 dias de trial
+    # Criar a Empresa com 30 dias de trial
     base_slug = slugify(nome_barbearia)
     slug = base_slug
     counter = 1
@@ -194,7 +194,7 @@ def registrar_saas(request):
         nome=nome_barbearia,
         slug=slug,
         em_trial=True,
-        data_fim_trial=timezone.now().date() + timedelta(days=7),
+        data_fim_trial=timezone.now().date() + timedelta(days=30),
         ativo=True
     )
 
