@@ -14,10 +14,10 @@ export default function ClientAgendaCard({ agendamento, isFuturo, onCancel }) {
   const obterUrlImagem = (urlOriginal) => {
     if (!urlOriginal) return null;
     if (urlOriginal.includes('backend:8000') || urlOriginal.includes('localhost:8000')) {
-      return urlOriginal.replace(/http:\/\/backend:8000|http:\/\/localhost:8000/, 'https://barbeiropro.duckdns.org');
+      return urlOriginal.replace(/http:\/\/backend:8000|http:\/\/localhost:8000/, 'https://salaopro.site');
     }
     if (urlOriginal.startsWith('/media/')) {
-      return `https://barbeiropro.duckdns.org${urlOriginal}`;
+      return `https://salaopro.site${urlOriginal}`;
     }
     return urlOriginal;
   };
