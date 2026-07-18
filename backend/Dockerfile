@@ -27,15 +27,15 @@ RUN mkdir -p /app/media/profissionais && chmod -R 777 /app/media
 # Coleta os arquivos estáticos (útil se usar whitenoise)
 RUN python manage.py collectstatic --noinput
 
-# Copia e configura o entrypoint
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# Copia entrypoint para fora de /app (que será sobrescrito pelo bind mount em produção)
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 
 # Expõe a porta 8000
 EXPOSE 8000
 
 # Usa entrypoint para ajustar permissões e rodar migrações antes de iniciar
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Comando para rodar a aplicação via gunicorn
 CMD ["gunicorn", "core.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
