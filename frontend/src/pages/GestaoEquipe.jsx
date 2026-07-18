@@ -59,7 +59,7 @@ export default function GestaoEquipe() {
         avaliacao: profissional.avaliacao || 5.0,
         taxa_comissao: profissional.taxa_comissao || 40.0,
         comissao_percentual: profissional.comissao_percentual || 50.0,
-        foto: null, // Não carregar foto anterior no form state, a menos que tenhamos preview
+        foto: profissional.foto || null, // Carregar a foto existente para preview
       });
     } else {
       setFormData({
