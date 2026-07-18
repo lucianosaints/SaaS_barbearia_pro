@@ -11,9 +11,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app  # Para espelhar as mudanças locais durante o desenvolvimento
+      - ./backend:/app
       - django_media:/app/media # Persiste arquivos de mídia (fotos, uploads)
-      # Se for usar SQLite, manter isso mapeado preservará os dados no disco host
     env_file:
       - ./backend/.env
     # Se mudar para postgres futuramente, habilitar o depends_on:

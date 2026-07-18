@@ -124,6 +124,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') # ou BASE_DIR / 'staticfiles
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Garante que arquivos enviados (fotos) sejam legíveis por todos os containers (Nginx, etc)
+FILE_UPLOAD_PERMISSIONS = 0o644
+FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

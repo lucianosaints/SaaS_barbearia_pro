@@ -22,11 +22,17 @@ FROM nginx:alpine
 # Remove configuração default do nginx
 RUN rm /etc/nginx/conf.d/default.conf
 
+# Altera o user do Nginx para que consiga ler arquivos do volume compartilhado com o Django
+RUN sed -i 's/user  nginx;/user  root;/' /etc/nginx/nginx.conf
+
 # Copia a configuração customizada
 COPY nginx.conf /etc/nginx/conf.d/
 
 # Copia os arquivos buildados da fase anterior
 COPY --from=build /app/dist /usr/share/nginx/html
+
+# Cria o ponto de montagem para o volume de media compartilhado
+RUN mkdir -p /app/media/profissionais && chmod -R 755 /app/media
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
