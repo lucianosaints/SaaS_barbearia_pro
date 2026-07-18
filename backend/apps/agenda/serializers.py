@@ -75,14 +75,26 @@ class AgendamentoSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         representation['servicos_detalhes'] = ServicoSerializer(instance.servicos.all(), many=True).data
         
+        request = self.context.get('request')
+        
         if instance.cliente:
             representation['cliente_nome'] = instance.cliente.get_full_name() or instance.cliente.username
             representation['cliente_telefone'] = instance.cliente.telefone
-            representation['cliente_foto'] = instance.cliente.foto.url if instance.cliente.foto else None
+            
+            if instance.cliente.foto:
+                url = instance.cliente.foto.url
+                representation['cliente_foto'] = request.build_absolute_uri(url) if request else url
+            else:
+                representation['cliente_foto'] = None
             
         if instance.profissional:
             representation['profissional_nome'] = instance.profissional.get_full_name() or instance.profissional.username
-            representation['profissional_foto'] = instance.profissional.foto.url if instance.profissional.foto else None
+            
+            if instance.profissional.foto:
+                url = instance.profissional.foto.url
+                representation['profissional_foto'] = request.build_absolute_uri(url) if request else url
+            else:
+                representation['profissional_foto'] = None
             
         if instance.empresa:
             representation['empresa_nome'] = instance.empresa.nome
