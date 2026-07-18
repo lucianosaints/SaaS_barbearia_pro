@@ -8,12 +8,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
     Garante o tratamento seguro de senhas e dados LGPD.
     """
     password = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
-    foto = serializers.SerializerMethodField()
-
-    def get_foto(self, obj):
-        if obj.foto:
-            return obj.foto.url
-        return None
+    foto = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Usuario
