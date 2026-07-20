@@ -210,7 +210,7 @@ function App() {
       )}
 
       {/* Botão Flutuante do WhatsApp */}
-      <WhatsAppButton />
+      {/* <WhatsAppButton /> */}
     </div>
   )
 }
