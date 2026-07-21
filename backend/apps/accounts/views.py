@@ -1,6 +1,6 @@
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -80,6 +80,28 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             serializer.save(empresa=user.empresa, tipo='PROFISSIONAL')
         else:
             serializer.save(tipo='PROFISSIONAL')
+
+    @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        usuario = request.user
+        if not getattr(usuario, 'is_authenticated', False):
+            return Response({"error": "Não autenticado"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+        if request.method == 'GET':
+            serializer = self.get_serializer(usuario)
+            return Response(serializer.data)
+            
+        elif request.method == 'PATCH':
+            data = request.data.copy()
+            # Bloqueia a alteração do email
+            if 'email' in data:
+                del data['email']
+            
+            serializer = self.get_serializer(usuario, data=data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])

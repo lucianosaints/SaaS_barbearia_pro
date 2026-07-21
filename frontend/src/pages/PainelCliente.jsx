@@ -10,6 +10,13 @@ export default function PainelCliente() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // Estados para o modal de Perfil
+  const [perfilModalOpen, setPerfilModalOpen] = useState(false);
+  const [perfilData, setPerfilData] = useState({ first_name: '', last_name: '', email: '', telefone: '' });
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+  const [perfilSuccess, setPerfilSuccess] = useState('');
+  const [perfilError, setPerfilError] = useState('');
+
   // Estados para o modal customizado de cancelamento
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [selectedAgendamentoId, setSelectedAgendamentoId] = useState(null);
@@ -33,6 +40,43 @@ export default function PainelCliente() {
   useEffect(() => {
     fetchAgendamentos();
   }, []);
+
+  const handleOpenPerfilModal = async () => {
+    setPerfilModalOpen(true);
+    setPerfilSuccess('');
+    setPerfilError('');
+    try {
+      const response = await api.get('/api/usuarios/me/');
+      setPerfilData({
+        first_name: response.data.first_name || '',
+        last_name: response.data.last_name || '',
+        email: response.data.email || '',
+        telefone: response.data.telefone || ''
+      });
+    } catch (err) {
+      setPerfilError('Não foi possível carregar os dados do perfil.');
+    }
+  };
+
+  const handleSavePerfil = async (e) => {
+    e.preventDefault();
+    setSalvandoPerfil(true);
+    setPerfilSuccess('');
+    setPerfilError('');
+    try {
+      await api.patch('/api/usuarios/me/', {
+        first_name: perfilData.first_name,
+        last_name: perfilData.last_name,
+        telefone: perfilData.telefone
+      });
+      setPerfilSuccess('Perfil atualizado com sucesso!');
+      setTimeout(() => setPerfilModalOpen(false), 2000);
+    } catch (err) {
+      setPerfilError('Erro ao atualizar o perfil. Tente novamente.');
+    } finally {
+      setSalvandoPerfil(false);
+    }
+  };
 
   const handleOpenCancelModal = (id) => {
     setSelectedAgendamentoId(id);
@@ -87,14 +131,22 @@ export default function PainelCliente() {
           <h2 className="text-2xl font-bold text-text-primary mb-2">Próximos Agendamentos</h2>
           <p className="text-text-muted text-sm">Confira seus horários marcados ou efetue o cancelamento se necessário.</p>
         </div>
-        {userEmpresa && userEmpresa.slug && (
+        <div className="flex gap-2">
           <button
-            onClick={() => window.open(`/agendar/${userEmpresa.slug}`, '_blank')}
-            className="btn-gold px-6 py-2.5 text-sm"
+            onClick={handleOpenPerfilModal}
+            className="px-4 py-2.5 text-sm font-semibold rounded-lg bg-background-darker border border-white/10 text-text-primary hover:border-gold/50 transition-colors"
           >
-            + Novo Agendamento
+            Meus Dados
           </button>
-        )}
+          {userEmpresa && userEmpresa.slug && (
+            <button
+              onClick={() => window.open(`/agendar/${userEmpresa.slug}`, '_blank')}
+              className="btn-gold px-6 py-2.5 text-sm"
+            >
+              + Novo Agendamento
+            </button>
+          )}
+        </div>
       </div>
 
       <div>
@@ -170,6 +222,95 @@ export default function PainelCliente() {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+      {/* Modal de Perfil */}
+      {perfilModalOpen && (
+        <div className="fixed inset-0 bg-background-darker/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-background-paper border border-white/5 rounded-2xl w-full max-w-md overflow-hidden relative shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <h3 className="text-lg font-bold text-text-primary">Meus Dados</h3>
+              <button onClick={() => setPerfilModalOpen(false)} className="text-text-muted hover:text-white transition-colors">
+                ✕
+              </button>
+            </div>
+
+            {perfilSuccess && (
+              <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm text-center">
+                {perfilSuccess}
+              </div>
+            )}
+            
+            {perfilError && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-sm text-center">
+                {perfilError}
+              </div>
+            )}
+
+            <form onSubmit={handleSavePerfil} className="space-y-4 text-left">
+              <div>
+                <label className="block text-xs font-semibold text-text-muted mb-1">Nome</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 bg-background-darker border border-white/10 rounded-lg text-sm text-text-primary focus:outline-none focus:border-gold/50"
+                  value={perfilData.first_name}
+                  onChange={(e) => setPerfilData({...perfilData, first_name: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-semibold text-text-muted mb-1">Sobrenome</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 bg-background-darker border border-white/10 rounded-lg text-sm text-text-primary focus:outline-none focus:border-gold/50"
+                  value={perfilData.last_name}
+                  onChange={(e) => setPerfilData({...perfilData, last_name: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-muted mb-1">Telefone (WhatsApp)</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 bg-background-darker border border-white/10 rounded-lg text-sm text-text-primary focus:outline-none focus:border-gold/50"
+                  value={perfilData.telefone}
+                  onChange={(e) => setPerfilData({...perfilData, telefone: e.target.value})}
+                  placeholder="Ex: 11999999999"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-muted mb-1">E-mail</label>
+                <input
+                  type="email"
+                  disabled
+                  className="w-full px-3 py-2 bg-background-darker/50 border border-white/5 rounded-lg text-sm text-text-muted cursor-not-allowed"
+                  value={perfilData.email}
+                />
+                <p className="text-[10px] text-text-muted mt-1">O e-mail de login não pode ser alterado.</p>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPerfilModalOpen(false)}
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-lg bg-background-darker border border-white/10 text-text-primary hover:border-white/20 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={salvandoPerfil}
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-lg bg-gold text-background-darker hover:bg-gold-light transition-colors shadow-md shadow-gold/20 flex items-center justify-center gap-2"
+                >
+                  {salvandoPerfil ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
