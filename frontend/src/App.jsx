@@ -23,7 +23,7 @@ function App() {
 
   // Redireciona para a landing page se logout, ou para o dashboard se login
   useEffect(() => {
-    if (location.pathname.startsWith('/agendar/') || location.pathname.startsWith('/admin/assinatura')) {
+    if (location.pathname.startsWith('/agendar/') || location.pathname.startsWith('/checkout-assinatura')) {
        // Se estiver na rota de agendamento ou assinatura, não força a aba landing.
        return;
     }
@@ -162,9 +162,9 @@ function App() {
           <Routes>
             <Route path="/agendar/:empresaSlug" element={<AgendamentoWizard />} />
           </Routes>
-        ) : location.pathname.startsWith('/admin/assinatura') ? (
+        ) : location.pathname.startsWith('/checkout-assinatura') ? (
           <Routes>
-            <Route path="/admin/assinatura" element={<Assinatura />} />
+            <Route path="/checkout-assinatura" element={<Assinatura />} />
           </Routes>
         ) : (
           <>

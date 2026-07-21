@@ -94,7 +94,7 @@ export default function GestaoConfiguracoes() {
 
   const handlePagar = async () => {
     // Redireciona para a página dedicada de checkout (onde está a lógica atualizada do PIX dinâmico com seletor de meses)
-    window.location.href = '/admin/assinatura';
+    window.location.href = '/checkout-assinatura';
   };
 
   const handleSaveFidelidade = async (e) => {

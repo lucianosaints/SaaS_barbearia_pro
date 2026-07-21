@@ -8,6 +8,10 @@ function Assinatura() {
   const [error, setError] = useState(null);
   const [pixData, setPixData] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [meses, setMeses] = useState(1);
+
+  const valorBase = 49.99;
+  const valorTotal = (valorBase * meses).toFixed(2).replace('.', ',');
 
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -18,7 +22,7 @@ function Assinatura() {
     setError(null);
     setPixData(null);
     try {
-      const response = await api.post('/api/assinaturas/criar-assinatura/');
+      const response = await api.post('/api/assinaturas/criar-assinatura/', { meses });
       if (response.data.qr_code_base64 && response.data.qr_code) {
         setPixData({
           qr_code_base64: response.data.qr_code_base64,
@@ -82,19 +86,40 @@ function Assinatura() {
         )}
 
         {!pixData ? (
-          <button
-            onClick={handlePagarPix}
-            disabled={loading}
-            className="w-full bg-accent-primary hover:bg-accent-hover text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 transform active:scale-95 shadow-lg shadow-accent-primary/20"
-          >
-            {loading ? (
-              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-            ) : (
-              <>
-                💠 Pagar Mensalidade via PIX (R$ 49,99)
-              </>
-            )}
-          </button>
+          <div className="w-full flex flex-col gap-4">
+            <div className="flex flex-col gap-2 mb-2">
+              <label className="text-left text-sm text-text-secondary font-semibold">Quantos meses deseja renovar?</label>
+              <div className="flex bg-bg-primary p-1 rounded-xl border border-bg-tertiary">
+                {[1, 2, 3, 6].map(num => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setMeses(num)}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${meses === num ? 'bg-accent-primary text-white shadow-md' : 'text-text-secondary hover:text-white'}`}
+                  >
+                    {num} {num === 1 ? 'Mês' : 'Meses'}
+                  </button>
+                ))}
+              </div>
+              {meses > 1 && (
+                <div className="text-xs text-green-400 text-left mt-1">
+                  Vencimento será estendido em {meses * 30} dias.
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handlePagarPix}
+              disabled={loading}
+              className="w-full bg-accent-primary hover:bg-accent-hover text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 transform active:scale-95 shadow-lg shadow-accent-primary/20"
+            >
+              {loading ? (
+                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+              ) : (
+                `💠 Pagar via PIX (R$ ${valorTotal})`
+              )}
+            </button>
+          </div>
         ) : (
           <div className="flex flex-col items-center mt-4 w-full">
             <h3 className="text-lg font-bold text-accent-primary mb-2">Escaneie o QR Code</h3>
