@@ -5,7 +5,7 @@ from django.db.models import Q
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from apps.tenants.models import Empresa
 from apps.tenants.serializers import EmpresaSerializer
-from apps.accounts.permissions import IsAdminUserOrReadOnly
+from apps.accounts.permissions import IsAdminUserOrReadOnly, IsDemoUserReadOnly
 
 class EmpresaViewSet(viewsets.ModelViewSet):
     """
@@ -14,7 +14,7 @@ class EmpresaViewSet(viewsets.ModelViewSet):
     acesse apenas os dados da própria empresa.
     """
     serializer_class = EmpresaSerializer
-    permission_classes = [IsAdminUserOrReadOnly]
+    permission_classes = [IsAdminUserOrReadOnly, IsDemoUserReadOnly]
 
     def get_queryset(self):
         # Permitir que qualquer pessoa veja as empresas ativas E (com assinatura ativa OU em trial)

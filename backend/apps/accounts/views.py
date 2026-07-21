@@ -7,7 +7,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.throttling import ScopedRateThrottle
 from apps.accounts.models import Usuario
 from apps.accounts.serializers import UsuarioSerializer, CustomTokenObtainPairSerializer
-from apps.accounts.permissions import IsAdminUserOrReadOnly
+from apps.accounts.permissions import IsAdminUserOrReadOnly, IsDemoUserReadOnly
 from apps.tenants.permissions import IsEmpresaAtiva
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
@@ -29,7 +29,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     """
     authentication_classes = [JWTAuthentication]
     serializer_class = UsuarioSerializer
-    permission_classes = [IsAdminUserOrReadOnly, IsEmpresaAtiva]
+    permission_classes = [IsAdminUserOrReadOnly, IsEmpresaAtiva, IsDemoUserReadOnly]
 
     def get_queryset(self):
         user = self.request.user
@@ -81,7 +81,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         else:
             serializer.save(tipo='PROFISSIONAL')
 
-    @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated, IsDemoUserReadOnly])
     def me(self, request):
         usuario = request.user
         if not getattr(usuario, 'is_authenticated', False):
