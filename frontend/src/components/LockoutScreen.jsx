@@ -7,13 +7,17 @@ export default function LockoutScreen() {
   const [error, setError] = useState(null);
   const [pixData, setPixData] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [meses, setMeses] = useState(1);
+
+  const valorBase = 49.99;
+  const valorTotal = (valorBase * meses).toFixed(2).replace('.', ',');
 
   const handleCheckout = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
-      const response = await api.post('/api/assinaturas/criar-assinatura/');
+      const response = await api.post('/api/assinaturas/criar-assinatura/', { meses });
       if (response.data.qr_code_base64 && response.data.qr_code) {
         setPixData({
           qr_code_base64: response.data.qr_code_base64,
@@ -73,17 +77,40 @@ export default function LockoutScreen() {
         )}
 
         {!pixData ? (
-          <button
-            onClick={handleCheckout}
-            disabled={loading}
-            className="w-full bg-primary hover:bg-primary-hover text-bg-primary font-bold py-3 px-4 rounded-xl transition-all shadow-[0_0_15px_rgba(212,175,55,0.4)] flex items-center justify-center"
-          >
-            {loading ? (
-              <span className="w-5 h-5 border-2 border-primary border-t-white rounded-full animate-spin"></span>
-            ) : (
-              "💠 Pagar Mensalidade via PIX (R$ 49,99)"
-            )}
-          </button>
+          <div className="w-full flex flex-col gap-4">
+            <div className="flex flex-col gap-2 mb-2">
+              <label className="text-left text-sm text-text-muted font-semibold">Quantos meses deseja renovar?</label>
+              <div className="flex bg-bg-primary p-1 rounded-xl border border-border-color">
+                {[1, 2, 3, 6].map(num => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setMeses(num)}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${meses === num ? 'bg-primary text-bg-primary shadow-md' : 'text-text-muted hover:text-white'}`}
+                  >
+                    {num} {num === 1 ? 'Mês' : 'Meses'}
+                  </button>
+                ))}
+              </div>
+              {meses > 1 && (
+                <div className="text-xs text-green-400 text-left mt-1">
+                  Vencimento será estendido em {meses * 30} dias.
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleCheckout}
+              disabled={loading}
+              className="w-full bg-primary hover:bg-primary-hover text-bg-primary font-bold py-3 px-4 rounded-xl transition-all shadow-[0_0_15px_rgba(212,175,55,0.4)] flex items-center justify-center"
+            >
+              {loading ? (
+                <span className="w-5 h-5 border-2 border-primary border-t-white rounded-full animate-spin"></span>
+              ) : (
+                `💠 Pagar via PIX (R$ ${valorTotal})`
+              )}
+            </button>
+          </div>
         ) : (
           <div className="flex flex-col items-center mt-4 w-full">
             <h3 className="text-lg font-bold text-primary mb-2">Escaneie o QR Code</h3>

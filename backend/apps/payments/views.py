@@ -49,16 +49,26 @@ class MercadoPagoWebhookView(APIView):
                 # 3. Se estiver aprovado e tiver a referência da empresa
                 if payment_status == "approved" and external_reference:
                     try:
-                        # Identifica a empresa pelo ID ou slug (assumindo ID neste caso)
-                        empresa = Empresa.objects.get(id=external_reference)
+                        parts = str(external_reference).split('_')
+                        empresa_id = parts[0]
+                        meses_pagos = int(parts[1]) if len(parts) > 1 else 1
+
+                        # Identifica a empresa pelo ID
+                        empresa = Empresa.objects.get(id=empresa_id)
                         
                         # Atualiza os dados da assinatura (Renovação ou Ativação)
                         import datetime
+                        
+                        if empresa.assinatura_ativa and empresa.data_vencimento_assinatura and empresa.data_vencimento_assinatura > datetime.date.today():
+                            base_date = empresa.data_vencimento_assinatura
+                        else:
+                            base_date = datetime.date.today()
+                            
                         empresa.assinatura_ativa = True
                         empresa.em_trial = False
-                        empresa.data_vencimento_assinatura = datetime.date.today() + datetime.timedelta(days=30)
+                        empresa.data_vencimento_assinatura = base_date + datetime.timedelta(days=30 * meses_pagos)
                         empresa.save(update_fields=['assinatura_ativa', 'em_trial', 'data_vencimento_assinatura'])
-                        print(f"[Webhook MP] Assinatura ativada/renovada com sucesso para a empresa: {empresa.nome}. Vencimento: {empresa.data_vencimento_assinatura}")
+                        print(f"[Webhook MP] Assinatura ativada/renovada com sucesso ({meses_pagos} meses) para a empresa: {empresa.nome}. Vencimento: {empresa.data_vencimento_assinatura}")
                         
                     except Empresa.DoesNotExist:
                         print(f"[Webhook MP] Empresa não encontrada com external_reference: {external_reference}")
@@ -90,12 +100,21 @@ class CriarPagamentoAssinaturaView(APIView):
             return Response({"error": "Usuário não pertence a nenhuma empresa."}, status=status.HTTP_400_BAD_REQUEST)
             
         empresa = usuario.empresa
-        # Valor padrão para teste de homologação em produção (1 Real)
-        valor_mensalidade = 1.00
+        
+        meses_str = request.data.get('meses', 1)
+        try:
+            meses = int(meses_str)
+        except (ValueError, TypeError):
+            meses = 1
+            
+        valor_base = 49.99
+        valor_total = round(valor_base * meses, 2)
+        
+        external_reference = f"{empresa.id}_{meses}"
         
         try:
             from services.mercado_pago_service import criar_pagamento_pix
-            dados_pix = criar_pagamento_pix(str(empresa.id), empresa.nome, valor_mensalidade, usuario.email)
+            dados_pix = criar_pagamento_pix(external_reference, empresa.nome, valor_total, usuario.email)
             return Response(dados_pix, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
