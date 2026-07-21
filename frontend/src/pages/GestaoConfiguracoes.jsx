@@ -397,11 +397,13 @@ export default function GestaoConfiguracoes() {
                   </div>
                 )}
                 
-                {empresaInfo.assinatura_ativa && empresaInfo.data_vencimento_assinatura && (
-                  <div className="flex justify-between p-3 bg-black/40 rounded-lg border border-white/5">
-                    <span className="text-sm text-gray-400">Vencimento:</span>
-                    <span className="text-sm font-bold text-white">
-                      {new Date(empresaInfo.data_vencimento_assinatura + "T12:00:00").toLocaleDateString('pt-BR')}
+                {empresaInfo.assinatura_ativa && (
+                  <div className="flex justify-between p-3 bg-black/40 rounded-lg border border-white/5 items-center">
+                    <span className="text-sm text-gray-400">Tempo Restante:</span>
+                    <span className={`text-sm font-bold ${empresaInfo.dias_restantes > 5 ? 'text-white' : (empresaInfo.dias_restantes > 0 ? 'text-yellow-400' : 'text-red-500 animate-pulse')}`}>
+                      {empresaInfo.dias_restantes > 0 
+                        ? `Expira em ${empresaInfo.dias_restantes} dias` 
+                        : (empresaInfo.dias_restantes === 0 ? 'Sua assinatura vence hoje!' : 'Assinatura vencida')}
                     </span>
                   </div>
                 )}
