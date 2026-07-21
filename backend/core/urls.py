@@ -25,7 +25,7 @@ router.register(r'bloqueios', BloqueioHorarioViewSet, basename='bloqueio')
 router.register(r'fila-espera', FilaEsperaViewSet, basename='fila_espera')
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('painel-master/', admin.site.urls),
     
     # Endpoint customizado de disponibilidade
     path('api/disponibilidade/', obter_disponibilidade, name='obter_disponibilidade'),
