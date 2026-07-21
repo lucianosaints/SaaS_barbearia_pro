@@ -6,21 +6,26 @@ import { motion } from 'framer-motion';
 function Assinatura() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [pixData, setPixData] = useState(null);
+  const [copied, setCopied] = useState(false);
+
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const paymentStatus = searchParams.get('status');
 
-  const handlePagar = async () => {
+  const handlePagarPix = async () => {
     setLoading(true);
     setError(null);
+    setPixData(null);
     try {
       const response = await api.post('/api/assinaturas/criar-assinatura/');
-      if (response.data.ticket_url) {
-        window.location.href = response.data.ticket_url;
-      } else if (response.data.init_point) {
-        window.location.href = response.data.init_point;
+      if (response.data.qr_code_base64 && response.data.qr_code) {
+        setPixData({
+          qr_code_base64: response.data.qr_code_base64,
+          qr_code: response.data.qr_code
+        });
       } else {
-        setError('Erro ao gerar o link de pagamento.');
+        setError('Erro ao gerar o código PIX. Formato inválido ou indisponível.');
       }
     } catch (err) {
       if (err.response && err.response.data && err.response.data.error) {
@@ -31,6 +36,14 @@ function Assinatura() {
       console.error("Erro ao gerar link MP:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCopy = () => {
+    if (pixData?.qr_code) {
+      navigator.clipboard.writeText(pixData.qr_code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
     }
   };
 
@@ -68,19 +81,53 @@ function Assinatura() {
           </div>
         )}
 
-        <button
-          onClick={handlePagar}
-          disabled={loading}
-          className="w-full bg-accent-primary hover:bg-accent-hover text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 transform active:scale-95 shadow-lg shadow-accent-primary/20"
-        >
-          {loading ? (
-            <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-          ) : (
-            <>
-              💳 Pagar Mensalidade (R$ 49,99)
-            </>
-          )}
-        </button>
+        {!pixData ? (
+          <button
+            onClick={handlePagarPix}
+            disabled={loading}
+            className="w-full bg-accent-primary hover:bg-accent-hover text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 transform active:scale-95 shadow-lg shadow-accent-primary/20"
+          >
+            {loading ? (
+              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+            ) : (
+              <>
+                💠 Pagar Mensalidade via PIX (R$ 49,99)
+              </>
+            )}
+          </button>
+        ) : (
+          <div className="flex flex-col items-center mt-4 w-full">
+            <h3 className="text-lg font-bold text-accent-primary mb-2">Escaneie o QR Code</h3>
+            <img 
+              src={`data:image/png;base64,${pixData.qr_code_base64}`} 
+              alt="QR Code PIX" 
+              className="w-48 h-48 rounded-lg border-2 border-bg-tertiary mb-4"
+            />
+            
+            <p className="text-text-secondary text-sm mb-2">Ou copie o código abaixo:</p>
+            <div className="flex w-full gap-2 mb-6">
+              <input 
+                type="text" 
+                value={pixData.qr_code} 
+                readOnly 
+                className="flex-1 bg-bg-primary border border-bg-tertiary text-text-primary rounded-lg px-3 py-2 text-sm outline-none w-full"
+              />
+              <button 
+                onClick={handleCopy}
+                className="bg-bg-tertiary hover:bg-opacity-80 text-text-primary px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap"
+              >
+                {copied ? '✅ Copiado!' : 'Copiar'}
+              </button>
+            </div>
+            
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
+            >
+              ✅ Já fiz o pagamento
+            </button>
+          </div>
+        )}
       </motion.div>
     </div>
   );
