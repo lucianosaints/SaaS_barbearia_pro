@@ -1,11 +1,44 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import api from '../services/api';
 
 export default function LockoutScreen() {
-  const handleCheckout = () => {
-    // Redireciona para a rota ou tela de checkout da assinatura.
-    // Como a API já foi criada (api/assinaturas/checkout/), pode ser uma chamada API ou redirect
-    window.location.href = '/api/assinaturas/checkout/'; // Ou roteamento React, dependendo do design
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [pixData, setPixData] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCheckout = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post('/api/assinaturas/criar-assinatura/');
+      if (response.data.qr_code_base64 && response.data.qr_code) {
+        setPixData({
+          qr_code_base64: response.data.qr_code_base64,
+          qr_code: response.data.qr_code
+        });
+      } else {
+        setError('Erro ao gerar o código PIX. Formato inválido ou indisponível.');
+      }
+    } catch (err) {
+      if (err.response && err.response.data && err.response.data.error) {
+        setError('Erro: ' + err.response.data.error);
+      } else {
+        setError('Ocorreu um erro de comunicação com o servidor.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopy = () => {
+    if (pixData?.qr_code) {
+      navigator.clipboard.writeText(pixData.qr_code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    }
   };
 
   return (
@@ -33,12 +66,57 @@ export default function LockoutScreen() {
           Para continuar usando o painel administrativo da sua barbearia, por favor, regularize sua assinatura.
         </p>
 
-        <button
-          onClick={handleCheckout}
-          className="w-full bg-primary hover:bg-primary-hover text-bg-primary font-bold py-3 px-4 rounded-xl transition-all shadow-[0_0_15px_rgba(212,175,55,0.4)]"
-        >
-          Regularizar Assinatura
-        </button>
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-lg mb-6 text-sm">
+            {error}
+          </div>
+        )}
+
+        {!pixData ? (
+          <button
+            onClick={handleCheckout}
+            disabled={loading}
+            className="w-full bg-primary hover:bg-primary-hover text-bg-primary font-bold py-3 px-4 rounded-xl transition-all shadow-[0_0_15px_rgba(212,175,55,0.4)] flex items-center justify-center"
+          >
+            {loading ? (
+              <span className="w-5 h-5 border-2 border-primary border-t-white rounded-full animate-spin"></span>
+            ) : (
+              "💠 Pagar Mensalidade via PIX (R$ 49,99)"
+            )}
+          </button>
+        ) : (
+          <div className="flex flex-col items-center mt-4 w-full">
+            <h3 className="text-lg font-bold text-primary mb-2">Escaneie o QR Code</h3>
+            <img 
+              src={`data:image/png;base64,${pixData.qr_code_base64}`} 
+              alt="QR Code PIX" 
+              className="w-48 h-48 rounded-lg border-2 border-border-color mb-4 bg-white"
+            />
+            
+            <p className="text-text-muted text-sm mb-2">Ou copie o código abaixo:</p>
+            <div className="flex w-full gap-2 mb-6">
+              <input 
+                type="text" 
+                value={pixData.qr_code} 
+                readOnly 
+                className="flex-1 bg-bg-primary border border-border-color text-white rounded-lg px-3 py-2 text-sm outline-none w-full"
+              />
+              <button 
+                onClick={handleCopy}
+                className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap"
+              >
+                {copied ? '✅ Copiado!' : 'Copiar'}
+              </button>
+            </div>
+            
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
+            >
+              ✅ Já paguei
+            </button>
+          </div>
+        )}
       </motion.div>
     </div>
   );
