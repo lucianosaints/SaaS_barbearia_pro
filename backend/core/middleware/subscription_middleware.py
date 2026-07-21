@@ -44,7 +44,13 @@ class SubscriptionMiddleware:
                     empresa = user.empresa
                     is_blocked = False
                     
-                    if not empresa.assinatura_ativa:
+                    if empresa.assinatura_ativa:
+                        # Verifica se o vencimento passou
+                        if empresa.data_vencimento_assinatura and datetime.date.today() > empresa.data_vencimento_assinatura:
+                            empresa.assinatura_ativa = False
+                            empresa.save(update_fields=['assinatura_ativa'])
+                            is_blocked = True
+                    else:
                         if not empresa.em_trial:
                             is_blocked = True
                         elif empresa.data_fim_trial and datetime.date.today() > empresa.data_fim_trial:

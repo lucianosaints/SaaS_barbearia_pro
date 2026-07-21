@@ -52,12 +52,13 @@ class MercadoPagoWebhookView(APIView):
                         # Identifica a empresa pelo ID ou slug (assumindo ID neste caso)
                         empresa = Empresa.objects.get(id=external_reference)
                         
-                        # Atualiza os dados da assinatura
-                        if not empresa.assinatura_ativa or empresa.em_trial:
-                            empresa.assinatura_ativa = True
-                            empresa.em_trial = False
-                            empresa.save(update_fields=['assinatura_ativa', 'em_trial'])
-                            print(f"[Webhook MP] Assinatura ativada com sucesso para a empresa: {empresa.nome}")
+                        # Atualiza os dados da assinatura (Renovação ou Ativação)
+                        import datetime
+                        empresa.assinatura_ativa = True
+                        empresa.em_trial = False
+                        empresa.data_vencimento_assinatura = datetime.date.today() + datetime.timedelta(days=30)
+                        empresa.save(update_fields=['assinatura_ativa', 'em_trial', 'data_vencimento_assinatura'])
+                        print(f"[Webhook MP] Assinatura ativada/renovada com sucesso para a empresa: {empresa.nome}. Vencimento: {empresa.data_vencimento_assinatura}")
                         
                     except Empresa.DoesNotExist:
                         print(f"[Webhook MP] Empresa não encontrada com external_reference: {external_reference}")

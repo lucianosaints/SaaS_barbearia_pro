@@ -60,6 +60,12 @@ class Empresa(models.Model):
         verbose_name=_("Assinatura Ativa"),
         help_text=_("Indica se a barbearia possui uma assinatura paga e ativa.")
     )
+    data_vencimento_assinatura = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name=_("Data de Vencimento da Assinatura"),
+        help_text=_("Data de expiração da assinatura mensal.")
+    )
     em_trial = models.BooleanField(
         default=True,
         verbose_name=_("Em Período de Teste"),
