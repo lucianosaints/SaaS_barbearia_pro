@@ -93,21 +93,8 @@ export default function GestaoConfiguracoes() {
   };
 
   const handlePagar = async () => {
-    setPagamentoLoading(true);
-    try {
-      const response = await api.post('/api/assinaturas/criar-assinatura/');
-      if (response.data.ticket_url) {
-        window.location.href = response.data.ticket_url;
-      } else if (response.data.init_point) {
-        window.location.href = response.data.init_point;
-      } else {
-        alert('Erro ao gerar o link de pagamento.');
-      }
-    } catch (err) {
-      alert(err.response?.data?.error || 'Erro ao comunicar com Mercado Pago.');
-    } finally {
-      setPagamentoLoading(false);
-    }
+    // Redireciona para a página dedicada de checkout (onde está a lógica atualizada do PIX dinâmico com seletor de meses)
+    window.location.href = '/admin/assinatura';
   };
 
   const handleSaveFidelidade = async (e) => {
@@ -410,6 +397,15 @@ export default function GestaoConfiguracoes() {
                   </div>
                 )}
                 
+                {empresaInfo.assinatura_ativa && empresaInfo.data_vencimento_assinatura && (
+                  <div className="flex justify-between p-3 bg-black/40 rounded-lg border border-white/5">
+                    <span className="text-sm text-gray-400">Vencimento:</span>
+                    <span className="text-sm font-bold text-white">
+                      {new Date(empresaInfo.data_vencimento_assinatura + "T12:00:00").toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                )}
+                
                 {!empresaInfo.assinatura_ativa && empresaInfo.em_trial && (
                   <p className="text-xs text-gray-400 leading-relaxed bg-blue-500/10 p-3 rounded border border-blue-500/20">
                     Você pode antecipar o pagamento da sua assinatura. Ao pagar, você garante acesso ininterrupto sem aguardar o bloqueio após o período de teste.
@@ -429,7 +425,7 @@ export default function GestaoConfiguracoes() {
             {pagamentoLoading ? (
               <span className="w-5 h-5 border-2 border-background-darker/30 border-t-background-darker rounded-full animate-spin"></span>
             ) : (
-              <>💳 Assinar Sistema (R$ 49,99/mês)</>
+              <>💳 Renovar / Assinar Sistema</>
             )}
           </button>
         </div>
