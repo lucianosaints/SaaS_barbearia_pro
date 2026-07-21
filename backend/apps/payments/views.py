@@ -89,8 +89,8 @@ class CriarPagamentoAssinaturaView(APIView):
             return Response({"error": "Usuário não pertence a nenhuma empresa."}, status=status.HTTP_400_BAD_REQUEST)
             
         empresa = usuario.empresa
-        # Valor padrão de 49.99
-        valor_mensalidade = 49.99 
+        # Valor padrão para teste de homologação em produção (1 Real)
+        valor_mensalidade = 1.00
         
         try:
             from services.mercado_pago_service import criar_pagamento_pix
