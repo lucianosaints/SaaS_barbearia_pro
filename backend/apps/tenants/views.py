@@ -37,8 +37,15 @@ class EmpresaViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path=r'por-slug/(?P<slug>[-\w]+)', permission_classes=[AllowAny])
     def por_slug(self, request, slug=None):
         """Busca uma empresa publicamente pelo slug"""
-        empresa = self.get_queryset().filter(slug=slug).first()
-        if empresa:
-            serializer = self.get_serializer(empresa)
-            return Response(serializer.data)
-        return Response({"detail": "Barbearia não encontrada ou inativa."}, status=404)
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Busca direta pela Empresa para busca case-insensitive e validação independente
+        empresa = Empresa.objects.filter(slug__iexact=slug).first()
+        
+        if not empresa or not empresa.ativo:
+            logger.warning(f"[Agendamento Público] Barbearia não encontrada ou inativa (ativo=False) para o slug: '{slug}'")
+            return Response({"detail": "Barbearia não encontrada ou inativa."}, status=404)
+            
+        serializer = self.get_serializer(empresa)
+        return Response(serializer.data)
