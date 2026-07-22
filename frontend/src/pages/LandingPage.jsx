@@ -205,6 +205,36 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* 3.5. Ideias e Sugestões */}
+      <section className="w-full bg-bg-primary py-16 relative z-10">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <motion.div 
+            whileHover={{ scale: 1.01 }}
+            className="bg-gradient-to-br from-[#1a1a1a] to-[#222222] p-10 md:p-14 rounded-3xl border border-gold/20 shadow-[0_0_30px_rgba(212,175,55,0.08)] relative overflow-hidden group transition-all duration-500"
+          >
+            {/* Efeitos de brilho */}
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-gold/20 blur-[50px] rounded-full pointer-events-none group-hover:bg-gold/30 transition-all duration-500"></div>
+            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-gold/10 blur-[50px] rounded-full pointer-events-none group-hover:bg-gold/20 transition-all duration-500"></div>
+            
+            <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-6 relative z-10">
+              💡 Tem uma ideia para o seu negócio? <br className="hidden md:block mt-2" />
+              <span className="bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">Nós desenvolvemos.</span>
+            </h2>
+            
+            <p className="text-gray-300 text-lg mb-10 leading-relaxed max-w-2xl mx-auto relative z-10">
+              O Salão PRO evolui com você! Se precisa de uma funcionalidade exclusiva para a sua barbearia, mande sua sugestão. A equipe de engenharia da i9builder avalia e implementa novas ferramentas para tornar sua gestão ainda mais eficiente.
+            </p>
+            
+            <a 
+              href="mailto:contato@i9builder.com"
+              className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-bold text-background-darker bg-gradient-to-r from-gold-light via-gold to-gold-dark hover:shadow-[0_0_25px_rgba(212,175,55,0.5)] transform hover:-translate-y-1 transition-all duration-300 relative z-10"
+            >
+              📩 Enviar Ideia por E-mail
+            </a>
+          </motion.div>
+        </div>
+      </section>
+
       {/* 4. Footer */}
       <footer className="w-full bg-bg-primary py-8 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
