@@ -226,10 +226,10 @@ export default function LandingPage() {
             </p>
             
             <a 
-              href="mailto:contato@i9builder.com?subject=Sugest%C3%A3o%20de%20Nova%20Funcionalidade%20-%20Sal%C3%A3o%20PRO&body=Ol%C3%A1%20equipe%20i9builder,%20gostaria%20de%20sugerir%20a%20seguinte%20funcionalidade:"
+              href="mailto:infor@salaopro.site?subject=Sugest%C3%A3o%20de%20Nova%20Funcionalidade%20-%20Sal%C3%A3o%20PRO&body=Ol%C3%A1%20equipe%20i9builder,%20gostaria%20de%20sugerir%20a%20seguinte%20funcionalidade:"
               onClick={() => {
-                navigator.clipboard.writeText('contato@i9builder.com');
-                alert('E-mail (contato@i9builder.com) copiado para a área de transferência!');
+                navigator.clipboard.writeText('infor@salaopro.site');
+                alert('E-mail (infor@salaopro.site) copiado para a área de transferência!');
               }}
               className="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-bold text-background-darker bg-gradient-to-r from-gold-light via-gold to-gold-dark hover:shadow-[0_0_25px_rgba(212,175,55,0.5)] transform hover:-translate-y-1 transition-all duration-300 relative z-10"
             >
