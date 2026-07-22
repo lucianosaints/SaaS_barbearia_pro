@@ -107,7 +107,7 @@ class CriarPagamentoAssinaturaView(APIView):
         except (ValueError, TypeError):
             meses = 1
             
-        valor_base = 1.00
+        valor_base = 49.99
         valor_total = round(valor_base * meses, 2)
         
         external_reference = f"{empresa.id}_{meses}"
