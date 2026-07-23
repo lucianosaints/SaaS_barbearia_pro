@@ -177,9 +177,27 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
-# Email configuration for local development
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'Salão Pro <notificacoes@salaopro.com.br>'
+# Email configuration
+email_host = os.environ.get('EMAIL_HOST', '').strip()
+
+if email_host:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = email_host
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '').strip()
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '').strip()
+    
+    # Safe boolean parsing
+    tls_val = os.environ.get('EMAIL_USE_TLS', 'True').strip().lower()
+    ssl_val = os.environ.get('EMAIL_USE_SSL', 'False').strip().lower()
+    
+    EMAIL_USE_TLS = tls_val in ('true', '1', 't', 'y', 'yes')
+    EMAIL_USE_SSL = ssl_val in ('true', '1', 't', 'y', 'yes')
+else:
+    # Fallback for local development or when SMTP is not configured
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Salão Pro <notificacoes@salaopro.com.br>')
 
 # WAHA API Configuration
 WAHA_API_URL = os.environ.get('WAHA_API_URL', 'http://waha:3000')
