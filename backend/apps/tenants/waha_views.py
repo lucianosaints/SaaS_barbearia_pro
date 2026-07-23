@@ -240,7 +240,7 @@ class WahaPairingCodeView(APIView):
         try:
             code_resp = requests.post(request_code_url, json=payload, headers=headers, timeout=30)
             
-            if code_resp.status_code == 200:
+            if code_resp.status_code in [200, 201]:
                 data = code_resp.json()
                 return Response({
                     "status": "WAITING_FOR_SCAN",
