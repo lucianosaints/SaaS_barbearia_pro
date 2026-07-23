@@ -254,8 +254,15 @@ class WahaPairingCodeView(APIView):
                 }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
             else:
                 logger.error(f"WAHA Code Error: {code_resp.status_code} - {code_resp.text}")
+                # Retorna o texto original da WAHA para sabermos qual é a limitação do container deles
+                error_msg = "Erro ao gerar código."
+                try:
+                    err_data = code_resp.json()
+                    error_msg = err_data.get("message", code_resp.text)
+                except:
+                    error_msg = code_resp.text
                 return Response({
-                    "error": "Erro ao gerar o código de parelhamento."
+                    "error": f"WAHA Error ({code_resp.status_code}): {error_msg}"
                 }, status=status.HTTP_400_BAD_REQUEST)
                 
         except Exception as e:
