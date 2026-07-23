@@ -9,7 +9,8 @@ export default function OnboardingModal({ isOpen, onClose }) {
     nome_barbearia: '',
     nome_admin: '',
     email: '',
-    senha: ''
+    senha: '',
+    whatsapp: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -106,6 +107,18 @@ export default function OnboardingModal({ isOpen, onClose }) {
                     required
                     className="input-premium w-full" 
                     placeholder="seu@email.com" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">WhatsApp da Barbearia</label>
+                  <input 
+                    type="tel" 
+                    name="whatsapp"
+                    value={formData.whatsapp}
+                    onChange={handleChange}
+                    required
+                    className="input-premium w-full" 
+                    placeholder="(11) 99999-9999" 
                   />
                 </div>
                 <div>

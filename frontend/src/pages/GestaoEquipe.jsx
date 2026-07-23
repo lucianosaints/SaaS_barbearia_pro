@@ -59,7 +59,9 @@ export default function GestaoEquipe() {
         avaliacao: profissional.avaliacao || 5.0,
         taxa_comissao: profissional.taxa_comissao || 40.0,
         comissao_percentual: profissional.comissao_percentual || 50.0,
+        comissao_percentual: profissional.comissao_percentual || 50.0,
         foto: profissional.foto || null, // Carregar a foto existente para preview
+        tipo: profissional.tipo || 'PROFISSIONAL',
       });
     } else {
       setFormData({
@@ -74,6 +76,7 @@ export default function GestaoEquipe() {
         taxa_comissao: 40.0,
         comissao_percentual: 50.0,
         foto: null,
+        tipo: 'PROFISSIONAL',
       });
     }
     setIsModalOpen(true);
@@ -106,7 +109,10 @@ export default function GestaoEquipe() {
       payload.append('email', formData.email);
       payload.append('username', formData.email);
       payload.append('telefone', formData.telefone);
-      payload.append('is_active', formData.is_active);
+      
+      const isActiveToSubmit = (formData.tipo === 'ADMINISTRADOR' || formData.tipo === 'DONO') ? true : formData.is_active;
+      payload.append('is_active', isActiveToSubmit);
+      
       payload.append('avaliacao', formData.avaliacao);
       payload.append('taxa_comissao', formData.taxa_comissao);
       payload.append('comissao_percentual', formData.comissao_percentual);
@@ -273,9 +279,12 @@ export default function GestaoEquipe() {
                         type="checkbox"
                         name="is_active"
                         id="is_active"
-                        checked={formData.is_active}
+                        checked={(formData.tipo === 'ADMINISTRADOR' || formData.tipo === 'DONO') ? true : formData.is_active}
                         onChange={handleInputChange}
-                        className="w-4 h-4 rounded bg-background border-gold/50 text-gold focus:ring-gold focus:ring-offset-background"
+                        disabled={formData.tipo === 'ADMINISTRADOR' || formData.tipo === 'DONO'}
+                        className={`w-4 h-4 rounded bg-background border-gold/50 text-gold focus:ring-gold focus:ring-offset-background ${
+                          (formData.tipo === 'ADMINISTRADOR' || formData.tipo === 'DONO') ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
                       />
                       <label htmlFor="is_active" className="text-xs font-bold text-text-primary cursor-pointer">
                         Exibir meu perfil na agenda

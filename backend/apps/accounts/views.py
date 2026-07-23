@@ -191,8 +191,9 @@ def registrar_saas(request):
     nome_admin = request.data.get('nome_admin')
     email = request.data.get('email')
     senha = request.data.get('senha')
+    whatsapp = request.data.get('whatsapp')
 
-    if not all([nome_barbearia, nome_admin, email, senha]):
+    if not all([nome_barbearia, nome_admin, email, senha, whatsapp]):
         return Response(
             {"error": "Todos os campos são obrigatórios."},
             status=status.HTTP_400_BAD_REQUEST
@@ -225,12 +226,12 @@ def registrar_saas(request):
     first_name = nomes[0]
     last_name = nomes[1] if len(nomes) > 1 else ''
 
-    # Criar o Usuário Administrador
     usuario = Usuario(
         username=email,
         email=email,
         first_name=first_name,
         last_name=last_name,
+        telefone=whatsapp,
         tipo='ADMINISTRADOR',
         is_active=True,
         empresa=empresa
