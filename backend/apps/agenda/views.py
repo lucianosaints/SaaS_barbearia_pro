@@ -425,7 +425,9 @@ class FinancasDashboardView(APIView):
 
         # Desempenho dos profissionais
         desempenho_profissionais = []
-        barbeiros = Usuario.objects.filter(tipo='PROFISSIONAL')
+        barbeiros = Usuario.objects.filter(
+            Q(tipo='PROFISSIONAL') | Q(agendamentos_profissional__in=agendamentos)
+        ).distinct()
         if not user.is_superuser:
             barbeiros = barbeiros.filter(empresa=empresa)
             
@@ -486,7 +488,9 @@ class ComissoesView(APIView):
                 pass
                 
         profissionais_data = []
-        barbeiros = Usuario.objects.filter(tipo='PROFISSIONAL')
+        barbeiros = Usuario.objects.filter(
+            Q(tipo='PROFISSIONAL') | Q(agendamentos_profissional__in=agendamentos)
+        ).distinct()
         if not user.is_superuser:
             barbeiros = barbeiros.filter(empresa=empresa)
             
