@@ -13,7 +13,7 @@ from rest_framework_simplejwt.views import (
 from apps.tenants.views import EmpresaViewSet
 from apps.accounts.views import UsuarioViewSet, registrar_cliente, registrar_saas, CustomTokenObtainPairView
 from apps.agenda.views import ServicoViewSet, AgendamentoViewSet, obter_disponibilidade, FinancasDashboardView, ComissoesView, MeuCartaoFidelidadeView, BloqueioHorarioViewSet, FilaEsperaViewSet
-from apps.tenants.waha_views import WahaQRCodeView
+from apps.tenants.waha_views import WahaQRCodeView, WahaPairingCodeView, WahaSessionStatusView
 
 # Inicializando o roteador principal do DRF
 router = DefaultRouter()
@@ -39,8 +39,10 @@ urlpatterns = [
     # Endpoint do Cartão Fidelidade
     path('api/fidelidade/meu-cartao/', MeuCartaoFidelidadeView.as_view(), name='meu_cartao_fidelidade'),
     
-    # Endpoint do WhatsApp QR Code com regex para aceitar parâmetro dinâmico de cache buster
+    # Endpoints do WhatsApp (WAHA)
     re_path(r'^api/whatsapp/qrcode/(?:(?P<cache_buster>[^/]+)/)?$', WahaQRCodeView.as_view(), name='whatsapp_qrcode'),
+    path('api/whatsapp/pairing-code/', WahaPairingCodeView.as_view(), name='whatsapp_pairing_code'),
+    path('api/whatsapp/status/', WahaSessionStatusView.as_view(), name='whatsapp_status'),
     
     # Endpoint de registro de cliente
     path('api/clientes/registrar/', registrar_cliente, name='registrar_cliente'),
