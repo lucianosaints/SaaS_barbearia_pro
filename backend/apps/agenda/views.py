@@ -326,34 +326,36 @@ def obter_disponibilidade(request):
 
         tem_sobreposicao = False
 
+        bloqueado_por_admin = False
+        
         # 1. Verifica colisão com o intervalo de almoço configurado da empresa
         if datetime_inicio_almoco and datetime_fim_almoco:
             if slot_inicio < datetime_fim_almoco and slot_fim > datetime_inicio_almoco:
-                tem_sobreposicao = True
+                bloqueado_por_admin = True
 
         # 2. Verifica colisão com os agendamentos já reservados no banco
-        if not tem_sobreposicao:
+        if not bloqueado_por_admin:
             for agendamento in agendamentos:
                 if slot_inicio < agendamento.data_hora_fim and slot_fim > agendamento.data_hora_inicio:
                     tem_sobreposicao = True
                     break
 
         # 3. Verifica colisão com bloqueios de horário
-        if not tem_sobreposicao:
+        if not tem_sobreposicao and not bloqueado_por_admin:
             for bloqueio in bloqueios:
                 if slot_inicio < bloqueio.data_hora_fim and slot_fim > bloqueio.data_hora_inicio:
-                    tem_sobreposicao = True
+                    bloqueado_por_admin = True
                     break
 
-        if not tem_sobreposicao:
+        if not tem_sobreposicao and not bloqueado_por_admin:
             horarios_disponiveis.append(timezone.localtime(slot_inicio).strftime('%H:%M'))
-        else:
+        elif tem_sobreposicao:
             horarios_ocupados.append(timezone.localtime(slot_inicio).strftime('%H:%M'))
 
         loop_time += timedelta(minutes=slot_intervalo_minutos)
 
     mensagem = None
-    if not horarios_disponiveis and bloqueios.exists():
+    if not horarios_disponiveis and not horarios_ocupados and bloqueios.exists():
         mensagem = "Este dia está totalmente bloqueado ou indisponível para agendamentos."
 
     return Response({
