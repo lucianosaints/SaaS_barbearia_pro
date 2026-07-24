@@ -74,12 +74,12 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        empresa_id = self.request.data.get('empresa')
-        # Associa automaticamente o novo usuário à empresa do criador e fixa como PROFISSIONAL
-        if not empresa_id and user.empresa:
+        # SEMPRE associa à empresa do admin logado, ignorando qualquer empresa vinda do payload
+        if user.empresa:
             serializer.save(empresa=user.empresa, tipo='PROFISSIONAL')
         else:
-            serializer.save(tipo='PROFISSIONAL')
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Você precisa estar vinculado a uma empresa para criar profissionais.")
 
     @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated, IsDemoUserReadOnly])
     def me(self, request):
@@ -93,9 +93,13 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             
         elif request.method == 'PATCH':
             data = request.data.copy()
-            # Bloqueia a alteração do email
-            if 'email' in data:
-                del data['email']
+            # Bloqueia a alteração de campos sensíveis que o usuário NÃO pode alterar sobre si mesmo
+            campos_proibidos = [
+                'email', 'tipo', 'is_staff', 'is_superuser', 'is_active',
+                'empresa', 'status', 'taxa_comissao', 'comissao_percentual'
+            ]
+            for campo in campos_proibidos:
+                data.pop(campo, None)
             
             serializer = self.get_serializer(usuario, data=data, partial=True)
             if serializer.is_valid():
