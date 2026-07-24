@@ -122,10 +122,10 @@ USE_I18N = True
 USE_TZ = True
 
 # Static and Media files
-STATIC_URL = 'static/'
+STATIC_URL = '/estaticos/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') # ou BASE_DIR / 'staticfiles'
 
-MEDIA_URL = '/media/'
+MEDIA_URL = '/arquivos/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Garante que arquivos enviados (fotos) sejam legíveis por todos os containers (Nginx, etc)

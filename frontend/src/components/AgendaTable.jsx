@@ -103,8 +103,8 @@ export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
                 if (urlOriginal.includes('backend:8000') || urlOriginal.includes('localhost:8000')) {
                   return urlOriginal.replace(/http:\/\/backend:8000|http:\/\/localhost:8000/, 'https://salaopro.site');
                 }
-                // Se a URL for relativa (começar apenas com /media/), adiciona o domínio público na frente
-                if (urlOriginal.startsWith('/media/')) {
+                // Se a URL for relativa (começar apenas com /media/ ou /arquivos/), adiciona o domínio público na frente
+                if (urlOriginal.startsWith('/media/') || urlOriginal.startsWith('/arquivos/')) {
                   return `https://salaopro.site${urlOriginal}`;
                 }
                 return urlOriginal;
@@ -238,7 +238,7 @@ export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
             if (urlOriginal.includes('backend:8000') || urlOriginal.includes('localhost:8000')) {
               return urlOriginal.replace(/http:\/\/backend:8000|http:\/\/localhost:8000/, 'https://salaopro.site');
             }
-            if (urlOriginal.startsWith('/media/')) {
+            if (urlOriginal.startsWith('/media/') || urlOriginal.startsWith('/arquivos/')) {
               return `https://salaopro.site${urlOriginal}`;
             }
             return urlOriginal;
