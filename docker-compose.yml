@@ -8,8 +8,8 @@ services:
     container_name: barbeiro_pro_backend
     command: gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 1 --timeout 120
     restart: unless-stopped
-    expose:
-      - "8000"
+    ports:
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
       - django_media:/app/media # Persiste arquivos de mídia (fotos, uploads)
