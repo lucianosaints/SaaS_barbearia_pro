@@ -17,9 +17,10 @@ export default function GerenciarBloqueiosModal({ isOpen, onClose, onBlocksChang
     setError(null);
     try {
       const res = await api.get('/api/bloqueios/');
-      // Filtra apenas bloqueios futuros ou do dia atual
-      const now = new Date();
-      const filtered = res.data.filter(b => new Date(b.data_hora_fim) > now);
+      // Filtra para mostrar todos os bloqueios a partir do dia atual (00:00)
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const filtered = res.data.filter(b => new Date(b.data_hora_fim) >= startOfDay);
       // Ordena por data mais próxima
       filtered.sort((a, b) => new Date(a.data_hora_inicio) - new Date(b.data_hora_inicio));
       setBloqueios(filtered);
