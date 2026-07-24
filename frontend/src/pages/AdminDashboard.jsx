@@ -11,6 +11,7 @@ import GestaoClientes from './GestaoClientes';
 import FinanceiroDashboard from './FinanceiroDashboard';
 import GestaoConfiguracoes from './GestaoConfiguracoes';
 import BloqueioHorarioModal from '../components/BloqueioHorarioModal';
+import GerenciarBloqueiosModal from '../components/GerenciarBloqueiosModal';
 import ConfirmModal from '../components/ConfirmModal';
 import LockoutScreen from '../components/LockoutScreen';
 import useAgendamentoStore from '../store/useAgendamentoStore';
@@ -26,6 +27,7 @@ export default function AdminDashboard() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [bloqueioModalOpen, setBloqueioModalOpen] = useState(false);
+  const [gerenciarBloqueiosModalOpen, setGerenciarBloqueiosModalOpen] = useState(false);
   const [cancelamentoModal, setCancelamentoModal] = useState({ isOpen: false, agendamento: null });
   
   // ==========================================
@@ -377,6 +379,12 @@ export default function AdminDashboard() {
               <h2 className="text-xl font-bold text-text-primary">Visão Operacional</h2>
               <div className="flex gap-2">
                 <button 
+                  onClick={() => setGerenciarBloqueiosModalOpen(true)}
+                  className="bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 font-semibold text-xs px-4 py-2 rounded-lg transition-colors"
+                >
+                  🗑️ Gerenciar Bloqueios
+                </button>
+                <button 
                   onClick={() => setBloqueioModalOpen(true)}
                   className="bg-red-500/20 text-red-500 border border-red-500/50 hover:bg-red-500/30 font-semibold text-xs px-4 py-2 rounded-lg transition-colors"
                 >
@@ -487,6 +495,15 @@ export default function AdminDashboard() {
         onClose={() => setBloqueioModalOpen(false)} 
         onSave={() => {
           setBloqueioModalOpen(false);
+          if (activeTab === 'agenda') fetchAgendamentos(currentFilters);
+        }}
+      />
+
+      {/* MODAL DE GERENCIAR BLOQUEIOS */}
+      <GerenciarBloqueiosModal 
+        isOpen={gerenciarBloqueiosModalOpen}
+        onClose={() => setGerenciarBloqueiosModalOpen(false)}
+        onBlocksChanged={() => {
           if (activeTab === 'agenda') fetchAgendamentos(currentFilters);
         }}
       />
