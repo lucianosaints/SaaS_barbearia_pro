@@ -171,15 +171,30 @@ class WahaQRCodeView(APIView):
         if api_key:
             headers["X-Api-Key"] = api_key
 
+        stop_url = f"{waha_url}/api/sessions/{waha_session}/stop"
+        delete_url = f"{waha_url}/api/sessions/{waha_session}"
         logout_url = f"{waha_url}/api/sessions/{waha_session}/logout"
         
         try:
-            requests.post(logout_url, headers=headers, timeout=15)
-            return Response({"message": "WhatsApp desconectado com sucesso."}, status=status.HTTP_200_OK)
+            # 1. Tenta logout suave se estiver conectado (pode falhar se estiver travado)
+            requests.post(logout_url, headers=headers, timeout=5)
+        except:
+            pass
+
+        try:
+            # 2. Tenta parar o motor
+            requests.post(stop_url, headers=headers, timeout=5)
+        except:
+            pass
+
+        try:
+            # 3. Força a exclusão total da sessão para limpar qualquer estado corrompido
+            requests.delete(delete_url, headers=headers, timeout=15)
+            return Response({"message": "Sessão resetada e excluída com sucesso."}, status=status.HTTP_200_OK)
         except Exception as e:
-            logger.error(f"WAHA: Erro ao desconectar WhatsApp. Erro: {str(e)}")
+            logger.error(f"WAHA: Erro ao deletar sessão WhatsApp. Erro: {str(e)}")
             return Response(
-                {"error": "Erro ao tentar desconectar o WhatsApp."},
+                {"error": "Erro ao tentar limpar a sessão do WhatsApp."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
