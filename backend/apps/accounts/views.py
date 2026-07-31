@@ -267,7 +267,6 @@ def registrar_saas(request):
                 'assinatura_ativa': empresa.assinatura_ativa
             }
         }
-        }
     }, status=status.HTTP_201_CREATED)
 
 class LogoutView(APIView):
