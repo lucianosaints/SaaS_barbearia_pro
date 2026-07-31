@@ -11,7 +11,7 @@ from rest_framework_simplejwt.views import (
 
 # Importando as ViewSets e views customizadas
 from apps.tenants.views import EmpresaViewSet
-from apps.accounts.views import UsuarioViewSet, registrar_cliente, registrar_saas, CustomTokenObtainPairView
+from apps.accounts.views import UsuarioViewSet, registrar_cliente, registrar_saas, CustomTokenObtainPairView, LogoutView
 from apps.agenda.views import ServicoViewSet, AgendamentoViewSet, obter_disponibilidade, FinancasDashboardView, ComissoesView, MeuCartaoFidelidadeView, BloqueioHorarioViewSet, FilaEsperaViewSet
 from apps.tenants.waha_views import WahaQRCodeView, WahaPairingCodeView, WahaSessionStatusView
 
@@ -57,6 +57,7 @@ urlpatterns = [
     # Endpoints de Autenticação (JWT)
     path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/logout/', LogoutView.as_view(), name='logout'),
 ]
 
 if settings.DEBUG:

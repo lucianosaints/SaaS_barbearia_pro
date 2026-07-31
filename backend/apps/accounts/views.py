@@ -1,10 +1,14 @@
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.decorators import api_view, permission_classes, action
+from rest_framework.views import APIView
+from rest_framework.decorators import api_view, permission_classes, action, throttle_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.throttling import ScopedRateThrottle, AnonRateThrottle
+
+class RegistroThrottle(AnonRateThrottle):
+    scope = 'registro'
 from apps.accounts.models import Usuario
 from apps.accounts.serializers import UsuarioSerializer, CustomTokenObtainPairSerializer
 from apps.accounts.permissions import IsAdminUserOrReadOnly, IsDemoUserReadOnly
@@ -110,6 +114,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([RegistroThrottle])
 def registrar_cliente(request):
     """
     Cadastra um novo cliente no sistema e retorna imediatamente os tokens JWT.
@@ -129,7 +134,7 @@ def registrar_cliente(request):
     # O username será o email do usuário
     if Usuario.objects.filter(username=email).exists() or Usuario.objects.filter(email=email).exists():
         return Response(
-            {"error": "Já existe um usuário cadastrado com este e-mail."},
+            {"error": "Não foi possível realizar o cadastro. Verifique os dados ou tente fazer login se já possuir uma conta."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -181,6 +186,7 @@ def registrar_cliente(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([RegistroThrottle])
 def registrar_saas(request):
     """
     Cadastra uma nova barbearia (Empresa) e o usuário administrador.
@@ -205,7 +211,7 @@ def registrar_saas(request):
 
     if Usuario.objects.filter(username=email).exists() or Usuario.objects.filter(email=email).exists():
         return Response(
-            {"error": "Já existe um usuário com este e-mail."},
+            {"error": "Não foi possível realizar o cadastro. Verifique os dados ou tente fazer login se já possuir uma conta."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -261,4 +267,22 @@ def registrar_saas(request):
                 'assinatura_ativa': empresa.assinatura_ativa
             }
         }
+        }
     }, status=status.HTTP_201_CREATED)
+
+class LogoutView(APIView):
+    """
+    View para realizar o logout do usuário, invalidando o Refresh Token.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data.get("refresh_token")
+            if not refresh_token:
+                return Response({"error": "O campo refresh_token é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response(status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response({"error": "Token inválido ou já expirado."}, status=status.HTTP_400_BAD_REQUEST)

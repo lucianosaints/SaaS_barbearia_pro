@@ -21,6 +21,12 @@ class UsuarioSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'id', 'empresa', 'date_joined', 'data_aceite_termos', 'ip_aceite_termos'
         ]
+        extra_kwargs = {
+            'ip_aceite_termos': {'write_only': True},
+            'taxa_comissao': {'write_only': True},
+            'comissao_percentual': {'write_only': True},
+            'telefone': {'write_only': True}
+        }
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
