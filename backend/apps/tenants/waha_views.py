@@ -36,24 +36,57 @@ class WahaQRCodeView(APIView):
         if api_key:
             headers["X-Api-Key"] = api_key
 
-        # 1. Iniciar a Sessão (garante que ela existe)
-        start_session_url = f"{waha_url}/api/sessions"
-        session_payload = {"name": waha_session}
-        
+        # 1. Verificar se a sessão já existe antes de tentar criá-la
         try:
-            # Chama o endpoint para iniciar/garantir a sessão.
-            # Timeout aumentado para 60s porque o motor do WAHA pode demorar muito
-            resp1 = requests.post(start_session_url, json=session_payload, headers=headers, timeout=60)
-            if not resp1.ok and resp1.status_code not in [409, 422]: # Ignora erro 409/422 (sessão já existe)
-                logger.warning(f"WAHA: Erro ao criar sessão. Status: {resp1.status_code}. Response: {resp1.text}")
+            check_url = f"{waha_url}/api/sessions/{waha_session}"
+            check_resp = requests.get(check_url, headers=headers, timeout=10)
             
-            # Garante que a sessão vai iniciar mesmo que já existisse mas estivesse parada (STOPPED)
-            start_engine_url = f"{waha_url}/api/sessions/{waha_session}/start"
-            resp2 = requests.post(start_engine_url, headers=headers, timeout=60)
-            if not resp2.ok and resp2.status_code not in [409, 422]:
-                logger.warning(f"WAHA: Erro ao iniciar motor. Status: {resp2.status_code}. Response: {resp2.text}")
+            if check_resp.status_code == 404:
+                # Sessão não existe, cria ela
+                create_url = f"{waha_url}/api/sessions"
+                session_payload = {"name": waha_session}
+                requests.post(create_url, json=session_payload, headers=headers, timeout=30)
+                # Inicia o motor
+                start_url = f"{waha_url}/api/sessions/{waha_session}/start"
+                requests.post(start_url, headers=headers, timeout=30)
+                return Response({
+                    "status": "LOADING",
+                    "message": "Sessão criada. O WhatsApp está preparando o seu QR Code, aguarde 5 segundos..."
+                }, status=status.HTTP_200_OK)
+            
+            elif check_resp.ok:
+                session_data = check_resp.json()
+                current_status = session_data.get('status', '')
+                
+                if current_status in ['WORKING', 'CONNECTED']:
+                    return Response({
+                        "status": "WORKING",
+                        "message": "O WhatsApp já está conectado e pronto para uso!"
+                    }, status=status.HTTP_200_OK)
+                
+                if current_status in ['FAILED', 'STOPPED']:
+                    # Sessão travou, deleta e recria
+                    delete_url = f"{waha_url}/api/sessions/{waha_session}"
+                    requests.delete(delete_url, headers=headers, timeout=15)
+                    create_url = f"{waha_url}/api/sessions"
+                    requests.post(create_url, json={"name": waha_session}, headers=headers, timeout=30)
+                    start_url = f"{waha_url}/api/sessions/{waha_session}/start"
+                    requests.post(start_url, headers=headers, timeout=30)
+                    return Response({
+                        "status": "LOADING",
+                        "message": "Sessão reiniciada. Aguarde 5 segundos..."
+                    }, status=status.HTTP_200_OK)
+                    
+                # Se está STARTING, não faz nada pesado, apenas tenta pegar o QR
+                
+        except requests.exceptions.ConnectionError:
+            logger.error(f"WAHA: Não conseguiu conectar ao container WAHA em {waha_url}")
+            return Response(
+                {"error": f"Não foi possível conectar ao motor do WhatsApp em {waha_url}. Verifique se o container 'waha' está rodando."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
         except Exception as e:
-            logger.error(f"WAHA: Falha ao tentar iniciar sessão {waha_session}. Erro: {str(e)}")
+            logger.error(f"WAHA: Falha ao verificar sessão {waha_session}. Erro: {str(e)}")
             return Response(
                 {"error": "Não foi possível conectar ao motor do WhatsApp. Verifique se o container 'waha' está rodando."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE

@@ -17,9 +17,6 @@ const WhatsAppIntegration = () => {
 
     const fetchQRCode = async () => {
         const fetchUrl = `/api/whatsapp/qrcode/${Date.now()}/?t=${new Date().getTime()}`;
-        setQrCodeStatus('LOADING');
-        setMessage('Buscando status da conexão...');
-        setQrCodeImage(null);
         
         try {
             const response = await api.get(fetchUrl);
