@@ -112,7 +112,7 @@ const WhatsAppIntegration = () => {
         pollingInterval.current = setInterval(() => {
             if (pairingMethod === 'PHONE' && pairingCode && qrCodeStatus !== 'WORKING') {
                 checkStatus();
-            } else if (pairingMethod === 'QRCODE' && qrCodeStatus !== 'WORKING' && qrCodeStatus !== 'LOADING') {
+            } else if (pairingMethod === 'QRCODE' && qrCodeStatus !== 'WORKING') {
                 fetchQRCode();
             }
         }, 10000); // 10 segundos
