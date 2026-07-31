@@ -21,8 +21,9 @@ export default function FilterBar({ onFilterChange }) {
     async function loadBarbeiros() {
       try {
         const response = await api.get('/api/usuarios/');
-        // Filtra simplificadamente por usuários ativos da empresa
-        setBarbeiros(response.data.results || response.data);
+        const users = response.data.results || response.data;
+        const apenasProfissionais = users.filter(u => u.tipo === 'PROFISSIONAL' || u.tipo === 'ADMINISTRADOR');
+        setBarbeiros(apenasProfissionais);
       } catch (err) {
         console.error('Erro ao carregar profissionais para filtros:', err);
       }

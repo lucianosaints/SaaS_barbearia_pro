@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.agenda.models import Servico, Agendamento
+from apps.agenda.models import Servico, Agendamento, BloqueioHorario, FilaEspera
 from apps.accounts.models import Usuario
 
 class ServicoSerializer(serializers.ModelSerializer):
@@ -9,7 +9,7 @@ class ServicoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Servico
         fields = ['id', 'empresa', 'nome', 'preco', 'duracao_minutos', 'ativo']
-        read_only_fields = ['id']
+        read_only_fields = ['id', 'empresa']
 
 
 class AgendamentoSerializer(serializers.ModelSerializer):
@@ -32,9 +32,11 @@ class AgendamentoSerializer(serializers.ModelSerializer):
         model = Agendamento
         fields = [
             'id', 'empresa', 'cliente', 'profissional', 'servicos',
-            'data_hora_inicio', 'data_hora_fim', 'status', 'observacoes'
+            'data_hora_inicio', 'data_hora_fim', 'status', 'observacoes',
+            'valor_total', 'valor_comissao', 'lucro_liquido',
+            'status_pagamento', 'metodo_pagamento'
         ]
-        read_only_fields = ['id', 'data_hora_fim', 'empresa']
+        read_only_fields = ['id', 'data_hora_fim', 'empresa', 'valor_total', 'valor_comissao', 'lucro_liquido']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -42,8 +44,8 @@ class AgendamentoSerializer(serializers.ModelSerializer):
         # Clientes finais são usuários globais do SaaS e podem agendar em qualquer barbearia.
         request = self.context.get('request')
         if request and hasattr(request, 'user') and request.user.is_authenticated and not request.user.is_superuser:
-            if request.user.tipo != 'CLIENTE':
-                empresa = request.user.empresa
+            empresa = request.user.empresa
+            if empresa:
                 self.fields['servicos'].queryset = Servico.objects.filter(empresa=empresa, ativo=True)
                 self.fields['cliente'].queryset = Usuario.objects.filter(empresa=empresa)
                 self.fields['profissional'].queryset = Usuario.objects.filter(empresa=empresa)
@@ -72,4 +74,57 @@ class AgendamentoSerializer(serializers.ModelSerializer):
         # Sobrescreve para retornar os detalhes dos serviços em vez de apenas os IDs no GET
         representation = super().to_representation(instance)
         representation['servicos_detalhes'] = ServicoSerializer(instance.servicos.all(), many=True).data
+        
+        request = self.context.get('request')
+        
+        if instance.cliente:
+            representation['cliente_nome'] = instance.cliente.get_full_name() or instance.cliente.username
+            representation['cliente_telefone'] = instance.cliente.telefone
+            
+            if instance.cliente.foto:
+                url = instance.cliente.foto.url
+                representation['cliente_foto'] = request.build_absolute_uri(url) if request else url
+            else:
+                representation['cliente_foto'] = None
+            
+        if instance.profissional:
+            representation['profissional_nome'] = instance.profissional.get_full_name() or instance.profissional.username
+            
+            if instance.profissional.foto:
+                url = instance.profissional.foto.url
+                representation['profissional_foto'] = request.build_absolute_uri(url) if request else url
+            else:
+                representation['profissional_foto'] = None
+            
+        if instance.empresa:
+            representation['empresa_nome'] = instance.empresa.nome
+            representation['empresa_slug'] = instance.empresa.slug
+            
         return representation
+
+
+class BloqueioHorarioSerializer(serializers.ModelSerializer):
+    """
+    Serializer para o modelo BloqueioHorario.
+    """
+    class Meta:
+        model = BloqueioHorario
+        fields = ['id', 'empresa', 'profissional', 'data_hora_inicio', 'data_hora_fim', 'motivo']
+        read_only_fields = ['id', 'empresa']
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.profissional:
+            representation['profissional_nome'] = instance.profissional.get_full_name() or instance.profissional.username
+        else:
+            representation['profissional_nome'] = 'Todos os Profissionais'
+        return representation
+
+class FilaEsperaSerializer(serializers.ModelSerializer):
+    """
+    Serializer para o modelo FilaEspera.
+    """
+    class Meta:
+        model = FilaEspera
+        fields = ['id', 'empresa', 'cliente_nome', 'cliente_telefone', 'data_desejada', 'horario_desejado', 'notificado', 'criado_em']
+        read_only_fields = ['id', 'notificado', 'criado_em']

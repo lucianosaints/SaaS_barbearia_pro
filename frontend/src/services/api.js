@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Instância base do Axios apontando para o nosso backend Django
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:8000'),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -43,12 +43,22 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Se o erro for 402 (Payment Required), redireciona para a tela de assinatura
+    if (error.response?.status === 402) {
+      window.location.href = '/admin/assinatura';
+      return Promise.reject(error);
+    }
+
     // Se o erro for 401 (Unauthorized) e não for uma tentativa repetida de obter token
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (originalRequest.url === '/api/token/' || originalRequest.url === '/api/token/refresh/') {
         // Se falhar na própria autenticação ou renovação, limpa os tokens e rejeita
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        // Só redireciona se já não estivermos na página de login, para evitar loops
+        if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+        }
         return Promise.reject(error);
       }
 
@@ -74,12 +84,16 @@ api.interceptors.response.use(
         isRefreshing = false;
         // Sem refresh token, força deslogar
         localStorage.removeItem('access_token');
+        if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+        }
         return Promise.reject(error);
       }
 
       try {
-        // Faz a requisição de Refresh Token na API do Django
-        const response = await axios.post('http://localhost:8000/api/token/refresh/', {
+        // Usamos axios em vez de api.post para o refresh para não passar pelo interceptor
+        // Mas como usamos api.post, a condição originalRequest.url === '/api/token/refresh/' acima já protege contra loops.
+        const response = await api.post('/api/token/refresh/', {
           refresh: refreshToken,
         });
 
@@ -109,6 +123,9 @@ api.interceptors.response.use(
         
         // Dispara evento global ou redirecionamento de login se necessário
         window.dispatchEvent(new Event('auth_expired'));
+        if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+        }
         
         return Promise.reject(refreshError);
       }

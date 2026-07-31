@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import ClientAgendaCard from '../components/ClientAgendaCard';
+import useAgendamentoStore from '../store/useAgendamentoStore';
+import CartaoFidelidadeCard from '../components/CartaoFidelidadeCard';
 
 export default function PainelCliente() {
+  const { userEmpresa } = useAgendamentoStore();
   const [agendamentos, setAgendamentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // Estados para o modal de Perfil
+  const [perfilModalOpen, setPerfilModalOpen] = useState(false);
+  const [perfilData, setPerfilData] = useState({ first_name: '', last_name: '', email: '', telefone: '' });
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+  const [perfilSuccess, setPerfilSuccess] = useState('');
+  const [perfilError, setPerfilError] = useState('');
+
   // Estados para o modal customizado de cancelamento
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [selectedAgendamentoId, setSelectedAgendamentoId] = useState(null);
@@ -30,6 +41,43 @@ export default function PainelCliente() {
     fetchAgendamentos();
   }, []);
 
+  const handleOpenPerfilModal = async () => {
+    setPerfilModalOpen(true);
+    setPerfilSuccess('');
+    setPerfilError('');
+    try {
+      const response = await api.get('/api/usuarios/me/');
+      setPerfilData({
+        first_name: response.data.first_name || '',
+        last_name: response.data.last_name || '',
+        email: response.data.email || '',
+        telefone: response.data.telefone || ''
+      });
+    } catch (err) {
+      setPerfilError('Não foi possível carregar os dados do perfil.');
+    }
+  };
+
+  const handleSavePerfil = async (e) => {
+    e.preventDefault();
+    setSalvandoPerfil(true);
+    setPerfilSuccess('');
+    setPerfilError('');
+    try {
+      await api.patch('/api/usuarios/me/', {
+        first_name: perfilData.first_name,
+        last_name: perfilData.last_name,
+        telefone: perfilData.telefone
+      });
+      setPerfilSuccess('Perfil atualizado com sucesso!');
+      setTimeout(() => setPerfilModalOpen(false), 2000);
+    } catch (err) {
+      setPerfilError('Erro ao atualizar o perfil. Tente novamente.');
+    } finally {
+      setSalvandoPerfil(false);
+    }
+  };
+
   const handleOpenCancelModal = (id) => {
     setSelectedAgendamentoId(id);
     setCancelModalOpen(true);
@@ -45,7 +93,7 @@ export default function PainelCliente() {
       fetchAgendamentos();
     } catch (err) {
       console.error('Erro ao cancelar agendamento:', err);
-      alert('Falha ao cancelar o agendamento. Tente novamente mais tarde.');
+      setError('Falha ao cancelar o agendamento. Tente novamente mais tarde.');
     } finally {
       setCanceling(false);
     }
@@ -72,58 +120,39 @@ export default function PainelCliente() {
     return dataAgendamento < agora || a.status === 'CANCELADO';
   });
 
-  const AgendamentoCard = ({ agendamento, isFuturo }) => {
-    const data = new Date(agendamento.data_hora_inicio);
-    const dataFormatada = data.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
-    const horaFormatada = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    
-    // Calcula serviços e valor total
-    const detalhes = agendamento.servicos_detalhes || [];
-    const nomesServicos = detalhes.map(s => s.nome).join(', ') || 'Serviços não listados';
-    const valorTotal = detalhes.reduce((acc, curr) => acc + parseFloat(curr.preco), 0);
 
-    return (
-      <div className={`p-4 rounded-xl border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all ${
-        agendamento.status === 'CANCELADO' ? 'bg-background-darker border-white/5 opacity-60' : 'bg-background-paper border-white/10 shadow-lg shadow-black/20'
-      }`}>
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="text-gold-light font-bold text-lg">{dataFormatada}</span>
-            <span className="text-text-secondary text-sm border-l border-white/20 pl-2">{horaFormatada}</span>
-            {agendamento.status === 'CANCELADO' && (
-              <span className="ml-2 px-2 py-0.5 text-[10px] uppercase font-bold bg-rose-500/20 text-rose-400 rounded border border-rose-500/30">
-                Cancelado
-              </span>
-            )}
-          </div>
-          <div className="text-text-primary text-sm font-medium">{nomesServicos}</div>
-          <div className="text-text-muted text-xs flex items-center gap-3">
-            <span>💈 Profissional ID: {agendamento.profissional}</span>
-            <span>💰 R$ {valorTotal.toFixed(2).replace('.', ',')}</span>
-          </div>
-        </div>
-        
-        {isFuturo && agendamento.status !== 'CANCELADO' && (
-          <button
-            onClick={() => handleOpenCancelModal(agendamento.id)}
-            className="w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-semibold transition-all text-rose-400 border border-rose-500/30 hover:bg-rose-500/10 hover:border-rose-500/50"
-          >
-            Cancelar Agendamento
-          </button>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="w-full max-w-4xl mx-auto py-8 px-4 space-y-10">
+      <CartaoFidelidadeCard />
+      
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+        <div>
+          <h2 className="text-2xl font-bold text-text-primary mb-2">Próximos Agendamentos</h2>
+          <p className="text-text-muted text-sm">Confira seus horários marcados ou efetue o cancelamento se necessário.</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleOpenPerfilModal}
+            className="px-4 py-2.5 text-sm font-semibold rounded-lg bg-background-darker border border-white/10 text-text-primary hover:border-gold/50 transition-colors"
+          >
+            Meus Dados
+          </button>
+          {userEmpresa && userEmpresa.slug && (
+            <button
+              onClick={() => window.open(`/agendar/${userEmpresa.slug}`, '_blank')}
+              className="btn-gold px-6 py-2.5 text-sm"
+            >
+              + Novo Agendamento
+            </button>
+          )}
+        </div>
+      </div>
+
       <div>
-        <h2 className="text-2xl font-bold text-text-primary mb-2">Próximos Agendamentos</h2>
-        <p className="text-text-muted text-sm mb-6">Confira seus horários marcados ou efetue o cancelamento se necessário.</p>
-        
         {futuros.length > 0 ? (
-          <div className="space-y-4">
-            {futuros.map(a => <AgendamentoCard key={a.id} agendamento={a} isFuturo={true} />)}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {futuros.map(a => <ClientAgendaCard key={a.id} agendamento={a} isFuturo={true} onCancel={handleOpenCancelModal} />)}
           </div>
         ) : (
           <div className="p-8 text-center text-text-muted bg-background-darker rounded-xl border border-white/5">
@@ -137,8 +166,8 @@ export default function PainelCliente() {
         <p className="text-text-muted text-sm mb-6">Seus agendamentos anteriores e horários cancelados.</p>
         
         {passados.length > 0 ? (
-          <div className="space-y-4">
-            {passados.map(a => <AgendamentoCard key={a.id} agendamento={a} isFuturo={false} />)}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {passados.map(a => <ClientAgendaCard key={a.id} agendamento={a} isFuturo={false} onCancel={handleOpenCancelModal} />)}
           </div>
         ) : (
           <div className="p-8 text-center text-text-muted bg-background-darker rounded-xl border border-white/5">
@@ -193,6 +222,95 @@ export default function PainelCliente() {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+      {/* Modal de Perfil */}
+      {perfilModalOpen && (
+        <div className="fixed inset-0 bg-background-darker/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-background-paper border border-white/5 rounded-2xl w-full max-w-md overflow-hidden relative shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <h3 className="text-lg font-bold text-text-primary">Meus Dados</h3>
+              <button onClick={() => setPerfilModalOpen(false)} className="text-text-muted hover:text-white transition-colors">
+                ✕
+              </button>
+            </div>
+
+            {perfilSuccess && (
+              <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm text-center">
+                {perfilSuccess}
+              </div>
+            )}
+            
+            {perfilError && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-sm text-center">
+                {perfilError}
+              </div>
+            )}
+
+            <form onSubmit={handleSavePerfil} className="space-y-4 text-left">
+              <div>
+                <label className="block text-xs font-semibold text-text-muted mb-1">Nome</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 bg-background-darker border border-white/10 rounded-lg text-sm text-text-primary focus:outline-none focus:border-gold/50"
+                  value={perfilData.first_name}
+                  onChange={(e) => setPerfilData({...perfilData, first_name: e.target.value})}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-xs font-semibold text-text-muted mb-1">Sobrenome</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 bg-background-darker border border-white/10 rounded-lg text-sm text-text-primary focus:outline-none focus:border-gold/50"
+                  value={perfilData.last_name}
+                  onChange={(e) => setPerfilData({...perfilData, last_name: e.target.value})}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-muted mb-1">Telefone (WhatsApp)</label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 bg-background-darker border border-white/10 rounded-lg text-sm text-text-primary focus:outline-none focus:border-gold/50"
+                  value={perfilData.telefone}
+                  onChange={(e) => setPerfilData({...perfilData, telefone: e.target.value})}
+                  placeholder="Ex: 11999999999"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-muted mb-1">E-mail</label>
+                <input
+                  type="email"
+                  disabled
+                  className="w-full px-3 py-2 bg-background-darker/50 border border-white/5 rounded-lg text-sm text-text-muted cursor-not-allowed"
+                  value={perfilData.email}
+                />
+                <p className="text-[10px] text-text-muted mt-1">O e-mail de login não pode ser alterado.</p>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPerfilModalOpen(false)}
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-lg bg-background-darker border border-white/10 text-text-primary hover:border-white/20 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={salvandoPerfil}
+                  className="flex-1 py-2.5 text-xs font-semibold rounded-lg bg-gold text-background-darker hover:bg-gold-light transition-colors shadow-md shadow-gold/20 flex items-center justify-center gap-2"
+                >
+                  {salvandoPerfil ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

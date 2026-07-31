@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import useAgendamentoStore from '../store/useAgendamentoStore';
 import api from '../services/api';
 import StepServicos from '../components/StepServicos';
 import StepBarbeiros from '../components/StepBarbeiros';
 import StepDataHora from '../components/StepDataHora';
+import StepPagamento from '../components/StepPagamento';
 import AuthModal from '../components/AuthModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -18,20 +20,52 @@ export default function AgendamentoWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  
+  // States para carregamento do slug
+  const [loadingEmpresa, setLoadingEmpresa] = useState(true);
+  const [empresaNotFound, setEmpresaNotFound] = useState(false);
+
+  // State para aceite da política
+  const [aceitouPolitica, setAceitouPolitica] = useState(false);
+  const [politicaModalOpen, setPoliticaModalOpen] = useState(false);
+
+  const { empresaSlug } = useParams();
+  const navigate = useNavigate();
 
   // Zustand
-  const { barbeiroId, servicosIds, dataHora, resetStore, userToken, setAuthModalOpen } = useAgendamentoStore();
+  const { empresaId, setEmpresaId, barbeiroId, servicosIds, dataHora, metodoPagamento, resetStore, userToken, setAuthModalOpen } = useAgendamentoStore();
 
-  // Verifica se o passo atual está válido para avançar
+  useEffect(() => {
+    async function fetchEmpresa() {
+      try {
+        const response = await api.get(`/api/empresas/por-slug/${empresaSlug}/`);
+        setEmpresaId(response.data.id);
+      } catch (error) {
+        console.error("Erro ao buscar empresa pelo slug", error);
+        setEmpresaNotFound(true);
+      } finally {
+        setLoadingEmpresa(false);
+      }
+    }
+    
+    if (empresaSlug) {
+      fetchEmpresa();
+    } else {
+      setEmpresaNotFound(true);
+      setLoadingEmpresa(false);
+    }
+  }, [empresaSlug, setEmpresaId]);
+
   const isStepValid = () => {
     if (step === 1) return servicosIds.length > 0;
     if (step === 2) return barbeiroId !== null;
     if (step === 3) return dataHora !== null;
+    if (step === 4) return metodoPagamento !== null;
     return false;
   };
 
   const handleNext = () => {
-    if (isStepValid() && step < 3) {
+    if (isStepValid() && step < 4) {
       setStep(step + 1);
     }
   };
@@ -44,6 +78,9 @@ export default function AgendamentoWizard() {
 
   // Faz a chamada de POST final no backend para criar o agendamento
   const handleFinalizarAgendamento = async () => {
+    // Se logou avulso e não tem dados do agendamento, apenas sai.
+    if (!servicosIds.length || !barbeiroId || !dataHora) return;
+
     setSubmitting(true);
     setSubmitError(null);
 
@@ -52,6 +89,7 @@ export default function AgendamentoWizard() {
         profissional: barbeiroId,
         servicos: servicosIds,
         data_hora_inicio: dataHora,
+        metodo_pagamento: metodoPagamento,
       };
 
       await api.post('/api/agendamentos/', payload);
@@ -93,7 +131,7 @@ export default function AgendamentoWizard() {
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-text-primary">Agendado com Sucesso!</h1>
             <p className="text-text-muted text-sm">
-              Seu horário foi reservado. Um e-mail de confirmação foi enviado!
+              Seu horário foi reservado. Acompanhe pelo painel "Minha Agenda".
             </p>
           </div>
           <button
@@ -110,11 +148,30 @@ export default function AgendamentoWizard() {
     );
   }
 
+  if (loadingEmpresa) {
+    return (
+      <div className="w-full h-[60vh] flex flex-col items-center justify-center text-text-muted">
+        <div className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-sm">Buscando barbearia...</p>
+      </div>
+    );
+  }
+
+  if (empresaNotFound) {
+    return (
+      <div className="w-full h-[60vh] flex flex-col items-center justify-center text-text-muted px-4 text-center">
+        <h2 className="text-2xl font-bold text-white mb-2">Barbearia não encontrada</h2>
+        <p className="text-sm max-w-sm mb-6">O link que você tentou acessar não existe ou a barbearia está inativa.</p>
+        <button onClick={() => navigate('/')} className="btn-gold px-6">Ir para a Tela Inicial</button>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-md mx-auto py-4 sm:py-8 px-4">
       {/* Banner da Barbearia */}
       <div className="w-full h-24 sm:h-32 rounded-2xl overflow-hidden border border-white/5 mb-4 sm:mb-6 relative shadow-lg shadow-black/35">
-        <img src={bannerImg} alt="Barbeiro Pro" className="w-full h-full object-cover opacity-70" />
+        <img src={bannerImg} alt="Salão Pro" className="w-full h-full object-cover opacity-70" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-black/10 to-transparent"></div>
         <div className="absolute bottom-3 left-4">
           <span className="text-[9px] uppercase font-bold tracking-widest text-gold bg-background-darker/70 px-2 py-0.5 rounded border border-gold/25">Ambiente Premium</span>
@@ -123,17 +180,17 @@ export default function AgendamentoWizard() {
 
       {/* Indicador de Passos */}
       <div className="flex justify-between items-center mb-4 sm:mb-8 px-4">
-        {[1, 2, 3].map((num) => (
+        {[1, 2, 3, 4].map((num) => (
           <div key={num} className="flex items-center">
             <div className={`w-8 h-8 rounded-full border font-bold text-xs flex items-center justify-center transition-all ${
               step >= num 
-                ? 'bg-gold border-gold text-background' 
+                ? 'bg-gold border-gold text-background-darker' 
                 : 'border-white/10 text-text-muted bg-background-darker'
             }`}>
               {num}
             </div>
-            {num < 3 && (
-              <div className={`w-16 h-[2px] transition-colors ${
+            {num < 4 && (
+              <div className={`w-8 sm:w-16 h-[2px] transition-colors ${
                 step > num ? 'bg-gold' : 'bg-white/10'
               }`} />
             )}
@@ -155,6 +212,7 @@ export default function AgendamentoWizard() {
               {step === 1 && <StepServicos />}
               {step === 2 && <StepBarbeiros />}
               {step === 3 && <StepDataHora />}
+              {step === 4 && <StepPagamento />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -166,6 +224,30 @@ export default function AgendamentoWizard() {
           </div>
         )}
       </div>
+
+      {/* Aceite de Política */}
+      {step === 4 && (
+        <div className="mb-4 flex items-start gap-2 bg-background-paper p-3 rounded-xl border border-white/5">
+          <input 
+            type="checkbox" 
+            id="politica"
+            checked={aceitouPolitica}
+            onChange={(e) => setAceitouPolitica(e.target.checked)}
+            className="mt-1 w-4 h-4 shrink-0 rounded bg-background-darker border-white/10 text-gold focus:ring-gold"
+          />
+          <label htmlFor="politica" className="text-xs text-text-secondary leading-snug cursor-pointer select-none">
+            Estou de acordo com a{' '}
+            <button 
+              type="button" 
+              onClick={(e) => { e.preventDefault(); setPoliticaModalOpen(true); }}
+              className="text-gold underline hover:text-gold-light"
+            >
+              Política de Agendamento e Cancelamento
+            </button>
+            {' '}do salão.
+          </label>
+        </div>
+      )}
 
       {/* Botões de Ação de Navegação */}
       <div className="flex gap-4">
@@ -180,12 +262,16 @@ export default function AgendamentoWizard() {
           </button>
         )}
 
-        {step < 3 ? (
+        {step < 4 ? (
           <button
             type="button"
             onClick={handleNext}
             disabled={!isStepValid()}
-            className="btn-gold flex-1 py-3 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`px-8 py-3 rounded-lg font-bold text-sm transition-all ${
+              isStepValid() 
+              ? 'bg-gradient-to-r from-gold-light to-gold-dark text-background-darker hover:shadow-lg hover:shadow-gold/20 flex-1' 
+              : 'bg-white/5 text-white/30 cursor-not-allowed flex-1'
+            }`}
           >
             Avançar
           </button>
@@ -193,7 +279,7 @@ export default function AgendamentoWizard() {
           <button
             type="button"
             onClick={handleConfirmar}
-            disabled={!isStepValid() || submitting}
+            disabled={!isStepValid() || submitting || !aceitouPolitica}
             className="btn-accent flex-1 py-3 text-sm font-semibold disabled:opacity-50"
           >
             {submitting ? 'Confirmando...' : 'Confirmar Agendamento ✂️'}
@@ -203,6 +289,25 @@ export default function AgendamentoWizard() {
 
       {/* Modal de Autenticação do Cliente */}
       <AuthModal onAuthSuccess={handleFinalizarAgendamento} />
+
+      {/* Modal da Política de Agendamento */}
+      {politicaModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-background-paper border border-gold/30 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in-95 max-h-[85vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-gold mb-4 text-center">Política de Agendamento</h3>
+            <div className="text-sm text-text-secondary space-y-4 leading-relaxed text-justify">
+              <p>Como esse horário foi reservado exclusivamente para você, infelizmente não conseguimos disponibilizá-lo para outra cliente a tempo. Por isso, nossa política de agendamentos foi criada para manter a agenda organizada e garantir um atendimento de qualidade a todos.</p>
+              <p>Para a reserva do horário, é necessário o pagamento de um sinal correspondente a 50% do valor do serviço. Em caso de cancelamento ou remarcação com, no mínimo, 24 horas de antecedência, esse valor permanecerá como crédito para um novo agendamento. Já em casos de ausência ou cancelamento fora desse prazo, o sinal não é reembolsável, sendo destinado à profissional em razão do horário reservado.</p>
+            </div>
+            <button 
+              onClick={() => setPoliticaModalOpen(false)}
+              className="mt-6 w-full py-3 btn-gold font-bold"
+            >
+              Entendi e Fechar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

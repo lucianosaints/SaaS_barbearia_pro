@@ -1,11 +1,19 @@
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.views import APIView
+from rest_framework.decorators import api_view, permission_classes, action, throttle_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.throttling import ScopedRateThrottle, AnonRateThrottle
+
+class RegistroThrottle(AnonRateThrottle):
+    scope = 'registro'
 from apps.accounts.models import Usuario
 from apps.accounts.serializers import UsuarioSerializer, CustomTokenObtainPairSerializer
+from apps.accounts.permissions import IsAdminUserOrReadOnly, IsDemoUserReadOnly
+from apps.tenants.permissions import IsEmpresaAtiva
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
@@ -13,6 +21,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     Retorna o perfil do usuário logado no mesmo payload do token.
     """
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'login'
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -21,37 +31,82 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     Garante o isolamento multi-tenant, permitindo listar apenas usuários
     pertencentes à mesma empresa do usuário logado ou filtrar profissionais publicamente.
     """
+    authentication_classes = [JWTAuthentication]
     serializer_class = UsuarioSerializer
-    permission_classes = [AllowAny] # Permite visualização pública (importante para o wizard de clientes)
+    permission_classes = [IsAdminUserOrReadOnly, IsEmpresaAtiva, IsDemoUserReadOnly]
 
     def get_queryset(self):
-        # Filtro de listagem pública por empresa para o Wizard
-        empresa_id = self.request.query_params.get('empresa_id')
-        if empresa_id:
-            return Usuario.objects.filter(empresa_id=empresa_id, tipo='PROFISSIONAL', is_active=True)
-
         user = self.request.user
-        if user.is_authenticated and user.tipo != 'CLIENTE':
+        
+        # Se for rota pública (wizard de agendamento), deve receber o empresa_id via query params
+        empresa_id_param = self.request.query_params.get('empresa_id')
+        if empresa_id_param:
+            return Usuario.objects.filter(
+                empresa_id=empresa_id_param, 
+                tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], 
+                is_active=True,
+                is_staff=False,
+                is_superuser=False
+            )
+            
+        # Se for rota do painel administrativo (usuário autenticado)
+        if user and user.is_authenticated:
+            # Se for superusuário, pode ver tudo (opcional)
             if user.is_superuser:
                 return Usuario.objects.all()
-            if user.empresa:
-                return Usuario.objects.filter(empresa=user.empresa)
-            return Usuario.objects.filter(id=user.id)
-            
-        # Se for consulta anônima ou cliente final logado, lista todos os profissionais ativos no MVP
-        return Usuario.objects.filter(tipo='PROFISSIONAL', is_active=True)
+                
+            # Para usuários comuns/administradores da empresa, filtra estritamente pelo ID da empresa deles
+            empresa_id = getattr(user, 'empresa_id', None)
+            if empresa_id:
+                return Usuario.objects.filter(
+                    empresa_id=empresa_id,
+                    is_staff=False,
+                    is_superuser=False
+                )
+            return Usuario.objects.none()
+                
+        # Caso falte autenticação ou parâmetro, bloqueia o retorno de dados globais
+        return Usuario.objects.none()
 
     def perform_create(self, serializer):
         user = self.request.user
-        # Associa automaticamente o novo usuário à empresa do criador (se não for superusuário informando outra)
-        if not user.is_superuser and user.empresa:
-            serializer.save(empresa=user.empresa)
+        # SEMPRE associa à empresa do admin logado, ignorando qualquer empresa vinda do payload
+        if user.empresa:
+            serializer.save(empresa=user.empresa, tipo='PROFISSIONAL')
         else:
-            serializer.save()
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Você precisa estar vinculado a uma empresa para criar profissionais.")
+
+    @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated, IsDemoUserReadOnly])
+    def me(self, request):
+        usuario = request.user
+        if not getattr(usuario, 'is_authenticated', False):
+            return Response({"error": "Não autenticado"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+        if request.method == 'GET':
+            serializer = self.get_serializer(usuario)
+            return Response(serializer.data)
+            
+        elif request.method == 'PATCH':
+            data = request.data.copy()
+            # Bloqueia a alteração de campos sensíveis que o usuário NÃO pode alterar sobre si mesmo
+            campos_proibidos = [
+                'email', 'tipo', 'is_staff', 'is_superuser', 'is_active',
+                'empresa', 'status', 'taxa_comissao', 'comissao_percentual'
+            ]
+            for campo in campos_proibidos:
+                data.pop(campo, None)
+            
+            serializer = self.get_serializer(usuario, data=data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([RegistroThrottle])
 def registrar_cliente(request):
     """
     Cadastra um novo cliente no sistema e retorna imediatamente os tokens JWT.
@@ -71,7 +126,7 @@ def registrar_cliente(request):
     # O username será o email do usuário
     if Usuario.objects.filter(username=email).exists() or Usuario.objects.filter(email=email).exists():
         return Response(
-            {"error": "Já existe um usuário cadastrado com este e-mail."},
+            {"error": "Não foi possível realizar o cadastro. Verifique os dados ou tente fazer login se já possuir uma conta."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -110,6 +165,115 @@ def registrar_cliente(request):
             'id': usuario.id,
             'nome': usuario.get_full_name() or usuario.username,
             'email': usuario.email,
-            'tipo': usuario.tipo
+            'tipo': usuario.tipo,
+            'empresa': {
+                'id': usuario.empresa.id,
+                'slug': usuario.empresa.slug,
+                'em_trial': usuario.empresa.em_trial,
+                'assinatura_ativa': usuario.empresa.assinatura_ativa
+            } if usuario.empresa else None
         }
     }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([RegistroThrottle])
+def registrar_saas(request):
+    """
+    Cadastra uma nova barbearia (Empresa) e o usuário administrador.
+    Inicia o período de teste grátis (Trial).
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.utils.text import slugify
+    from apps.tenants.models import Empresa
+
+    nome_barbearia = request.data.get('nome_barbearia')
+    nome_admin = request.data.get('nome_admin')
+    email = request.data.get('email')
+    senha = request.data.get('senha')
+    whatsapp = request.data.get('whatsapp')
+
+    if not all([nome_barbearia, nome_admin, email, senha, whatsapp]):
+        return Response(
+            {"error": "Todos os campos são obrigatórios."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if Usuario.objects.filter(username=email).exists() or Usuario.objects.filter(email=email).exists():
+        return Response(
+            {"error": "Não foi possível realizar o cadastro. Verifique os dados ou tente fazer login se já possuir uma conta."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Criar a Empresa com 30 dias de trial
+    base_slug = slugify(nome_barbearia)
+    slug = base_slug
+    counter = 1
+    while Empresa.objects.filter(slug=slug).exists():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
+    empresa = Empresa.objects.create(
+        nome=nome_barbearia,
+        slug=slug,
+        em_trial=True,
+        data_fim_trial=timezone.now().date() + timedelta(days=30),
+        ativo=True
+    )
+
+    # Separa primeiro e último nome
+    nomes = nome_admin.strip().split(' ', 1)
+    first_name = nomes[0]
+    last_name = nomes[1] if len(nomes) > 1 else ''
+
+    usuario = Usuario(
+        username=email,
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        telefone=whatsapp,
+        tipo='ADMINISTRADOR',
+        is_active=True,
+        empresa=empresa
+    )
+    usuario.set_password(senha)
+    usuario.save()
+
+    # Gerar JWT
+    refresh = RefreshToken.for_user(usuario)
+
+    return Response({
+        'refresh': str(refresh),
+        'access': str(refresh.access_token),
+        'user': {
+            'id': usuario.id,
+            'nome': usuario.get_full_name() or usuario.username,
+            'email': usuario.email,
+            'tipo': usuario.tipo,
+            'empresa': {
+                'id': empresa.id,
+                'slug': empresa.slug,
+                'em_trial': empresa.em_trial,
+                'assinatura_ativa': empresa.assinatura_ativa
+            }
+        }
+    }, status=status.HTTP_201_CREATED)
+
+class LogoutView(APIView):
+    """
+    View para realizar o logout do usuário, invalidando o Refresh Token.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data.get("refresh_token")
+            if not refresh_token:
+                return Response({"error": "O campo refresh_token é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response(status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response({"error": "Token inválido ou já expirado."}, status=status.HTTP_400_BAD_REQUEST)

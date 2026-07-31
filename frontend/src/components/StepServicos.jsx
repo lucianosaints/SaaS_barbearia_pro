@@ -13,14 +13,16 @@ export default function StepServicos() {
   const [error, setError] = useState(null);
 
   // Zustand
-  const { servicosIds, toggleServicoId } = useAgendamentoStore();
+  const { empresaId, servicosIds, toggleServicoId } = useAgendamentoStore();
 
   useEffect(() => {
     async function loadServicos() {
       setLoading(true);
       setError(null);
       try {
-        const response = await api.get('/api/servicos/');
+        const response = await api.get('/api/servicos/', {
+          params: { empresa_id: empresaId }
+        });
         setServicos(response.data.results || response.data);
       } catch (err) {
         console.error('Erro ao buscar serviços:', err);
@@ -29,8 +31,10 @@ export default function StepServicos() {
         setLoading(false);
       }
     }
-    loadServicos();
-  }, []);
+    if (empresaId) {
+      loadServicos();
+    }
+  }, [empresaId]);
 
   if (loading) {
     return (

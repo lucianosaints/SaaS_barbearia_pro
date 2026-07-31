@@ -22,7 +22,6 @@ class Servico(models.Model):
         verbose_name=_("Nome do Serviço")
     )
     preco = models.DecimalField(
-        max_length=10,
         max_digits=10,
         decimal_places=2,
         verbose_name=_("Preço")
@@ -88,6 +87,16 @@ class Agendamento(models.Model):
         ('CONCLUIDO', _('Concluído')),
         ('CANCELADO', _('Cancelado')),
     ]
+    STATUS_PAGAMENTO_CHOICES = [
+        ('PENDENTE', _('Pendente')),
+        ('PAGO', _('Pago')),
+    ]
+    METODO_PAGAMENTO_CHOICES = [
+        ('PIX', _('Pix')),
+        ('CREDITO', _('Cartão de Crédito')),
+        ('DEBITO', _('Cartão de Débito')),
+        ('DINHEIRO', _('Dinheiro')),
+    ]
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -120,6 +129,19 @@ class Agendamento(models.Model):
         blank=True,
         verbose_name=_("Lucro Líquido")
     )
+    status_pagamento = models.CharField(
+        max_length=20,
+        choices=STATUS_PAGAMENTO_CHOICES,
+        default='PENDENTE',
+        verbose_name=_("Status do Pagamento")
+    )
+    metodo_pagamento = models.CharField(
+        max_length=20,
+        choices=METODO_PAGAMENTO_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name=_("Método de Pagamento")
+    )
 
     class Meta:
         verbose_name = _("Agendamento")
@@ -147,9 +169,143 @@ class Agendamento(models.Model):
 def atualizar_data_hora_fim(sender, instance: Agendamento, action: str, **kwargs) -> None:
     """
     Signal para escutar alterações no relacionamento ManyToMany de serviços do Agendamento.
-    Atualiza e salva o campo `data_hora_fim` automaticamente.
+    Atualiza e salva o campo `data_hora_fim` e calcula o `valor_total` automaticamente.
     """
     if action in ["post_add", "post_remove", "post_clear"]:
-        instance.recalcular_fim()
-        # Salva apenas o campo atualizado para evitar recursão ou triggers desnecessários
-        instance.save(update_fields=["data_hora_fim"])
+        servicos = instance.servicos.all()
+        
+        # Recalcula data_hora_fim
+        total_duracao = sum(servico.duracao_minutos for servico in servicos)
+        instance.data_hora_fim = instance.data_hora_inicio + timedelta(minutes=total_duracao)
+        
+        # Calcula valor_total baseado nos serviços associados
+        valor_total = sum(servico.preco for servico in servicos)
+        instance.valor_total = valor_total
+        
+        # Salva apenas os campos atualizados para evitar recursão ou triggers desnecessários
+        instance.save(update_fields=["data_hora_fim", "valor_total"])
+
+
+class BloqueioHorario(models.Model):
+    """
+    Representa um bloqueio de horário na agenda, indicando indisponibilidade.
+    Se profissional for null, o bloqueio se aplica a todos os profissionais da empresa (ex: feriado, manutenção).
+    """
+    empresa = models.ForeignKey(
+        Empresa,
+        on_delete=models.CASCADE,
+        related_name="bloqueios",
+        verbose_name=_("Empresa")
+    )
+    profissional = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="bloqueios",
+        verbose_name=_("Profissional"),
+        help_text=_("Deixe em branco para bloquear a agenda de todos os profissionais")
+    )
+    data_hora_inicio = models.DateTimeField(
+        verbose_name=_("Data/Hora de Início")
+    )
+    data_hora_fim = models.DateTimeField(
+        verbose_name=_("Data/Hora de Fim")
+    )
+    motivo = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name=_("Motivo do Bloqueio")
+    )
+
+    class Meta:
+        verbose_name = _("Bloqueio de Horário")
+        verbose_name_plural = _("Bloqueios de Horário")
+        ordering = ['data_hora_inicio']
+
+    def __str__(self) -> str:
+        prof = self.profissional.get_full_name() if self.profissional else "Todos"
+        return f"Bloqueio {prof}: {self.data_hora_inicio.strftime('%d/%m %H:%M')} até {self.data_hora_fim.strftime('%H:%M')}"
+
+
+class FilaEspera(models.Model):
+    """
+    Representa a fila de espera (Sniper de Desistências) para um horário específico.
+    """
+    empresa = models.ForeignKey(
+        Empresa,
+        on_delete=models.CASCADE,
+        related_name="fila_espera",
+        verbose_name=_("Empresa")
+    )
+    cliente_nome = models.CharField(
+        max_length=150,
+        verbose_name=_("Nome do Cliente")
+    )
+    cliente_telefone = models.CharField(
+        max_length=20,
+        verbose_name=_("WhatsApp do Cliente")
+    )
+    data_desejada = models.DateField(
+        verbose_name=_("Data Desejada")
+    )
+    horario_desejado = models.TimeField(
+        verbose_name=_("Horário Desejado")
+    )
+    notificado = models.BooleanField(
+        default=False,
+        verbose_name=_("Notificado?")
+    )
+    criado_em = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_("Criado Em")
+    )
+
+    class Meta:
+        verbose_name = _("Fila de Espera")
+        verbose_name_plural = _("Fila de Espera")
+        ordering = ['criado_em']
+
+    def __str__(self):
+        return f"{self.cliente_nome} aguardando {self.data_desejada.strftime('%d/%m/%Y')} às {self.horario_desejado.strftime('%H:%M')}"
+
+
+class CartaoFidelidade(models.Model):
+    """
+    Representa o progresso do Cartão Fidelidade Digital de um cliente.
+    """
+    empresa = models.ForeignKey(
+        Empresa,
+        on_delete=models.CASCADE,
+        related_name="cartoes_fidelidade",
+        verbose_name=_("Empresa")
+    )
+    cliente = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="cartoes_fidelidade",
+        verbose_name=_("Cliente")
+    )
+    qtd_selos_atual = models.IntegerField(
+        default=0,
+        verbose_name=_("Quantidade de Selos Atual")
+    )
+    premios_disponiveis = models.IntegerField(
+        default=0,
+        verbose_name=_("Prêmios Disponíveis"),
+        help_text=_("Incrementado quando o cliente atinge a meta de selos da empresa.")
+    )
+    atualizado_em = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_("Última Atualização")
+    )
+
+    class Meta:
+        verbose_name = _("Cartão Fidelidade")
+        verbose_name_plural = _("Cartões Fidelidade")
+        unique_together = ('empresa', 'cliente')
+
+    def __str__(self):
+        return f"Fidelidade de {self.cliente} - {self.qtd_selos_atual} selos"
+
