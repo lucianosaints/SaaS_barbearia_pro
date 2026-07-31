@@ -279,7 +279,6 @@ def sniper_de_desistencias(sender, instance: Agendamento, created: bool, **kwarg
         if espera:
             espera.notificado = True
             espera.save()
-            print(f"\n[SNIPER] Notificando {espera.cliente_nome} no WhatsApp {espera.cliente_telefone} sobre a vaga liberada!\n")
             logger.info(f"Notificando {espera.cliente_nome} ({espera.cliente_telefone}) sobre vaga liberada em {data} às {horario}.")
             
             # Notifica o cliente da fila de espera

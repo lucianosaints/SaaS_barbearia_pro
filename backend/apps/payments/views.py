@@ -1,4 +1,5 @@
 import os
+import logging
 import mercadopago
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -6,6 +7,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework import status
 from django.conf import settings
 from apps.tenants.models import Empresa
+
+logger = logging.getLogger(__name__)
 
 class MercadoPagoWebhookView(APIView):
     """
@@ -32,7 +35,7 @@ class MercadoPagoWebhookView(APIView):
         # 1. Configurar SDK do Mercado Pago
         mp_access_token = getattr(settings, 'MERCADOPAGO_ACCESS_TOKEN', os.environ.get('MERCADOPAGO_ACCESS_TOKEN', ''))
         if not mp_access_token:
-            print("Erro: MERCADOPAGO_ACCESS_TOKEN não configurado no backend.")
+            logger.error("MERCADOPAGO_ACCESS_TOKEN não configurado no backend.")
             return Response({"status": "error", "message": "MP token not configured"}, status=status.HTTP_200_OK)
             
         sdk = mercadopago.SDK(mp_access_token)
@@ -68,14 +71,14 @@ class MercadoPagoWebhookView(APIView):
                         empresa.em_trial = False
                         empresa.data_vencimento_assinatura = base_date + datetime.timedelta(days=30 * meses_pagos)
                         empresa.save(update_fields=['assinatura_ativa', 'em_trial', 'data_vencimento_assinatura'])
-                        print(f"[Webhook MP] Assinatura ativada/renovada com sucesso ({meses_pagos} meses) para a empresa: {empresa.nome}. Vencimento: {empresa.data_vencimento_assinatura}")
+                        logger.info(f"[Webhook MP] Assinatura ativada/renovada ({meses_pagos} meses) para empresa ID: {empresa.id}. Vencimento: {empresa.data_vencimento_assinatura}")
                         
                     except Empresa.DoesNotExist:
-                        print(f"[Webhook MP] Empresa não encontrada com external_reference: {external_reference}")
+                        logger.warning(f"[Webhook MP] Empresa não encontrada com external_reference: {external_reference}")
                         pass
                 
         except Exception as e:
-            print(f"[Webhook MP] Erro ao processar webhook: {e}")
+            logger.error(f"[Webhook MP] Erro ao processar webhook: {e}")
 
         # Sempre retorne 200/201 OK para o Mercado Pago não tentar reenviar indefinidamente
         return Response({"status": "success"}, status=status.HTTP_200_OK)
