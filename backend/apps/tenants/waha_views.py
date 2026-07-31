@@ -92,93 +92,91 @@ class WahaQRCodeView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
 
-        # 2. Capturar o QR Code (Em formato de imagem)
-        qr_url = f"{waha_url}/api/{waha_session}/auth/qr?format=image"
-        
+        # 2. Capturar o QR Code - tenta múltiplos formatos
         try:
-            # Requisitando a imagem do QR Code
-            qr_headers = headers.copy()
-            qr_headers["Accept"] = "image/png"
-            qr_response = requests.get(qr_url, headers=qr_headers, timeout=60)
+            # Primeiro tenta o formato raw (base64 puro) - mais leve e confiável
+            qr_raw_url = f"{waha_url}/api/{waha_session}/auth/qr?format=raw"
+            qr_response = requests.get(qr_raw_url, headers=headers, timeout=15)
+            
+            logger.info(f"WAHA QR raw: status={qr_response.status_code}, content-type={qr_response.headers.get('Content-Type', 'N/A')}, body_len={len(qr_response.content)}")
             
             if qr_response.status_code == 200:
-                # Verifica se o retorno veio em JSON acidentalmente
                 content_type = qr_response.headers.get("Content-Type", "")
                 
                 if "application/json" in content_type:
-                    # Se for JSON, o WAHA provavelmente enviou a string base64 dentro de algum campo
                     data = qr_response.json()
-                    # Pode vir em data['qrcode'] ou data['url'] ou etc. Tenta achar o base64
-                    base64_encoded = data.get('qrcode', '')
-                    # Se já vier com o prefixo 'data:image/png;base64,', vamos limpar para o React colocar depois
-                    if "base64," in base64_encoded:
-                        base64_encoded = base64_encoded.split("base64,")[1]
-                else:
-                    # Se for imagem real, converte
+                    # WAHA retorna {"value": "base64string..."} no formato raw
+                    base64_encoded = data.get('value', '') or data.get('qrcode', '') or data.get('data', '')
+                    if base64_encoded:
+                        if "base64," in base64_encoded:
+                            base64_encoded = base64_encoded.split("base64,")[1]
+                        return Response({
+                            "status": "WAITING_FOR_SCAN",
+                            "qrcode_base64": base64_encoded,
+                            "message": "Leia o QR Code com o seu WhatsApp para conectar."
+                        }, status=status.HTTP_200_OK)
+                
+                elif "image" in content_type:
+                    # Se veio como imagem, converte para base64
                     image_bytes = qr_response.content
                     base64_encoded = base64.b64encode(image_bytes).decode('utf-8')
+                    return Response({
+                        "status": "WAITING_FOR_SCAN",
+                        "qrcode_base64": base64_encoded,
+                        "message": "Leia o QR Code com o seu WhatsApp para conectar."
+                    }, status=status.HTTP_200_OK)
                 
-                return Response({
-                    "status": "WAITING_FOR_SCAN",
-                    "qrcode_base64": base64_encoded,
-                    "message": "Leia o QR Code com o seu WhatsApp para conectar."
-                }, status=status.HTTP_200_OK)
-                
-            elif qr_response.status_code in [404, 422]:
-                # O endpoint retorna 404 quando o motor ainda está inicializando.
-                # Retorna 422 quando a sessão já está conectada (WORKING) e não tem QR code.
-                # Vamos verificar o status real da sessão
-                status_url = f"{waha_url}/api/sessions"
-                status_response = requests.get(status_url, headers=headers, timeout=30)
-                if status_response.ok:
-                    sessions = status_response.json()
-                    # Encontrar a nossa sessão específica
-                    my_session = next((s for s in sessions if s.get('name') == waha_session), None)
-                    
-                    if not my_session or my_session.get('status') in ['FAILED', 'STOPPED']:
-                        try:
-                            # Auto-healing agressivo: se for FAILED, a sessão travou e precisa ser recriada
-                            if my_session and my_session.get('status') == 'FAILED':
-                                delete_url = f"{waha_url}/api/sessions/{waha_session}"
-                                requests.delete(delete_url, headers=headers, timeout=15)
-                                session_payload = {"name": waha_session}
-                                requests.post(f"{waha_url}/api/sessions", json=session_payload, headers=headers, timeout=30)
-                                
-                            start_engine_url = f"{waha_url}/api/sessions/{waha_session}/start"
-                            requests.post(start_engine_url, headers=headers, timeout=30)
-                        except Exception as e:
-                            logger.error(f"WAHA: Erro ao forçar start/delete no fallback. {e}")
+                else:
+                    # Tenta como texto puro (o WAHA pode retornar a string base64 direto no body)
+                    raw_text = qr_response.text.strip()
+                    if len(raw_text) > 100:  # Se tiver conteúdo suficiente pra ser base64
+                        if "base64," in raw_text:
+                            raw_text = raw_text.split("base64,")[1]
                         return Response({
-                            "status": "LOADING",
-                            "message": "O WhatsApp está preparando o seu QR Code, aguarde 5 segundos..."
+                            "status": "WAITING_FOR_SCAN",
+                            "qrcode_base64": raw_text,
+                            "message": "Leia o QR Code com o seu WhatsApp para conectar."
                         }, status=status.HTTP_200_OK)
 
-                    current_status = my_session.get('status', 'DESCONHECIDO')
-                    if current_status in ['WORKING', 'CONNECTED']:
-                        return Response({
-                            "status": "WORKING",
-                            "message": "O WhatsApp já está conectado e pronto para uso!"
-                        }, status=status.HTTP_200_OK)
-                    else:
-                        # Se não está conectado e não está parado, significa que está inicializando ou esperando QR.
-                        # Como o endpoint do QR retornou 404/422, ele ainda está preparando.
-                        return Response({
-                            "status": "LOADING",
-                            "message": "O WhatsApp está preparando o seu QR Code, aguarde 5 segundos..."
-                        }, status=status.HTTP_200_OK)
+            # Se raw falhou, tenta o formato image
+            if qr_response.status_code != 200:
+                qr_img_url = f"{waha_url}/api/{waha_session}/auth/qr?format=image"
+                qr_img_headers = headers.copy()
+                qr_img_headers["Accept"] = "image/png"
+                qr_img_response = requests.get(qr_img_url, headers=qr_img_headers, timeout=15)
                 
-                return Response({
-                    "status": "LOADING",
-                    "message": "O WhatsApp está preparando o seu QR Code, aguarde 5 segundos..."
-                }, status=status.HTTP_200_OK)
+                logger.info(f"WAHA QR image: status={qr_img_response.status_code}, content-type={qr_img_response.headers.get('Content-Type', 'N/A')}")
                 
-            else:
-                erro_txt = f"WAHA retornou {qr_response.status_code}: {qr_response.text}"
-                logger.error(erro_txt)
-                # Retorna o erro real para facilitar o debug na tela
-                return Response({
-                    "error": erro_txt
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                if qr_img_response.status_code == 200 and len(qr_img_response.content) > 100:
+                    base64_encoded = base64.b64encode(qr_img_response.content).decode('utf-8')
+                    return Response({
+                        "status": "WAITING_FOR_SCAN",
+                        "qrcode_base64": base64_encoded,
+                        "message": "Leia o QR Code com o seu WhatsApp para conectar."
+                    }, status=status.HTTP_200_OK)
+            
+            # Se chegou aqui, nenhum formato retornou o QR. Verifica status da sessão.
+            logger.warning(f"WAHA: Nenhum formato de QR retornou dados. Status HTTP do raw: {qr_response.status_code}")
+            
+            # Verificar status da sessão diretamente (sem fazer chamadas pesadas)
+            check_url = f"{waha_url}/api/sessions/{waha_session}"
+            check_resp = requests.get(check_url, headers=headers, timeout=10)
+            
+            if check_resp.ok:
+                session_info = check_resp.json()
+                current_status = session_info.get('status', 'UNKNOWN')
+                logger.info(f"WAHA: Status atual da sessão: {current_status}")
+                
+                if current_status in ['WORKING', 'CONNECTED']:
+                    return Response({
+                        "status": "WORKING",
+                        "message": "O WhatsApp já está conectado e pronto para uso!"
+                    }, status=status.HTTP_200_OK)
+            
+            return Response({
+                "status": "LOADING",
+                "message": "O WhatsApp está preparando o seu QR Code, aguarde alguns segundos..."
+            }, status=status.HTTP_200_OK)
 
         except Exception as e:
             logger.error(f"WAHA: Falha ao tentar capturar o QR Code. Erro: {str(e)}")
