@@ -37,13 +37,13 @@ services:
       - django_media:/app/media
 
   waha:
-    image: devlikeapro/waha
+    image: devlikeapro/waha:chrome
     container_name: barbeiro_pro_waha
     restart: unless-stopped
     expose:
       - "3000" # Acessível apenas pela rede interna Docker (barbeiro_pro_net)
     environment:
-      - WHATSAPP_DEFAULT_ENGINE=NOWEB
+      - WHATSAPP_DEFAULT_ENGINE=WEBJS
       - WAHA_API_KEY=BarbeariaPro!2026
       - WHATSAPP_API_KEY=BarbeariaPro!2026
       - WHATSAPP_SWAGGER_USERNAME=admin
