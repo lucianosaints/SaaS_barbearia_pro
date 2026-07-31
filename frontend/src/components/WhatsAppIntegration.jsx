@@ -102,27 +102,50 @@ const WhatsAppIntegration = () => {
 
     // Efeito para carregar o estado inicial e fazer polling
     useEffect(() => {
-        if (pairingMethod === 'QRCODE' && qrCodeStatus !== 'WORKING') {
-            fetchQRCode();
-        } else if (pairingMethod === 'PHONE' && qrCodeStatus !== 'WORKING') {
-            checkStatus();
-        }
+        let isMounted = true;
+        let timeoutId = null;
+        let isFetching = false;
 
-        // Configura o polling para checar se conectou
-        pollingInterval.current = setInterval(() => {
-            if (pairingMethod === 'PHONE' && pairingCode && qrCodeStatus !== 'WORKING') {
-                checkStatus();
-            } else if (pairingMethod === 'QRCODE' && qrCodeStatus !== 'WORKING') {
-                fetchQRCode();
+        const pollData = async () => {
+            if (!isMounted) return;
+            
+            // Só executa se não estiver já buscando algo
+            if (!isFetching) {
+                isFetching = true;
+                if (pairingMethod === 'QRCODE' && qrCodeStatus !== 'WORKING') {
+                    await fetchQRCode();
+                } else if (pairingMethod === 'PHONE' && pairingCode && qrCodeStatus !== 'WORKING') {
+                    await checkStatus();
+                }
+                isFetching = false;
             }
-        }, 10000); // 10 segundos
 
-        return () => {
-            if (pollingInterval.current) {
-                clearInterval(pollingInterval.current);
+            // Agenda a próxima execução apenas APÓS o término da atual
+            if (isMounted && qrCodeStatus !== 'WORKING') {
+                timeoutId = setTimeout(pollData, 10000);
             }
         };
-    }, [pairingMethod]);
+
+        // Carga inicial imediata se for QR Code (se fone, só após gerar código)
+        if (pairingMethod === 'QRCODE' && qrCodeStatus !== 'WORKING') {
+            pollData();
+        } else if (pairingMethod === 'PHONE') {
+            // Se mudou para fone e já tem um código, começa o poll
+            if (pairingCode && qrCodeStatus !== 'WORKING') {
+                pollData();
+            }
+        }
+
+        return () => {
+            isMounted = false;
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+            if (pollingInterval.current) {
+                clearInterval(pollingInterval.current); // limpeza do legacy
+            }
+        };
+    }, [pairingMethod, qrCodeStatus, pairingCode]);
 
     return (
         <div className="bg-background-paper border border-white/5 p-6 rounded-xl w-full flex flex-col items-center text-center">

@@ -20,7 +20,7 @@ class WahaQRCodeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        waha_url = getattr(settings, 'WAHA_API_URL', 'http://localhost:3000').rstrip('/')
+        waha_url = getattr(settings, 'WAHA_API_URL', 'http://waha:3000').rstrip('/')
         
         if hasattr(request.user, 'empresa') and request.user.empresa:
             waha_session = f"tenant_{request.user.empresa.id}"
@@ -155,7 +155,7 @@ class WahaQRCodeView(APIView):
             )
 
     def delete(self, request, *args, **kwargs):
-        waha_url = getattr(settings, 'WAHA_API_URL', 'http://localhost:3000').rstrip('/')
+        waha_url = getattr(settings, 'WAHA_API_URL', 'http://waha:3000').rstrip('/')
         
         if hasattr(request.user, 'empresa') and request.user.empresa:
             waha_session = f"tenant_{request.user.empresa.id}"
@@ -205,7 +205,7 @@ class WahaPairingCodeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        waha_url = getattr(settings, 'WAHA_API_URL', 'http://localhost:3000').rstrip('/')
+        waha_url = getattr(settings, 'WAHA_API_URL', 'http://waha:3000').rstrip('/')
         
         if hasattr(request.user, 'empresa') and request.user.empresa:
             waha_session = f"tenant_{request.user.empresa.id}"
@@ -295,7 +295,7 @@ class WahaSessionStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        waha_url = getattr(settings, 'WAHA_API_URL', 'http://localhost:3000').rstrip('/')
+        waha_url = getattr(settings, 'WAHA_API_URL', 'http://waha:3000').rstrip('/')
         
         if hasattr(request.user, 'empresa') and request.user.empresa:
             waha_session = f"tenant_{request.user.empresa.id}"
