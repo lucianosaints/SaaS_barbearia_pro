@@ -163,16 +163,25 @@ const WhatsAppIntegration = () => {
                     )}
 
                     {['LOADING', 'STARTING', 'WAITING_FOR_SCAN', 'ERROR'].includes(qrCodeStatus) && (
-                        <button 
-                            onClick={fetchQRCode}
-                            disabled={qrCodeStatus === 'LOADING'}
-                            className={`w-full font-bold py-2 px-4 rounded-lg transition-all text-sm mt-auto border 
-                                ${qrCodeStatus === 'LOADING' 
-                                    ? 'bg-gray-700 border-gray-600 text-gray-400 cursor-not-allowed' 
-                                    : 'bg-background-darker border-white/10 hover:border-gold text-white'}`}
-                        >
-                            {qrCodeStatus === 'LOADING' ? '⏳ Carregando...' : '🔄 Atualizar QR Code'}
-                        </button>
+                        <div className="flex gap-2 w-full mt-auto">
+                            <button 
+                                onClick={fetchQRCode}
+                                disabled={qrCodeStatus === 'LOADING'}
+                                className={`flex-1 font-bold py-2 px-2 rounded-lg transition-all text-xs border 
+                                    ${qrCodeStatus === 'LOADING' 
+                                        ? 'bg-gray-700 border-gray-600 text-gray-400 cursor-not-allowed' 
+                                        : 'bg-background-darker border-white/10 hover:border-gold text-white'}`}
+                            >
+                                {qrCodeStatus === 'LOADING' ? '⏳ Carregando...' : '🔄 Atualizar'}
+                            </button>
+                            <button 
+                                onClick={handleDisconnect}
+                                className="flex-1 bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 text-red-400 font-bold py-2 px-2 rounded-lg transition-all text-xs"
+                                title="Força a exclusão da sessão travada"
+                            >
+                                🔌 Forçar Reset
+                            </button>
+                        </div>
                     )}
                 </>
             )}
