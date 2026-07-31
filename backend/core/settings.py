@@ -205,7 +205,12 @@ else:
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Salão Pro <notificacoes@salaopro.com.br>')
 
 # WAHA API Configuration
-WAHA_API_URL = os.environ.get('WAHA_API_URL', 'http://waha:3000')
+_raw_waha = os.environ.get('WAHA_API_URL', 'http://waha:3000')
+if 'localhost' in _raw_waha or '127.0.0.1' in _raw_waha:
+    WAHA_API_URL = 'http://waha:3000'
+else:
+    WAHA_API_URL = _raw_waha
+
 WAHA_SESSION = os.environ.get('WAHA_SESSION', 'default')
 WAHA_API_KEY = os.environ.get('WAHA_API_KEY', 'BarbeariaPro!2026')
 

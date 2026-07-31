@@ -100,7 +100,20 @@ const WhatsAppIntegration = () => {
         }
     };
 
-    // Efeito para carregar o estado inicial e fazer polling
+    const statusRef = useRef(qrCodeStatus);
+    const pairingCodeRef = useRef(pairingCode);
+    const fetchQRCodeRef = useRef(fetchQRCode);
+    const checkStatusRef = useRef(checkStatus);
+
+    // Atualiza as refs sempre que o estado ou função mudar
+    useEffect(() => {
+        statusRef.current = qrCodeStatus;
+        pairingCodeRef.current = pairingCode;
+        fetchQRCodeRef.current = fetchQRCode;
+        checkStatusRef.current = checkStatus;
+    });
+
+    // Efeito de Polling assíncrono controlado (sem recriar a cada mudança de status)
     useEffect(() => {
         let isMounted = true;
         let timeoutId = null;
@@ -108,33 +121,31 @@ const WhatsAppIntegration = () => {
 
         const pollData = async () => {
             if (!isMounted) return;
+            if (statusRef.current === 'WORKING') return;
             
-            // Só executa se não estiver já buscando algo
             if (!isFetching) {
                 isFetching = true;
-                if (pairingMethod === 'QRCODE' && qrCodeStatus !== 'WORKING') {
-                    await fetchQRCode();
-                } else if (pairingMethod === 'PHONE' && pairingCode && qrCodeStatus !== 'WORKING') {
-                    await checkStatus();
+                try {
+                    if (pairingMethod === 'QRCODE') {
+                        await fetchQRCodeRef.current();
+                    } else if (pairingMethod === 'PHONE' && pairingCodeRef.current) {
+                        await checkStatusRef.current();
+                    }
+                } catch (err) {
+                    console.error("Erro no polling:", err);
+                } finally {
+                    isFetching = false;
                 }
-                isFetching = false;
             }
 
-            // Agenda a próxima execução apenas APÓS o término da atual
-            if (isMounted && qrCodeStatus !== 'WORKING') {
-                timeoutId = setTimeout(pollData, 10000);
+            // Agenda a próxima execução APÓS o término da atual, com 5s de intervalo
+            if (isMounted && statusRef.current !== 'WORKING') {
+                timeoutId = setTimeout(pollData, 5000);
             }
         };
 
-        // Carga inicial imediata se for QR Code (se fone, só após gerar código)
-        if (pairingMethod === 'QRCODE' && qrCodeStatus !== 'WORKING') {
-            pollData();
-        } else if (pairingMethod === 'PHONE') {
-            // Se mudou para fone e já tem um código, começa o poll
-            if (pairingCode && qrCodeStatus !== 'WORKING') {
-                pollData();
-            }
-        }
+        // Inicia o loop
+        pollData();
 
         return () => {
             isMounted = false;
@@ -142,10 +153,10 @@ const WhatsAppIntegration = () => {
                 clearTimeout(timeoutId);
             }
             if (pollingInterval.current) {
-                clearInterval(pollingInterval.current); // limpeza do legacy
+                clearInterval(pollingInterval.current);
             }
         };
-    }, [pairingMethod, qrCodeStatus, pairingCode]);
+    }, [pairingMethod]); // Roda apenas quando o método de pareamento muda
 
     return (
         <div className="bg-background-paper border border-white/5 p-6 rounded-xl w-full flex flex-col items-center text-center">
