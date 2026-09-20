@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import useAgendamentoStore from './store/useAgendamentoStore'
 import AdminDashboard from './pages/AdminDashboard'
 import AgendamentoWizard from './pages/AgendamentoWizard'
@@ -10,6 +10,12 @@ import backgroundImg from './imagem/Background.jpg'
 function App() {
   const [currentTab, setCurrentTab] = useState('client') // 'client' ou 'admin'
   const { userToken, userNome, userTipo, logout } = useAgendamentoStore()
+
+  useEffect(() => {
+    const onExpired = () => { logout(); setCurrentTab('client'); };
+    window.addEventListener('auth_expired', onExpired);
+    return () => window.removeEventListener('auth_expired', onExpired);
+  }, [logout]);
 
   return (
     <div 

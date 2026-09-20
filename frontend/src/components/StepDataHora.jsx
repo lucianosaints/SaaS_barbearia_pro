@@ -21,6 +21,7 @@ export default function StepDataHora() {
 
   // Busca os horários livres sempre que a data selecionada mudar
   useEffect(() => {
+    const controller = new AbortController();
     async function loadDisponibilidade() {
       if (!selectedDate || !barbeiroId || servicosIds.length === 0) {
         setHorariosDisponiveis([]);
@@ -33,6 +34,7 @@ export default function StepDataHora() {
       try {
         const servicosParam = servicosIds.join(',');
         const response = await api.get('/api/disponibilidade/', {
+          signal: controller.signal,
           params: {
             data: selectedDate,
             barbeiro_id: barbeiroId,
@@ -41,15 +43,17 @@ export default function StepDataHora() {
         });
         setHorariosDisponiveis(response.data.horarios_disponiveis || []);
       } catch (err) {
+        if (controller.signal.aborted) return;
         console.error('Erro ao carregar disponibilidade:', err);
         setError('Ocorreu um erro ao carregar os horários disponíveis.');
         setHorariosDisponiveis([]);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
     loadDisponibilidade();
+    return () => controller.abort();
   }, [selectedDate, barbeiroId, servicosIds]);
 
   const handleDateChange = (e) => {
@@ -63,7 +67,7 @@ export default function StepDataHora() {
     setSelectedTime(time);
     if (selectedDate && time) {
       // Salva no formato ISO com fuso local que o backend espera
-      setDataHora(`${selectedDate}T${time}:00`);
+      setDataHora(`${selectedDate}T${time}:00-03:00`);
     } else {
       setDataHora(null);
     }
@@ -86,7 +90,7 @@ export default function StepDataHora() {
             type="date"
             value={selectedDate}
             onChange={handleDateChange}
-            min={new Date().toISOString().split('T')[0]} // Impede datas retroativas
+            min={new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())}
             className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold transition-colors"
           />
         </div>

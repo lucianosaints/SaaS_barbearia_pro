@@ -1,13 +1,11 @@
 from django.contrib import admin
+from django.conf import settings
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import (
-    TokenRefreshView,
-)
 
 # Importando as ViewSets e views customizadas
 from apps.tenants.views import EmpresaViewSet
-from apps.accounts.views import UsuarioViewSet, registrar_cliente, CustomTokenObtainPairView
+from apps.accounts.views import UsuarioViewSet, registrar_cliente, CustomTokenObtainPairView, CustomTokenRefreshView
 from apps.agenda.views import ServicoViewSet, AgendamentoViewSet, obter_disponibilidade, FinancasDashboardView
 
 # Inicializando o roteador principal do DRF
@@ -18,7 +16,7 @@ router.register(r'servicos', ServicoViewSet, basename='servico')
 router.register(r'agendamentos', AgendamentoViewSet, basename='agendamento')
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path(settings.ADMIN_URL, admin.site.urls),
     
     # Endpoint customizado de disponibilidade
     path('api/disponibilidade/', obter_disponibilidade, name='obter_disponibilidade'),
@@ -34,5 +32,5 @@ urlpatterns = [
     
     # Endpoints de Autenticação (JWT)
     path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
 ]

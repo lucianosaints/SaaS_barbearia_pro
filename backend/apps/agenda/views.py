@@ -1,6 +1,10 @@
 from datetime import datetime, time, timedelta
 from django.utils import timezone
 from django.db.models import Sum
+from apps.accounts.permissions import PublicReadAdminWrite
+from apps.agenda.rules import available_slots
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import SAFE_METHODS
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework import status
@@ -20,13 +24,16 @@ class ServicoViewSet(viewsets.ModelViewSet):
     Garante isolamento multi-tenant e visualização pública.
     """
     serializer_class = ServicoSerializer
-    permission_classes = [AllowAny] # Permite visualização pública
+    permission_classes = [PublicReadAdminWrite]
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
 
     def get_queryset(self):
         # Filtro de listagem pública por empresa para o Wizard
         empresa_id = self.request.query_params.get('empresa_id')
-        if empresa_id:
-            return Servico.objects.filter(empresa_id=empresa_id, ativo=True)
+        if empresa_id and self.request.method in SAFE_METHODS:
+            if not empresa_id.isdigit():
+                raise ValidationError({'empresa_id': 'Identificador inválido.'})
+            return Servico.objects.filter(empresa_id=empresa_id, ativo=True, empresa__ativo=True)
 
         user = self.request.user
         if user.is_authenticated and user.tipo != 'CLIENTE':
@@ -37,7 +44,7 @@ class ServicoViewSet(viewsets.ModelViewSet):
             return Servico.objects.none()
             
         # Se for consulta anônima ou cliente final logado, lista todos os serviços ativos no MVP
-        return Servico.objects.filter(ativo=True)
+        return Servico.objects.filter(ativo=True, empresa__ativo=True)
 
     def perform_create(self, serializer):
         # Associa o serviço automaticamente à empresa do usuário criador
@@ -88,13 +95,14 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
     """
     serializer_class = AgendamentoSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
     filter_backends = [filters.DjangoFilterBackend]
     filterset_class = AgendamentoFilter
 
     def get_queryset(self):
         user = self.request.user
         if user.is_superuser:
-            return Agendamento.objects.all()
+            return Agendamento.objects.select_related('cliente', 'profissional', 'empresa').prefetch_related('servicos').all()
         
         # Cliente final: OBRIGATORIAMENTE retorna apenas seus próprios agendamentos
         if user.tipo == 'CLIENTE':
@@ -106,161 +114,28 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
             
         return Agendamento.objects.none()
 
-    def perform_create(self, serializer):
-        user = self.request.user
-        # Se for cliente, associa-o automaticamente ao agendamento
-        if user.tipo == 'CLIENTE':
-            profissional = serializer.validated_data.get('profissional')
-            empresa = profissional.empresa if profissional else user.empresa
-            serializer.save(cliente=user, empresa=empresa)
-        else:
-            # Caso contrário (operadores/administradores), fluxo normal
-            empresa = user.empresa or serializer.validated_data.get('empresa')
-            serializer.save(empresa=empresa)
-
     @action(detail=True, methods=['patch'])
     def cancelar(self, request, pk=None):
-        agendamento = self.get_object()
-        
-        # Garante que só o próprio cliente ou um administrador possa cancelar
-        if request.user.tipo == 'CLIENTE' and agendamento.cliente != request.user:
-            return Response(
-                {"error": "Você não tem permissão para cancelar este agendamento."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-            
-        if agendamento.status == 'CANCELADO':
-            return Response(
-                {"error": "Este agendamento já está cancelado."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-            
-        agendamento.status = 'CANCELADO'
-        agendamento.save()
+        serializer = self.get_serializer(self.get_object(), data={'status': 'CANCELADO'}, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response({"message": "Agendamento cancelado com sucesso."})
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def obter_disponibilidade(request):
-    """
-    Calcula e retorna a lista de horários livres de um profissional (barbeiro)
-    para uma data e serviços selecionados. Evita qualquer sobreposição.
-    """
-    data_str = request.query_params.get('data')
-    barbeiro_id = request.query_params.get('barbeiro_id')
-    servicos_str = request.query_params.get('servicos')
-
-    if not all([data_str, barbeiro_id, servicos_str]):
-        return Response(
-            {"error": "Os parâmetros 'data', 'barbeiro_id' e 'servicos' são obrigatórios."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
     try:
-        data_selecionada = datetime.strptime(data_str, '%Y-%m-%d').date()
-    except ValueError:
-        return Response(
-            {"error": "Formato de data inválido. Use YYYY-MM-DD."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    try:
-        servico_ids = [int(id_str.strip()) for id_str in servicos_str.split(',') if id_str.strip()]
-    except ValueError:
-        return Response(
-            {"error": "Formato do parâmetro 'servicos' inválido. Use IDs separados por vírgula."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    if not servico_ids:
-        return Response(
-            {"error": "Pelo menos um serviço deve ser selecionado."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    user = request.user
-    servicos_qs = Servico.objects.filter(id__in=servico_ids, ativo=True)
-    if user.is_authenticated and not user.is_superuser and user.empresa:
-        servicos_qs = servicos_qs.filter(empresa=user.empresa)
-
-    if servicos_qs.count() != len(set(servico_ids)):
-        return Response(
-            {"error": "Um ou mais serviços informados são inválidos ou não pertencem à empresa."},
-            status=status.HTTP_404_NOT_FOUND
-        )
-
-    # Busca o profissional para obter sua respectiva empresa (tenant)
-    barbeiro = Usuario.objects.filter(id=barbeiro_id).first()
-    if not barbeiro or not barbeiro.empresa:
-        return Response(
-            {"error": "Profissional inválido ou sem barbearia (empresa) vinculada."},
-            status=status.HTTP_404_NOT_FOUND
-        )
-
-    empresa = barbeiro.empresa
-    duracao_total = sum(s.duracao_minutos for s in servicos_qs)
-
-    tz = timezone.get_current_timezone()
-    
-    # Parâmetros de expediente e almoço dinâmicos da empresa
-    hora_abertura = registrar_tempo_certo = empresa.hora_abertura
-    hora_fechamento = empresa.hora_fechamento
-    almoco_inicio = empresa.intervalo_almoco_inicio
-    almoco_fim = empresa.intervalo_almoco_fim
-    slot_intervalo_minutos = 30
-
-    agendamentos = Agendamento.objects.filter(
-        profissional_id=barbeiro_id,
-        data_hora_inicio__date=data_selecionada,
-        status__in=['PENDENTE', 'CONFIRMADO', 'CONCLUIDO']
-    )
-    if user.is_authenticated and not user.is_superuser and user.empresa:
-        agendamentos = agendamentos.filter(empresa=user.empresa)
-
-    horarios_disponiveis = []
-    agora = timezone.localtime(timezone.now())
-
-    datetime_inicio_exp = timezone.make_aware(datetime.combine(data_selecionada, hora_abertura), tz)
-    datetime_fim_exp = timezone.make_aware(datetime.combine(data_selecionada, hora_fechamento), tz)
-
-    # Converte intervalo de almoço para datetimes cientes de fuso horário se configurados
-    datetime_inicio_almoco = None
-    datetime_fim_almoco = None
-    if almoco_inicio and almoco_fim:
-        datetime_inicio_almoco = timezone.make_aware(datetime.combine(data_selecionada, almoco_inicio), tz)
-        datetime_fim_almoco = timezone.make_aware(datetime.combine(data_selecionada, almoco_fim), tz)
-
-    loop_time = datetime_inicio_exp
-    while loop_time + timedelta(minutes=duracao_total) <= datetime_fim_exp:
-        slot_inicio = loop_time
-        slot_fim = loop_time + timedelta(minutes=duracao_total)
-
-        # Se a data for hoje, pula os horários passados
-        if data_selecionada == agora.date() and slot_inicio < agora:
-            loop_time += timedelta(minutes=slot_intervalo_minutos)
-            continue
-
-        tem_sobreposicao = False
-
-        # 1. Verifica colisão com o intervalo de almoço configurado da empresa
-        if datetime_inicio_almoco and datetime_fim_almoco:
-            if slot_inicio < datetime_fim_almoco and slot_fim > datetime_inicio_almoco:
-                tem_sobreposicao = True
-
-        # 2. Verifica colisão com os agendamentos já reservados no banco
-        if not tem_sobreposicao:
-            for agendamento in agendamentos:
-                if slot_inicio < agendamento.data_hora_fim and slot_fim > agendamento.data_hora_inicio:
-                    tem_sobreposicao = True
-                    break
-
-        if not tem_sobreposicao:
-            horarios_disponiveis.append(timezone.localtime(slot_inicio).strftime('%H:%M'))
-
-        loop_time += timedelta(minutes=slot_intervalo_minutos)
-
-    return Response({"horarios_disponiveis": horarios_disponiveis})
+        day = datetime.strptime(request.query_params.get('data', ''), '%Y-%m-%d').date()
+        profissional_id = int(request.query_params.get('barbeiro_id', ''))
+        ids = [int(value) for value in request.query_params.get('servicos', '').split(',')]
+    except (ValueError, TypeError):
+        raise ValidationError('Informe data (YYYY-MM-DD), barbeiro_id e serviços válidos.')
+    profissional = Usuario.objects.select_related('empresa').filter(pk=profissional_id).first()
+    services = list(Servico.objects.filter(pk__in=ids))
+    if len(ids) != len(services):
+        raise ValidationError({'servicos': 'Serviços inválidos ou repetidos.'})
+    return Response({'horarios_disponiveis': available_slots(profissional, services, day)})
 
 
 class FinancasDashboardView(APIView):

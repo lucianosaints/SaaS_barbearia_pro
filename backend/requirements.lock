@@ -1,0 +1,16 @@
+asgiref==3.12.1
+Django==5.2.17
+django-cors-headers==4.9.0
+django-filter==25.2
+djangorestframework==3.16.1
+djangorestframework_simplejwt==5.5.1
+psycopg==3.3.6
+psycopg-binary==3.3.6
+PyJWT==2.14.0
+sqlparse==0.6.0
+typing_extensions==4.16.0
+tzdata==2026.4
+waitress==3.0.2
+whitenoise==6.12.0
+# Gunicorn executa em Unix; preserve este marcador ao atualizar o lock no Windows.
+gunicorn==26.2.0; sys_platform != "win32"

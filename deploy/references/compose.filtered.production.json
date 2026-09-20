@@ -1,0 +1,22 @@
+{
+  "backend": {
+    "container_name": "barbeiro_pro_backend",
+    "ports": [{"mode": "ingress", "host_ip": "127.0.0.1", "target": 8000, "published": "8000", "protocol": "tcp"}],
+    "volumes": [
+      {"type": "bind", "source": "/root/SaaS_barbearia_pro/backend", "target": "/app", "bind": {}},
+      {"type": "volume", "source": "django_media", "target": "/app/media", "volume": {}}
+    ],
+    "networks": {"barbeiro_pro_net": null}
+  },
+  "frontend": {
+    "container_name": "barbeiro_pro_frontend",
+    "ports": [{"mode": "ingress", "target": 80, "published": "3000", "protocol": "tcp"}],
+    "volumes": [{"type": "volume", "source": "django_media", "target": "/app/media", "volume": {}}],
+    "networks": {"barbeiro_pro_net": null}
+  },
+  "waha": {
+    "container_name": "barbeiro_pro_waha",
+    "volumes": [{"type": "volume", "source": "waha_data", "target": "/app/.waha", "volume": {}}],
+    "networks": {"barbeiro_pro_net": null}
+  }
+}

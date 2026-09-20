@@ -14,14 +14,14 @@ export default function StepBarbeiros() {
   const [error, setError] = useState(null);
 
   // Zustand
-  const { barbeiroId, setBarbeiroId } = useAgendamentoStore();
+  const { barbeiroId, setBarbeiroId, empresaId } = useAgendamentoStore();
 
   useEffect(() => {
     async function loadBarbeiros() {
       setLoading(true);
       setError(null);
       try {
-        const response = await api.get('/api/usuarios/');
+        const response = await api.get('/api/usuarios/', { params: { empresa_id: empresaId } });
         setBarbeiros(response.data.results || response.data);
       } catch (err) {
         console.error('Erro ao buscar barbeiros:', err);
@@ -31,7 +31,7 @@ export default function StepBarbeiros() {
       }
     }
     loadBarbeiros();
-  }, []);
+  }, [empresaId]);
 
   if (loading) {
     return (
@@ -80,7 +80,7 @@ export default function StepBarbeiros() {
           const isSelected = barbeiroId === barbeiro.id;
           const nomeCompleto = barbeiro.first_name 
             ? `${barbeiro.first_name} ${barbeiro.last_name || ''}` 
-            : barbeiro.username;
+            : (barbeiro.nome || 'Profissional');
 
           const isCarlos = nomeCompleto.toLowerCase().includes('carlos');
           const isPedro = nomeCompleto.toLowerCase().includes('pedro');

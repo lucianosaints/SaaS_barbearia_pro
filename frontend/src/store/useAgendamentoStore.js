@@ -7,6 +7,7 @@ const useAgendamentoStore = create((set) => ({
   // Estados iniciais de Agendamento
   barbeiroId: null,
   servicosIds: [],
+  empresaId: null,
   dataHora: null,
 
   // Estados de Autenticação do Cliente
@@ -17,16 +18,19 @@ const useAgendamentoStore = create((set) => ({
   authModalOpen: false,
 
   // Ações de alteração de estado do Agendamento
-  setBarbeiroId: (id) => set({ barbeiroId: id }),
+  setBarbeiroId: (id) => set({ barbeiroId: id, dataHora: null }),
   
-  setServicosIds: (ids) => set({ servicosIds: ids }),
+  setServicosIds: (ids) => set({ servicosIds: ids, dataHora: null }),
   
-  toggleServicoId: (id) => set((state) => {
+  toggleServicoId: (id, empresaId) => set((state) => {
+    if (state.empresaId !== null && state.empresaId !== empresaId) {
+      return { servicosIds: [id], empresaId, barbeiroId: null, dataHora: null };
+    }
     const isSelected = state.servicosIds.includes(id);
     const newServicosIds = isSelected
       ? state.servicosIds.filter((servicoId) => servicoId !== id)
       : [...state.servicosIds, id];
-    return { servicosIds: newServicosIds };
+    return { servicosIds: newServicosIds, empresaId: newServicosIds.length ? empresaId : null, barbeiroId: null, dataHora: null };
   }),
 
   setDataHora: (data) => set({ dataHora: data }),
@@ -53,6 +57,7 @@ const useAgendamentoStore = create((set) => ({
 
   // Reseta o fluxo de agendamento mantendo a autenticação
   resetStore: () => set({
+    empresaId: null,
     barbeiroId: null,
     servicosIds: [],
     dataHora: null,

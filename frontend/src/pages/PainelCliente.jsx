@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import StatusBadge from '../components/StatusBadge';
 
 export default function PainelCliente() {
   const [agendamentos, setAgendamentos] = useState([]);
@@ -80,7 +81,8 @@ export default function PainelCliente() {
     // Calcula serviços e valor total
     const detalhes = agendamento.servicos_detalhes || [];
     const nomesServicos = detalhes.map(s => s.nome).join(', ') || 'Serviços não listados';
-    const valorTotal = detalhes.reduce((acc, curr) => acc + parseFloat(curr.preco), 0);
+    const valorTotal = agendamento.valor_total !== null && agendamento.valor_total !== undefined
+      ? Number(agendamento.valor_total) : detalhes.reduce((acc, curr) => acc + parseFloat(curr.preco), 0);
 
     return (
       <div className={`p-4 rounded-xl border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all ${
@@ -97,13 +99,14 @@ export default function PainelCliente() {
             )}
           </div>
           <div className="text-text-primary text-sm font-medium">{nomesServicos}</div>
+          <div><StatusBadge status={agendamento.status} /></div>
           <div className="text-text-muted text-xs flex items-center gap-3">
             <span>💈 Profissional ID: {agendamento.profissional}</span>
             <span>💰 R$ {valorTotal.toFixed(2).replace('.', ',')}</span>
           </div>
         </div>
         
-        {isFuturo && agendamento.status !== 'CANCELADO' && (
+        {isFuturo && ['PENDENTE', 'CONFIRMADO'].includes(agendamento.status) && (
           <button
             onClick={() => handleOpenCancelModal(agendamento.id)}
             className="w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-semibold transition-all text-rose-400 border border-rose-500/30 hover:bg-rose-500/10 hover:border-rose-500/50"

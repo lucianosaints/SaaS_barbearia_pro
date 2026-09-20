@@ -44,6 +44,7 @@ export default function AgendamentoWizard() {
 
   // Faz a chamada de POST final no backend para criar o agendamento
   const handleFinalizarAgendamento = async () => {
+    if (submitting || !barbeiroId || !servicosIds.length || !dataHora) return;
     setSubmitting(true);
     setSubmitError(null);
 
@@ -61,6 +62,9 @@ export default function AgendamentoWizard() {
       console.error('Erro ao salvar agendamento:', err);
       setSubmitError(
         err.response?.data?.non_field_errors?.[0] || 
+        err.response?.data?.data_hora_inicio?.[0] ||
+        err.response?.data?.servicos?.[0] ||
+        err.response?.data?.profissional?.[0] ||
         err.response?.data?.detail || 
         'Ocorreu uma falha ao realizar o agendamento. Por favor, tente novamente.'
       );
@@ -93,7 +97,7 @@ export default function AgendamentoWizard() {
           <div className="space-y-2">
             <h1 className="text-2xl font-bold text-text-primary">Agendado com Sucesso!</h1>
             <p className="text-text-muted text-sm">
-              Seu horário foi reservado. Um e-mail de confirmação foi enviado!
+              Seu horário foi registrado. Acompanhe a confirmação em Minha Agenda.
             </p>
           </div>
           <button

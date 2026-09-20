@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import FilterBar from '../components/FilterBar';
 import AgendamentoTable from '../components/AgendamentoTable';
@@ -11,6 +11,7 @@ export default function AdminDashboard() {
   const [agendamentos, setAgendamentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
   const [currentFilters, setCurrentFilters] = useState({
     data: '',
     barbeiro: '',
@@ -18,7 +19,7 @@ export default function AdminDashboard() {
   });
 
   // Função para buscar agendamentos na API aplicando filtros
-  const fetchAgendamentos = async (filters) => {
+  const fetchAgendamentos = useCallback(async (filters) => {
     setLoading(true);
     setError(null);
     try {
@@ -43,16 +44,29 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Carrega inicialmente
   useEffect(() => {
     fetchAgendamentos(currentFilters);
-  }, []);
+  }, [currentFilters, fetchAgendamentos]);
 
   const handleFilterChange = (newFilters) => {
     setCurrentFilters(newFilters);
-    fetchAgendamentos(newFilters);
+  };
+
+  const handleStatusChange = async (id, status) => {
+    if (updatingId !== null) return;
+    if (status === 'CANCELADO' && !window.confirm('Cancelar este agendamento e liberar o horário?')) return;
+    setUpdatingId(id);
+    try {
+      await api.patch(`/api/agendamentos/${id}/`, { status });
+      await fetchAgendamentos(currentFilters);
+    } catch (err) {
+      setError(err.response?.data?.status?.[0] || err.response?.data?.detail || 'Não foi possível atualizar o agendamento.');
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   return (
@@ -87,7 +101,7 @@ export default function AdminDashboard() {
           ❌ {error}
         </div>
       ) : (
-        <AgendamentoTable agendamentos={agendamentos} />
+        <AgendamentoTable agendamentos={agendamentos} onStatusChange={handleStatusChange} updatingId={updatingId} />
       )}
     </div>
   );

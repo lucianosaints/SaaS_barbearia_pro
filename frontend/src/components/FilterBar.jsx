@@ -22,7 +22,7 @@ export default function FilterBar({ onFilterChange }) {
       try {
         const response = await api.get('/api/usuarios/');
         // Filtra simplificadamente por usuários ativos da empresa
-        setBarbeiros(response.data.results || response.data);
+        setBarbeiros((response.data.results || response.data).filter(user => user.tipo === 'PROFISSIONAL'));
       } catch (err) {
         console.error('Erro ao carregar profissionais para filtros:', err);
       }
@@ -67,7 +67,7 @@ export default function FilterBar({ onFilterChange }) {
           <option value="">Todos os profissionais</option>
           {barbeiros.map((barbeiro) => (
             <option key={barbeiro.id} value={barbeiro.id}>
-              {barbeiro.first_name ? `${barbeiro.first_name} ${barbeiro.last_name || ''}` : barbeiro.username}
+              {barbeiro.first_name ? `${barbeiro.first_name} ${barbeiro.last_name || ''}` : (barbeiro.nome || barbeiro.username || 'Profissional')}
             </option>
           ))}
         </select>
