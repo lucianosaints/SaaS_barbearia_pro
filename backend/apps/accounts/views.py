@@ -1,81 +1,70 @@
+from django.db import IntegrityError, transaction
 from rest_framework import viewsets, status
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny, SAFE_METHODS, IsAuthenticated
 from rest_framework.views import APIView
-from rest_framework.decorators import api_view, permission_classes, action, throttle_classes
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework.throttling import ScopedRateThrottle, AnonRateThrottle
-
-class RegistroThrottle(AnonRateThrottle):
-    scope = 'registro'
-from apps.accounts.models import Usuario
-from apps.accounts.serializers import UsuarioSerializer, CustomTokenObtainPairSerializer
-from apps.accounts.permissions import IsAdminUserOrReadOnly, IsDemoUserReadOnly
 from apps.tenants.permissions import IsEmpresaAtiva
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from apps.accounts.permissions import IsDemoUserReadOnly
+from rest_framework.decorators import api_view, permission_classes, throttle_classes, action
+from rest_framework.throttling import AnonRateThrottle
+from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from apps.accounts.models import Usuario
+from apps.accounts.permissions import PublicReadAdminWrite, is_manager
+from apps.accounts.serializers import (
+    UsuarioSerializer, ProfissionalPublicoSerializer, RegistroClienteSerializer,
+    CustomTokenObtainPairSerializer,
+)
+
+
+class AuthThrottle(AnonRateThrottle):
+    scope = 'auth'
+
+    def get_cache_key(self, request, view):
+        # O cadastro continua limitado mesmo quando quem o chama já tem uma sessão.
+        return self.cache_format % {'scope': self.scope, 'ident': self.get_ident(request)}
+
 
 class CustomTokenObtainPairView(TokenObtainPairView):
-    """
-    View customizada para obtenção de Token JWT.
-    Retorna o perfil do usuário logado no mesmo payload do token.
-    """
     serializer_class = CustomTokenObtainPairSerializer
-    throttle_classes = [ScopedRateThrottle]
-    throttle_scope = 'login'
+    throttle_classes = [AuthThrottle]
+
+
+class CustomTokenRefreshView(TokenRefreshView):
+    throttle_classes = [AuthThrottle]
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet para gerenciamento de Usuários.
-    Garante o isolamento multi-tenant, permitindo listar apenas usuários
-    pertencentes à mesma empresa do usuário logado ou filtrar profissionais publicamente.
-    """
-    authentication_classes = [JWTAuthentication]
-    serializer_class = UsuarioSerializer
-    permission_classes = [IsAdminUserOrReadOnly, IsEmpresaAtiva, IsDemoUserReadOnly]
+    permission_classes = [PublicReadAdminWrite, IsEmpresaAtiva, IsDemoUserReadOnly]
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
+
+    def get_serializer_class(self):
+        if self.action == 'me':
+            return UsuarioSerializer
+        return UsuarioSerializer if is_manager(self.request.user) else ProfissionalPublicoSerializer
 
     def get_queryset(self):
         user = self.request.user
-        
-        # Se for rota pública (wizard de agendamento), deve receber o empresa_id via query params
-        empresa_id_param = self.request.query_params.get('empresa_id')
-        if empresa_id_param:
-            return Usuario.objects.filter(
-                empresa_id=empresa_id_param, 
-                tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], 
-                is_active=True,
-                is_staff=False,
-                is_superuser=False
-            )
-            
-        # Se for rota do painel administrativo (usuário autenticado)
-        if user and user.is_authenticated:
-            # Se for superusuário, pode ver tudo (opcional)
+        empresa_id = self.request.query_params.get('empresa_id')
+        if empresa_id and self.request.method in SAFE_METHODS:
+            if not empresa_id.isdigit():
+                raise ValidationError({'empresa_id': 'Identificador inválido.'})
+            # Consulta pública nunca devolve campos privados mesmo para gestores de outra empresa.
+            return Usuario.objects.filter(empresa_id=empresa_id, tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], is_staff=False, is_superuser=False, is_active=True, empresa__ativo=True)
+        if is_manager(user):
             if user.is_superuser:
                 return Usuario.objects.all()
-                
-            # Para usuários comuns/administradores da empresa, filtra estritamente pelo ID da empresa deles
-            empresa_id = getattr(user, 'empresa_id', None)
-            if empresa_id:
-                return Usuario.objects.filter(
-                    empresa_id=empresa_id,
-                    is_staff=False,
-                    is_superuser=False
-                )
-            return Usuario.objects.none()
-                
-        # Caso falte autenticação ou parâmetro, bloqueia o retorno de dados globais
-        return Usuario.objects.none()
+            return Usuario.objects.filter(empresa=user.empresa, is_superuser=False, is_staff=False)
+        if user.is_authenticated and user.tipo == 'PROFISSIONAL' and user.empresa_id:
+            return Usuario.objects.filter(empresa=user.empresa, tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], is_staff=False, is_superuser=False, is_active=True)
+        return Usuario.objects.filter(tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], is_staff=False, is_superuser=False, is_active=True, empresa__ativo=True)
 
-    def perform_create(self, serializer):
-        user = self.request.user
-        # SEMPRE associa à empresa do admin logado, ignorando qualquer empresa vinda do payload
-        if user.empresa:
-            serializer.save(empresa=user.empresa, tipo='PROFISSIONAL')
-        else:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Você precisa estar vinculado a uma empresa para criar profissionais.")
+    def get_serializer(self, *args, **kwargs):
+        if self.action != 'me' and self.request.query_params.get('empresa_id') and self.request.method in SAFE_METHODS:
+            kwargs.setdefault('context', self.get_serializer_context())
+            return ProfissionalPublicoSerializer(*args, **kwargs)
+        return super().get_serializer(*args, **kwargs)
 
     @action(detail=False, methods=['get', 'patch'], permission_classes=[IsAuthenticated, IsDemoUserReadOnly])
     def me(self, request):
@@ -106,79 +95,32 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@throttle_classes([RegistroThrottle])
+@throttle_classes([AuthThrottle])
 def registrar_cliente(request):
-    """
-    Cadastra um novo cliente no sistema e retorna imediatamente os tokens JWT.
-    """
-    nome = request.data.get('nome')
-    telefone = request.data.get('telefone')
-    email = request.data.get('email')
-    senha = request.data.get('senha')
-    empresa_id = request.data.get('empresa_id')
-
-    if not all([nome, email, senha]):
-        return Response(
-            {"error": "Os campos Nome, Email e Senha são obrigatórios."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    # O username será o email do usuário
-    if Usuario.objects.filter(username=email).exists() or Usuario.objects.filter(email=email).exists():
-        return Response(
-            {"error": "Não foi possível realizar o cadastro. Verifique os dados ou tente fazer login se já possuir uma conta."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    # Separa primeiro e último nome
-    nomes = nome.strip().split(' ', 1)
-    first_name = nomes[0]
-    last_name = nomes[1] if len(nomes) > 1 else ''
-
-    # Criação do cliente
-    usuario = Usuario(
-        username=email,
-        email=email,
-        first_name=first_name,
-        last_name=last_name,
-        telefone=telefone,
-        tipo='CLIENTE',
-        is_active=True
-    )
-
-    if empresa_id:
-        from apps.tenants.models import Empresa
-        empresa = Empresa.objects.filter(id=empresa_id).first()
-        if empresa:
-            usuario.empresa = empresa
-
-    usuario.set_password(senha)
-    usuario.save()
-
-    # Gera os tokens JWT
+    serializer = RegistroClienteSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    data = serializer.validated_data
+    names = data['nome'].split(' ', 1)
+    try:
+        with transaction.atomic():
+            usuario = Usuario.objects.create_user(
+                username=data['email'], email=data['email'], password=data['senha'],
+                first_name=names[0], last_name=names[1] if len(names) > 1 else '',
+                telefone=data.get('telefone', ''), tipo='CLIENTE', empresa_id=data.get('empresa_id'),
+            )
+    except IntegrityError:
+        raise ValidationError({'email': 'Já existe um usuário com este e-mail.'})
     refresh = RefreshToken.for_user(usuario)
-
     return Response({
-        'refresh': str(refresh),
-        'access': str(refresh.access_token),
-        'user': {
-            'id': usuario.id,
-            'nome': usuario.get_full_name() or usuario.username,
-            'email': usuario.email,
-            'tipo': usuario.tipo,
-            'empresa': {
-                'id': usuario.empresa.id,
-                'slug': usuario.empresa.slug,
-                'em_trial': usuario.empresa.em_trial,
-                'assinatura_ativa': usuario.empresa.assinatura_ativa
-            } if usuario.empresa else None
-        }
+        'refresh': str(refresh), 'access': str(refresh.access_token),
+        'user': {'id': usuario.id, 'nome': usuario.get_full_name(), 'email': usuario.email, 'tipo': usuario.tipo, 'empresa': {'id': usuario.empresa_id, 'slug': usuario.empresa.slug, 'em_trial': usuario.empresa.em_trial, 'assinatura_ativa': usuario.empresa.assinatura_ativa} if usuario.empresa else None},
     }, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@throttle_classes([RegistroThrottle])
+@throttle_classes([AuthThrottle])
+@transaction.atomic
 def registrar_saas(request):
     """
     Cadastra uma nova barbearia (Empresa) e o usuário administrador.
@@ -191,7 +133,7 @@ def registrar_saas(request):
 
     nome_barbearia = request.data.get('nome_barbearia')
     nome_admin = request.data.get('nome_admin')
-    email = request.data.get('email')
+    email = str(request.data.get('email') or '').strip().lower()
     senha = request.data.get('senha')
     whatsapp = request.data.get('whatsapp')
 
@@ -206,6 +148,9 @@ def registrar_saas(request):
             {"error": "Não foi possível realizar o cadastro. Verifique os dados ou tente fazer login se já possuir uma conta."},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+    registration = RegistroClienteSerializer(data={'nome': nome_admin, 'email': email, 'senha': senha, 'telefone': whatsapp})
+    registration.is_valid(raise_exception=True)
 
     # Criar a Empresa com 30 dias de trial
     base_slug = slugify(nome_barbearia)
@@ -260,6 +205,7 @@ def registrar_saas(request):
             }
         }
     }, status=status.HTTP_201_CREATED)
+
 
 class LogoutView(APIView):
     """

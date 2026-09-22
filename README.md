@@ -1,5 +1,7 @@
 # Golden Barber SaaS 💈
 
+> **Atualização de produção:** leia [ATUALIZACAO_PRODUCAO.md](ATUALIZACAO_PRODUCAO.md) antes de publicar. O guia documenta as novas restrições de acesso/status, variáveis obrigatórias, migrações, auditoria de dados e rollback. Dependências verificadas estão em `backend/requirements.lock` e `frontend/package-lock.json`.
+
 O **Golden Barber** é um sistema SaaS (Software as a Service) completo para gestão de barbearias e salões, operando em uma arquitetura Multi-Tenant. Este projeto oferece um aplicativo para o cliente final agendar seus horários e um painel de administração (Dashboard) para o proprietário gerenciar serviços, profissionais e o calendário de sua empresa.
 
 ## 🚀 Arquitetura e Tecnologias
@@ -33,33 +35,29 @@ Este projeto foi construído separando as camadas de Frontend (Client) e Backend
 
 ### Pré-requisitos
 - Python 3.11 ou superior
-- Node.js e NPM
+- Node.js 22.12+ e NPM
 
 ### 1. Backend (Django)
-```bash
-# Entre na pasta raiz do projeto
-cd SASS_BARBE_SHOP/backend
-
-# (Opcional) Ative sua virtualenv e instale as dependências
-pip install -r requirements.txt
-
-# Execute as migrações do banco
-python manage.py migrate
-
-# Inicie o servidor Django (padrão porta 8000)
-python manage.py runserver
+```powershell
+# Na raiz SaaS_barbearia_pro, para desenvolvimento local:
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements.lock
+$env:DJANGO_DEBUG = 'True'
+cd backend
+..\.venv\Scripts\python.exe manage.py migrate
+..\.venv\Scripts\python.exe manage.py runserver
 ```
 
 ### 2. Frontend (React)
-```bash
-# Entre na pasta do frontend
-cd SASS_BARBE_SHOP/frontend
+```powershell
+# Em outro terminal, a partir da raiz SaaS_barbearia_pro:
+cd frontend
 
 # Instale os pacotes NPM
-npm install
+npm.cmd ci
 
 # Inicie o servidor Vite
-npm run dev
+npm.cmd run dev
 ```
 
 A aplicação frontend iniciará, conectando-se automaticamente ao backend em `http://127.0.0.1:8000/`.

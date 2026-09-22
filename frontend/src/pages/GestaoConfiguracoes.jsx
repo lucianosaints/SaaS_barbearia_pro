@@ -8,7 +8,7 @@ export default function GestaoConfiguracoes() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
-  const [pagamentoLoading, setPagamentoLoading] = useState(false);
+  const [pagamentoLoading] = useState(false);
   
   const [empresaInfo, setEmpresaInfo] = useState(null);
   

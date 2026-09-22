@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import useAgendamentoStore from '../store/useAgendamentoStore';
 import videoBackground from '../imagem/salao_pro.mp4';
-import logoImg from '../imagem/logo.png';
+
 import i9builderImg from '../imagem/i9builder.png';
 import OnboardingModal from '../components/OnboardingModal';
 import AuthModal from '../components/AuthModal';

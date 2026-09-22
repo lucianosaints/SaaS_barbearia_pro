@@ -11,12 +11,16 @@ import Assinatura from './pages/Assinatura'
 import backgroundImg from './imagem/Background.jpg'
 import i9builderImg from './imagem/i9builder.png'
 
-import logoImg from './imagem/logo.png'
-import WhatsAppButton from './components/WhatsAppButton'
 
 function App() {
   const [currentTab, setCurrentTab] = useState('landing') // 'landing' por padrão para visitantes
   const { userToken, userNome, userTipo, userEmpresa, logout, setAuthModalOpen } = useAgendamentoStore()
+
+  useEffect(() => {
+    const onExpired = () => { logout(); setCurrentTab('landing'); };
+    window.addEventListener('auth_expired', onExpired);
+    return () => window.removeEventListener('auth_expired', onExpired);
+  }, [logout]);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -37,7 +41,7 @@ function App() {
         setCurrentTab('client_dashboard');
       }
     }
-  }, [userToken, userTipo, location.pathname]);
+  }, [userToken, userTipo, location.pathname, currentTab]);
 
   return (
     <div 

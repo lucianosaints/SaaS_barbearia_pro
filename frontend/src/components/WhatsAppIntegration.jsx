@@ -13,7 +13,6 @@ const WhatsAppIntegration = () => {
     const [isRequestingCode, setIsRequestingCode] = useState(false);
     
     // Ref para controle de polling
-    const pollingInterval = useRef(null);
 
     const fetchQRCode = async () => {
         const fetchUrl = `/api/whatsapp/qrcode/${Date.now()}/?t=${new Date().getTime()}`;
@@ -91,7 +90,7 @@ const WhatsAppIntegration = () => {
                 setQrCodeStatus('WAITING_FOR_SCAN');
                 setMessage('Desconectado. Insira seu número para gerar um novo código.');
             }
-        } catch (error) {
+        } catch {
             setQrCodeStatus('WORKING');
             setMessage('Erro ao tentar desconectar. Tente novamente.');
         }
@@ -148,9 +147,6 @@ const WhatsAppIntegration = () => {
             isMounted = false;
             if (timeoutId) {
                 clearTimeout(timeoutId);
-            }
-            if (pollingInterval.current) {
-                clearInterval(pollingInterval.current);
             }
         };
     }, [pairingMethod]); // Roda apenas quando o método de pareamento muda

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell 
@@ -18,7 +18,7 @@ export default function FinanceiroDashboard() {
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
 
-  const fetchFinanceData = async () => {
+  const fetchFinanceData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -35,11 +35,11 @@ export default function FinanceiroDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dataInicio, dataFim]);
 
   useEffect(() => {
     fetchFinanceData();
-  }, [dataInicio, dataFim]);
+  }, [fetchFinanceData]);
 
   if (loading) {
     return (

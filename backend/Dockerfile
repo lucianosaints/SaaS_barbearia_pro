@@ -15,8 +15,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia os requirements e instala as dependências do Python
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.lock /app/
+RUN pip install --no-cache-dir -r requirements.lock
 
 # Copia todo o código do backend para dentro do diretório de trabalho
 COPY . /app/
@@ -25,7 +25,7 @@ COPY . /app/
 RUN mkdir -p /app/media/profissionais && chmod -R 777 /app/media
 
 # Coleta os arquivos estáticos (útil se usar whitenoise)
-RUN python manage.py collectstatic --noinput
+# Static files are collected by entrypoint after the runtime mounts are applied.
 
 # Copia entrypoint para fora de /app (que será sobrescrito pelo bind mount em produção)
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh

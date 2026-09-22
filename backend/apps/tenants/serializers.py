@@ -25,3 +25,18 @@ class EmpresaSerializer(serializers.ModelSerializer):
             delta = obj.data_fim_trial - datetime.date.today()
             return delta.days
         return 0
+
+
+    def validate(self, attrs):
+        from datetime import time
+        def value(key, default=None):
+            return attrs.get(key, getattr(self.instance, key, default))
+        opening, closing = value('hora_abertura', time(9)), value('hora_fechamento', time(19))
+        start, end = value('intervalo_almoco_inicio'), value('intervalo_almoco_fim')
+        if opening >= closing:
+            raise serializers.ValidationError('O fechamento deve ser posterior à abertura.')
+        if (start is None) != (end is None):
+            raise serializers.ValidationError('Informe início e fim do almoço.')
+        if start is not None and not opening <= start < end <= closing:
+            raise serializers.ValidationError('O almoço deve estar dentro do expediente.')
+        return attrs

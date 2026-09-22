@@ -17,7 +17,10 @@ from django.db.models import Q
 
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
-from apps.accounts.permissions import IsAdminUserOrReadOnly
+from apps.accounts.permissions import IsAdminUserOrReadOnly, PublicReadAdminWrite
+from rest_framework.permissions import SAFE_METHODS
+from rest_framework.exceptions import ValidationError
+from apps.agenda.rules import validate_selection
 from apps.tenants.permissions import IsEmpresaAtiva
 
 class ServicoViewSet(viewsets.ModelViewSet):
@@ -25,43 +28,35 @@ class ServicoViewSet(viewsets.ModelViewSet):
     ViewSet para listar, criar e gerenciar Serviços.
     Garante isolamento multi-tenant e visualização pública.
     """
-    authentication_classes = [JWTAuthentication]
     serializer_class = ServicoSerializer
-    permission_classes = [IsAdminUserOrReadOnly, IsEmpresaAtiva]
+    permission_classes = [PublicReadAdminWrite, IsEmpresaAtiva]
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
 
     def get_queryset(self):
+        # Filtro de listagem pública por empresa para o Wizard
+        empresa_id = self.request.query_params.get('empresa_id')
+        if empresa_id and self.request.method in SAFE_METHODS:
+            if not empresa_id.isdigit():
+                raise ValidationError({'empresa_id': 'Identificador inválido.'})
+            return Servico.objects.filter(empresa_id=empresa_id, ativo=True, empresa__ativo=True)
+
         user = self.request.user
-        
-        # Se for rota pública (wizard de agendamento), deve receber o empresa_id via query params
-        empresa_id_param = self.request.query_params.get('empresa_id')
-        if empresa_id_param:
-            return Servico.objects.filter(empresa_id=empresa_id_param, ativo=True)
-        
-        # Se for rota do painel administrativo (usuário autenticado)
-        if user and user.is_authenticated:
-            # Se for superusuário, pode ver tudo (opcional)
+        if user.is_authenticated and user.tipo != 'CLIENTE':
             if user.is_superuser:
                 return Servico.objects.all()
-                
-            # Para usuários comuns/administradores da empresa, filtra estritamente pelo ID da empresa deles
-            empresa_id = getattr(user, 'empresa_id', None)
-            if empresa_id:
-                return Servico.objects.filter(empresa_id=empresa_id)
+            if user.empresa:
+                return Servico.objects.filter(empresa=user.empresa)
             return Servico.objects.none()
-                
-        # Caso falte autenticação ou parâmetro, bloqueia o retorno de dados globais
-        return Servico.objects.none()
+
+        # Se for consulta anônima ou cliente final logado, lista todos os serviços ativos no MVP
+        return Servico.objects.filter(ativo=True, empresa__ativo=True)
 
     def perform_create(self, serializer):
-        user = self.request.user
-        empresa_id = self.request.data.get('empresa')
-        if not empresa_id and user.empresa:
-            serializer.save(empresa=user.empresa)
-        elif empresa_id:
-            serializer.save()
+        # Associa o serviço automaticamente à empresa do usuário criador
+        if not self.request.user.is_superuser and self.request.user.empresa:
+            serializer.save(empresa=self.request.user.empresa)
         else:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError({"empresa": "Não foi possível associar o serviço a uma empresa. Verifique se seu usuário está vinculado a uma barbearia."})
+            serializer.save()
 
 
 class AgendamentoFilter(filters.FilterSet):
@@ -113,93 +108,32 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
     """
     serializer_class = AgendamentoSerializer
     permission_classes = [IsAuthenticated, IsEmpresaAtiva]
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
     filter_backends = [filters.DjangoFilterBackend]
     filterset_class = AgendamentoFilter
 
     def get_queryset(self):
         user = self.request.user
         if user.is_superuser:
-            return Agendamento.objects.all()
+            return Agendamento.objects.select_related('cliente', 'profissional', 'empresa').prefetch_related('servicos').all()
         
         # Cliente final: OBRIGATORIAMENTE retorna apenas seus próprios agendamentos
         if user.tipo == 'CLIENTE':
             return Agendamento.objects.filter(cliente=user)
             
-        # Profissionais: veem apenas os agendamentos em que são o barbeiro
-        if user.tipo == 'PROFISSIONAL' and user.empresa:
+        if user.tipo == 'PROFISSIONAL' and user.empresa_id:
             return Agendamento.objects.filter(empresa=user.empresa, profissional=user)
-            
-        # Administradores: veem todos os agendamentos da empresa
-        if user.tipo == 'ADMINISTRADOR' and user.empresa:
+        # Administradores veem os agendamentos da empresa
+        if user.tipo in ['ADMINISTRADOR', 'PROFISSIONAL'] and user.empresa:
             return Agendamento.objects.filter(empresa=user.empresa)
             
         return Agendamento.objects.none()
 
-    def perform_create(self, serializer):
-        user = self.request.user
-        empresa = user.empresa or serializer.validated_data.get('empresa')
-        
-        if user.tipo == 'CLIENTE':
-            cliente = user
-            profissional = serializer.validated_data.get('profissional')
-        else:
-            cliente = serializer.validated_data.get('cliente', user)
-            profissional = serializer.validated_data.get('profissional')
-
-        # Isolamento Rígido de Tenant (Evita vazamento/cruzamento de dados)
-        if not user.is_superuser:
-            if profissional and profissional.empresa != empresa:
-                from rest_framework.exceptions import PermissionDenied
-                raise PermissionDenied("Operação não permitida: O profissional não pertence a esta barbearia.")
-            if cliente and getattr(cliente, 'empresa', None) and cliente.empresa != empresa:
-                from rest_framework.exceptions import PermissionDenied
-                raise PermissionDenied("Operação não permitida: O cliente não pertence a esta barbearia.")
-
-        # Validação de Cliente Bloqueado
-        if cliente and getattr(cliente, 'status', 'ATIVO') == 'BLOQUEADO':
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Não foi possível processar seu agendamento de forma automática no momento. Fale conosco pelo WhatsApp para garantir sua vaga rapidinho!")
-
-        serializer.save(cliente=cliente, empresa=empresa)
-
     @action(detail=True, methods=['patch'])
     def cancelar(self, request, pk=None):
-        agendamento = self.get_object()
-        
-        # Garante que só o próprio cliente ou um administrador/profissional da empresa possa cancelar
-        if request.user.tipo == 'CLIENTE' and agendamento.cliente != request.user:
-            return Response(
-                {"error": "Você não tem permissão para cancelar este agendamento."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        # Se for profissional, só pode cancelar se for da mesma empresa
-        if request.user.tipo == 'PROFISSIONAL' and agendamento.empresa != request.user.empresa:
-            return Response(
-                {"error": "Você não tem permissão para cancelar este agendamento."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-        # Regra de horas limite para cancelamento (apenas restringe o cliente final)
-        if request.user.tipo == 'CLIENTE':
-            empresa = agendamento.empresa
-            limite_horas = getattr(empresa, 'horas_limite_cancelamento', 24)
-            from django.utils import timezone
-            from datetime import timedelta
-            
-            if agendamento.data_hora_inicio - timezone.now() < timedelta(hours=limite_horas):
-                return Response(
-                    {"error": f"O cancelamento automático não é permitido com menos de {limite_horas} horas de antecedência. Entre em contato direto pelo WhatsApp para realizar a alteração."},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-        if agendamento.status == 'CANCELADO':
-            return Response(
-                {"error": "Este agendamento já está cancelado."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-            
-        agendamento.status = 'CANCELADO'
-        agendamento.save()
+        serializer = self.get_serializer(self.get_object(), data={'status': 'CANCELADO'}, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response({"message": "Agendamento cancelado com sucesso."})
 
 
@@ -230,13 +164,14 @@ def obter_disponibilidade(request):
 
     try:
         servico_ids = [int(id_str.strip()) for id_str in servicos_str.split(',') if id_str.strip()]
+        barbeiro_id = int(barbeiro_id)
     except ValueError:
         return Response(
             {"error": "Formato do parâmetro 'servicos' inválido. Use IDs separados por vírgula."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    if not servico_ids:
+    if not servico_ids or len(servico_ids) != len(set(servico_ids)):
         return Response(
             {"error": "Pelo menos um serviço deve ser selecionado."},
             status=status.HTTP_400_BAD_REQUEST
@@ -246,7 +181,7 @@ def obter_disponibilidade(request):
     if not barbeiro or not barbeiro.empresa:
         return Response(
             {"error": "Profissional inválido ou sem barbearia (empresa) vinculada."},
-            status=status.HTTP_404_NOT_FOUND
+            status=status.HTTP_400_BAD_REQUEST
         )
 
     empresa = barbeiro.empresa
@@ -257,10 +192,12 @@ def obter_disponibilidade(request):
     if servicos_qs.count() != len(set(servico_ids)):
         return Response(
             {"error": "Um ou mais serviços informados são inválidos ou não pertencem à empresa."},
-            status=status.HTTP_404_NOT_FOUND
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    duracao_total = sum(s.duracao_minutos for s in servicos_qs)
+    duracao_total = validate_selection(barbeiro, list(servicos_qs))
+    if data_selecionada < timezone.localdate():
+        return Response({'horarios_disponiveis': [], 'horarios_ocupados': [], 'mensagem': None})
 
     tz = timezone.get_current_timezone()
     
@@ -288,9 +225,6 @@ def obter_disponibilidade(request):
         Q(profissional_id=barbeiro_id) | Q(profissional__isnull=True)
     )
     
-    user = request.user
-    if user.is_authenticated and not user.is_superuser and user.empresa:
-        agendamentos = agendamentos.filter(empresa=user.empresa)
 
     horarios_disponiveis = []
     horarios_ocupados = []
@@ -328,7 +262,7 @@ def obter_disponibilidade(request):
         # 2. Verifica colisão com os agendamentos já reservados no banco
         if not bloqueado_por_admin:
             for agendamento in agendamentos:
-                if slot_inicio < agendamento.data_hora_fim and slot_fim > agendamento.data_hora_inicio:
+                if (agendamento.data_hora_fim is None or slot_inicio < agendamento.data_hora_fim) and slot_fim > agendamento.data_hora_inicio:
                     tem_sobreposicao = True
                     break
 

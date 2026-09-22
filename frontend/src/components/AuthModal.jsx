@@ -75,6 +75,7 @@ export default function AuthModal({ onAuthSuccess }) {
       setError(
         err.response?.data?.error || 
         err.response?.data?.email?.[0] || 
+        err.response?.data?.senha?.[0] ||
         'Erro ao realizar o cadastro. Verifique os dados inseridos.'
       );
     } finally {
@@ -209,7 +210,8 @@ export default function AuthModal({ onAuthSuccess }) {
                   required
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
+                  minLength={8}
+                  placeholder="Mínimo 8 caracteres"
                   className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold transition-colors"
                 />
               </div>

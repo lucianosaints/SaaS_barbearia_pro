@@ -1,0 +1,36 @@
+# Ambiente isolado de testes. Não carrega credenciais ou volumes de produção.
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: salaopro_tests
+      POSTGRES_USER: salaopro_tests
+      POSTGRES_PASSWORD: isolated-test-only
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U salaopro_tests -d salaopro_tests"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  backend-tests:
+    image: python:3.11-slim
+    working_dir: /app/backend
+    volumes:
+      - ./backend:/app/backend:ro
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      DJANGO_DEBUG: "True"
+      DB_ENGINE: postgresql
+      DB_NAME: salaopro_tests
+      DB_USER: salaopro_tests
+      DB_PASSWORD: isolated-test-only
+      DB_HOST: postgres-test
+      DB_PORT: "5432"
+      DB_SSLMODE: disable
+      DB_CONN_MAX_AGE: "0"
+      EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    command: ["sh", "-c", "pip install --no-cache-dir -r requirements.lock && python manage.py test --noinput"]

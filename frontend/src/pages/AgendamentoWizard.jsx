@@ -33,7 +33,7 @@ export default function AgendamentoWizard() {
   const navigate = useNavigate();
 
   // Zustand
-  const { empresaId, setEmpresaId, barbeiroId, servicosIds, dataHora, metodoPagamento, resetStore, userToken, setAuthModalOpen } = useAgendamentoStore();
+  const { setEmpresaId, barbeiroId, servicosIds, dataHora, metodoPagamento, resetStore, userToken, setAuthModalOpen } = useAgendamentoStore();
 
   useEffect(() => {
     async function fetchEmpresa() {

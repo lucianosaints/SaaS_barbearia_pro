@@ -1,6 +1,4 @@
-const CACHE_NAME = 'salao-pro-v1';
-
-self.addEventListener('install', event => {
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 

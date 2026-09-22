@@ -53,7 +53,7 @@ export default function PainelCliente() {
         email: response.data.email || '',
         telefone: response.data.telefone || ''
       });
-    } catch (err) {
+    } catch {
       setPerfilError('Não foi possível carregar os dados do perfil.');
     }
   };
@@ -71,7 +71,7 @@ export default function PainelCliente() {
       });
       setPerfilSuccess('Perfil atualizado com sucesso!');
       setTimeout(() => setPerfilModalOpen(false), 2000);
-    } catch (err) {
+    } catch {
       setPerfilError('Erro ao atualizar o perfil. Tente novamente.');
     } finally {
       setSalvandoPerfil(false);

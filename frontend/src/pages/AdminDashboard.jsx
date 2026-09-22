@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -69,7 +69,7 @@ export default function AdminDashboard() {
   const [editingAgendamento, setEditingAgendamento] = useState(null);
   const [savingStatus, setSavingStatus] = useState(false);
 
-  const fetchAgendamentos = async (filters) => {
+  const fetchAgendamentos = useCallback(async (filters) => {
     setLoadingAgenda(true);
     setErrorAgenda(null);
     try {
@@ -86,21 +86,20 @@ export default function AdminDashboard() {
     } finally {
       setLoadingAgenda(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'agenda') {
       fetchAgendamentos(currentFilters);
     }
-  }, [activeTab]); // Recarrega se voltar pra agenda (opcional)
+  }, [activeTab, currentFilters, fetchAgendamentos]); // Recarrega se voltar pra agenda (opcional)
 
   const handleFilterChange = (newFilters) => {
     setCurrentFilters(newFilters);
-    fetchAgendamentos(newFilters);
   };
 
   const handleEditClick = (agendamento) => {
-    setEditingAgendamento(agendamento);
+    setEditingAgendamento({ ...agendamento, originalStatus: agendamento.status });
   };
 
   const handleSaveStatus = async (e) => {
@@ -115,7 +114,8 @@ export default function AdminDashboard() {
       fetchAgendamentos(currentFilters);
     } catch (err) {
       console.error(err);
-      alert("Erro ao salvar o status do agendamento.");
+      const details = err.response?.data;
+      alert(details?.detail || details?.status?.[0] || details?.non_field_errors?.[0] || "Erro ao salvar o status do agendamento.");
     } finally {
       setSavingStatus(false);
     }
@@ -427,10 +427,10 @@ export default function AdminDashboard() {
                         onChange={(e) => setEditingAgendamento({...editingAgendamento, status: e.target.value})}
                         className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-gold outline-none"
                       >
-                        <option value="PENDENTE">Pendente</option>
-                        <option value="CONFIRMADO">Confirmado</option>
-                        <option value="CONCLUIDO">Concluído</option>
-                        <option value="CANCELADO">Cancelado</option>
+                        <option value="PENDENTE" disabled={editingAgendamento.originalStatus !== 'PENDENTE'}>Pendente</option>
+                        <option value="CONFIRMADO" disabled={['CONCLUIDO', 'CANCELADO'].includes(editingAgendamento.originalStatus)}>Confirmado</option>
+                        <option value="CONCLUIDO" disabled={!['CONFIRMADO', 'CONCLUIDO'].includes(editingAgendamento.originalStatus) || new Date(editingAgendamento.data_hora_inicio) > new Date()}>Concluído</option>
+                        <option value="CANCELADO" disabled={editingAgendamento.originalStatus === 'CONCLUIDO'}>Cancelado</option>
                       </select>
                     </div>
                     <div>

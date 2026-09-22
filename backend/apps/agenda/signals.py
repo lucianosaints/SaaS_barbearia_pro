@@ -173,58 +173,42 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
 
 
 @receiver(pre_save, sender=Agendamento)
-def calcular_valores_financeiros(sender, instance: Agendamento, **kwargs) -> None:
-    """
-    Signal pre_save para calcular comissão e lucro líquido quando o status
-    muda para 'CONCLUIDO'. O valor_total já é preenchido pelo signal m2m_changed
-    em models.py no momento da associação dos serviços.
-    """
-    # Verifica se a instância já existe no banco (para podermos comparar o status antigo)
-    status_anterior = None
-    if instance.pk:
-        try:
-            old_instance = Agendamento.objects.get(pk=instance.pk)
-            status_anterior = old_instance.status
-        except Agendamento.DoesNotExist:
-            pass
-
-    if instance.status == 'CONCLUIDO' and instance.pk:
-        # Se valor_total ainda não foi preenchido, tenta calcular agora
-        if not instance.valor_total:
-            total_servicos = sum(s.preco for s in instance.servicos.all())
-            if total_servicos > 0:
-                instance.valor_total = total_servicos
-
-        # Calcula comissão e lucro líquido
-        if instance.valor_total:
-            taxa = 40.00
-            if instance.profissional and hasattr(instance.profissional, 'taxa_comissao'):
-                taxa = instance.profissional.taxa_comissao
-            
-            comissao = (instance.valor_total * taxa) / 100
-            instance.valor_comissao = comissao
-            instance.lucro_liquido = instance.valor_total - comissao
-
-        # Atualiza o Cartão Fidelidade se o status acabou de mudar para CONCLUIDO
-        if status_anterior != 'CONCLUIDO' and instance.cliente and instance.empresa:
-            if instance.empresa.fidelidade_ativo:
-                from apps.agenda.models import CartaoFidelidade
-                cartao, _ = CartaoFidelidade.objects.get_or_create(
-                    empresa=instance.empresa,
-                    cliente=instance.cliente
-                )
-                cartao.qtd_selos_atual += 1
-                
-                # Se bateu a meta, zera e dá o prêmio
-                if cartao.qtd_selos_atual >= instance.empresa.fidelidade_meta:
-                    cartao.premios_disponiveis += 1
-                    cartao.qtd_selos_atual = 0
-                    
-                cartao.save()
+def calcular_valores_financeiros(sender, instance, **kwargs):
+    from decimal import Decimal, ROUND_HALF_UP
+    previous = Agendamento.objects.filter(pk=instance.pk).values_list('status', flat=True).first() if instance.pk else None
+    instance._previous_status = previous
+    if instance.status == 'CONCLUIDO' and previous != 'CONCLUIDO' and instance.pk:
+        total = instance.valor_total
+        if total is None:
+            total = sum((s.preco for s in instance.servicos.all()), Decimal('0'))
+        rate = Decimal(str(instance.profissional.taxa_comissao))
+        if not Decimal('0') <= rate <= Decimal('100') or total < 0:
+            from django.core.exceptions import ValidationError
+            raise ValidationError('Valor ou comissão inválida.')
+        instance.valor_total = total
+        instance.valor_comissao = (total * rate / 100).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        instance.lucro_liquido = total - instance.valor_comissao
 
 
 @receiver(post_save, sender=Agendamento)
-def sniper_de_desistencias(sender, instance: Agendamento, created: bool, **kwargs) -> None:
+def atualizar_fidelidade(sender, instance, **kwargs):
+    from django.db import transaction
+    from apps.agenda.models import CartaoFidelidade
+    if instance.status != 'CONCLUIDO' or getattr(instance, '_previous_status', None) == 'CONCLUIDO':
+        return
+    if not instance.empresa.fidelidade_ativo:
+        return
+    with transaction.atomic():
+        cartao, _ = CartaoFidelidade.objects.get_or_create(empresa=instance.empresa, cliente=instance.cliente)
+        cartao = CartaoFidelidade.objects.select_for_update().get(pk=cartao.pk)
+        cartao.qtd_selos_atual += 1
+        if cartao.qtd_selos_atual >= instance.empresa.fidelidade_meta:
+            cartao.premios_disponiveis += 1
+            cartao.qtd_selos_atual = 0
+        cartao.save()
+
+
+def _notificar_cancelamento(instance) -> None:
     """
     Verifica se um agendamento foi cancelado. Se sim, procura na Fila de Espera 
     por alguém que queria esse horário e simula a notificação.
@@ -235,8 +219,8 @@ def sniper_de_desistencias(sender, instance: Agendamento, created: bool, **kwarg
         datetime_local = instance.data_hora_inicio.astimezone(fuso_local)
         data_formatada = datetime_local.strftime('%d/%m/%Y às %H:%M')
         
-        data = instance.data_hora_inicio.date()
-        horario = instance.data_hora_inicio.time()
+        data = datetime_local.date()
+        horario = datetime_local.time().replace(tzinfo=None)
         
         session_id = f"tenant_{instance.empresa.id}" if instance.empresa else 'default'
         cliente_nome = instance.cliente.get_full_name() or instance.cliente.username if instance.cliente else "Desconhecido"
@@ -288,4 +272,16 @@ def sniper_de_desistencias(sender, instance: Agendamento, created: bool, **kwarg
                 f"Uma vaga acabou de ser liberada na barbearia para o dia {data.strftime('%d/%m/%Y')} às {horario.strftime('%H:%M')}!\n"
                 f"Acesse o app para agendar antes que outra pessoa pegue."
             )
-            enviar_mensagem_whatsapp(espera.cliente_telefone, msg_fila)
+            enviar_mensagem_whatsapp(espera.cliente_telefone, msg_fila, waha_session=session_id)
+
+@receiver(post_save, sender=Agendamento)
+def sniper_de_desistencias(sender, instance, created, **kwargs):
+    from django.db import transaction
+    if instance.status != 'CANCELADO' or getattr(instance, '_previous_status', None) == 'CANCELADO':
+        return
+    def notify():
+        try:
+            _notificar_cancelamento(Agendamento.objects.get(pk=instance.pk))
+        except Exception:
+            logger.exception('Falha na notificação do cancelamento %s', instance.pk)
+    transaction.on_commit(notify)

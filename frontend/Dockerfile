@@ -1,11 +1,11 @@
 # Fase de Build (Node.js)
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
 # Copia os arquivos de dependência e instala
-COPY package.json package-lock.json* ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # Copia o restante do código
 COPY . .

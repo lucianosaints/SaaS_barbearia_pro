@@ -7,7 +7,7 @@ const getInitialEmpresa = () => {
   try {
     const item = localStorage.getItem('user_empresa');
     return item && item !== 'undefined' ? JSON.parse(item) : null;
-  } catch (e) {
+  } catch {
     return null;
   }
 };
@@ -31,16 +31,19 @@ const useAgendamentoStore = create((set) => ({
   // Ações de alteração de estado do Agendamento
   setEmpresaId: (id) => set({ empresaId: id, barbeiroId: null, servicosIds: [], dataHora: null, metodoPagamento: null }),
   
-  setBarbeiroId: (id) => set({ barbeiroId: id }),
+  setBarbeiroId: (id) => set({ barbeiroId: id, dataHora: null }),
   
-  setServicosIds: (ids) => set({ servicosIds: ids }),
+  setServicosIds: (ids) => set({ servicosIds: ids, dataHora: null }),
   
-  toggleServicoId: (id) => set((state) => {
+  toggleServicoId: (id, empresaId) => set((state) => {
+    if (empresaId != null && state.empresaId !== empresaId) {
+      return { empresaId, servicosIds: [id], barbeiroId: null, dataHora: null, metodoPagamento: null };
+    }
     const isSelected = state.servicosIds.includes(id);
     const newServicosIds = isSelected
       ? state.servicosIds.filter((servicoId) => servicoId !== id)
       : [...state.servicosIds, id];
-    return { servicosIds: newServicosIds };
+    return { servicosIds: newServicosIds, dataHora: null };
   }),
 
   setDataHora: (data) => set({ dataHora: data }),
@@ -55,6 +58,8 @@ const useAgendamentoStore = create((set) => ({
     localStorage.setItem('user_tipo', tipo);
     if (empresa) {
         localStorage.setItem('user_empresa', JSON.stringify(empresa));
+    } else {
+        localStorage.removeItem('user_empresa');
     }
     set({ userToken: token, userId: id, userNome: nome, userTipo: tipo, userEmpresa: empresa, authModalOpen: false });
   },
@@ -66,7 +71,7 @@ const useAgendamentoStore = create((set) => ({
     localStorage.removeItem('user_nome');
     localStorage.removeItem('user_tipo');
     localStorage.removeItem('user_empresa');
-    set({ userToken: null, userId: null, userNome: null, userTipo: null, userEmpresa: null });
+    set({ userToken: null, userId: null, userNome: null, userTipo: null, userEmpresa: null, empresaId: null, barbeiroId: null, servicosIds: [], dataHora: null, metodoPagamento: null });
   },
 
   setAuthModalOpen: (isOpen) => set({ authModalOpen: isOpen }),
