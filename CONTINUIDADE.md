@@ -243,6 +243,12 @@ Testes de segurança: 8 aprovados (`apps.accounts.tests_security`). Suíte backe
 
 Pendências para a próxima sessão: revisar a política de armazenamento de JWT no `localStorage` (avaliar cookie HttpOnly com migração coordenada), confirmar cache Redis/Memcached no Compose de produção e executar uma homologação final com PostgreSQL e proxy reais. Não publicar ainda sem backup e janela de manutenção.
 
+## Verificação de isolamento entre empresas (22/09/2026)
+
+Foi validado o isolamento multiempresa na branch integrada. A suíte cruzada executou 12 testes e todos passaram (`tests_cross_tenant`, `tests_waha_isolation` e `tests_integration`). Clientes consultam somente seus próprios agendamentos; profissionais ficam limitados à empresa e à própria agenda; gestores não conseguem editar usuários ou serviços de outra empresa; disponibilidade e reservas rejeitam serviços/profissionais de empresas diferentes; bloqueios e fila usam a empresa do usuário; e as notificações WhatsApp usam somente a sessão `tenant_<empresa_id>` correta.
+
+O catálogo público de profissionais e serviços exige `empresa_id` no fluxo do wizard frontend. Sem esse filtro, as rotas públicas mantêm listagem global de itens ativos por compatibilidade com o catálogo público; não há acesso a campos privados. Revisar se o produto deve tornar `empresa_id` obrigatório também para chamadas públicas fora do wizard.
+
 ## Como retomar localmente
 
 Não reinstalar nem refazer alterações sem necessidade. Leia este arquivo e os dois guias, confira `git status` e prossiga do próximo passo pendente.
