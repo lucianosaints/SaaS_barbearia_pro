@@ -251,6 +251,22 @@ O catálogo público de profissionais e serviços já envia `empresa_id` no flux
 
 Correção aplicada depois da revisão: chamadas anônimas a `/api/usuarios/` e `/api/servicos/` sem `empresa_id` agora retornam `400`; com `empresa_id`, retornam somente profissionais/serviços ativos daquela empresa. Os testes de catálogo público e isolamento foram atualizados. A suíte direcionada executou os cenários de agenda, cross-tenant, integração e segurança; os novos casos de ausência de empresa passaram. Repetir a suíte completa antes de qualquer publicação.
 
+## Próxima retomada — segurança e produção (22/09/2026)
+
+O usuário informou que o backup será provido pela Vultr. Na retomada, confirmar se o backup cobre PostgreSQL e volume de mídia/fotos, sua retenção e realizar um ensaio de restauração antes da publicação.
+
+Estado do código: a branch local `codex/integracao-develop-20260920` contém o commit `62f4338`, que exige `empresa_id` nas listagens públicas de profissionais e serviços. Esse commit ainda não foi enviado para `develop`; a branch local está dois commits à frente do remoto. Há uma foto local não rastreada do banco de prévia, que deve permanecer fora do Git.
+
+Próximos passos combinados:
+
+1. Enviar o commit `62f4338` para `develop` quando autorizado.
+2. Confirmar cache compartilhado de produção para o rate limit (Redis/Memcached ou configuração equivalente).
+3. Validar migrações, testes e restauração em PostgreSQL de homologação.
+4. Revisar a migração de JWT do `localStorage` para mecanismo mais resistente a XSS.
+5. Homologar Nginx, WAHA, SMTP e Mercado Pago antes de publicar.
+
+Não publicar em produção nem executar seed até concluir essas verificações.
+
 ## Como retomar localmente
 
 Não reinstalar nem refazer alterações sem necessidade. Leia este arquivo e os dois guias, confira `git status` e prossiga do próximo passo pendente.
