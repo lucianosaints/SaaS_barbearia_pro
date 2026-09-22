@@ -28,3 +28,32 @@ it('não mistura serviços de barbearias distintas', () => {
   expect(store.getState().empresaId).toBe(20);
   expect(store.getState().barbeiroId).toBeNull();
 });
+
+it('notifica o backend no logout antes de remover os tokens locais', () => {
+  const values = new Map([
+    ['access_token', 'access-test'],
+    ['refresh_token', 'refresh-test'],
+  ]);
+  const removeItem = vi.fn((key) => values.delete(key));
+  vi.stubGlobal('localStorage', {
+    getItem: (key) => values.get(key) || null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem,
+  });
+  const fetchMock = vi.fn(() => Promise.resolve({ ok: true }));
+  vi.stubGlobal('fetch', fetchMock);
+
+  store.getState().logout();
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringContaining('/api/logout/'),
+    expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({ Authorization: 'Bearer access-test' }),
+      body: JSON.stringify({ refresh_token: 'refresh-test' }),
+      keepalive: true,
+    }),
+  );
+  expect(removeItem).toHaveBeenCalledWith('access_token');
+  expect(removeItem).toHaveBeenCalledWith('refresh_token');
+});

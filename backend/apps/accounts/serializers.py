@@ -75,10 +75,7 @@ class RegistroClienteSerializer(serializers.Serializer):
     empresa_id = serializers.IntegerField(required=False, allow_null=True, min_value=1)
 
     def validate_email(self, value):
-        value = value.strip().lower()
-        if Usuario.objects.filter(email__iexact=value).exists() or Usuario.objects.filter(username__iexact=value).exists():
-            raise serializers.ValidationError('Já existe um usuário com este e-mail.')
-        return value
+        return value.strip().lower()
 
     def validate(self, attrs):
         names = attrs['nome'].split(' ', 1)
@@ -88,6 +85,8 @@ class RegistroClienteSerializer(serializers.Serializer):
             validate_password(attrs['senha'], candidate)
         except DjangoValidationError as exc:
             raise serializers.ValidationError({'senha': exc.messages})
+        if Usuario.objects.filter(email__iexact=attrs['email']).exists() or Usuario.objects.filter(username__iexact=attrs['email']).exists():
+            raise serializers.ValidationError({'detail': 'Não foi possível concluir o cadastro. Verifique os dados informados.'})
         if attrs.get('empresa_id') is not None:
             from apps.tenants.models import Empresa
             if not Empresa.objects.filter(pk=attrs['empresa_id'], ativo=True).exists():

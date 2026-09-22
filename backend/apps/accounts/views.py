@@ -1,11 +1,12 @@
 from django.db import IntegrityError, transaction
+from django.conf import settings
 from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny, SAFE_METHODS, IsAuthenticated
 from rest_framework.views import APIView
 from apps.tenants.permissions import IsEmpresaAtiva
 from apps.accounts.permissions import IsDemoUserReadOnly
 from rest_framework.decorators import api_view, permission_classes, throttle_classes, action
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, SimpleRateThrottle
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -18,21 +19,46 @@ from apps.accounts.serializers import (
 )
 
 
-class AuthThrottle(AnonRateThrottle):
-    scope = 'auth'
+class AuthIPThrottle(AnonRateThrottle):
+    scope = 'auth_ip'
+
+    def get_rate(self):
+        return settings.REST_FRAMEWORK.get('DEFAULT_THROTTLE_RATES', {}).get(self.scope)
 
     def get_cache_key(self, request, view):
         # O cadastro continua limitado mesmo quando quem o chama já tem uma sessão.
         return self.cache_format % {'scope': self.scope, 'ident': self.get_ident(request)}
 
 
+class AuthAccountThrottle(SimpleRateThrottle):
+    scope = 'auth_account'
+
+    def get_rate(self):
+        return settings.REST_FRAMEWORK.get('DEFAULT_THROTTLE_RATES', {}).get(self.scope)
+
+    def get_cache_key(self, request, view):
+        import hashlib
+        identity = str(
+            request.data.get('username') or request.data.get('email') or
+            request.data.get('refresh') or ''
+        ).strip().casefold()
+        if not identity:
+            return None
+        digest = hashlib.sha256(identity.encode('utf-8')).hexdigest()
+        return self.cache_format % {'scope': self.scope, 'ident': digest}
+
+
+# Compatibilidade para imports de testes/integrações anteriores.
+AuthThrottle = AuthIPThrottle
+
+
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
-    throttle_classes = [AuthThrottle]
+    throttle_classes = [AuthIPThrottle, AuthAccountThrottle]
 
 
 class CustomTokenRefreshView(TokenRefreshView):
-    throttle_classes = [AuthThrottle]
+    throttle_classes = [AuthIPThrottle, AuthAccountThrottle]
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -95,7 +121,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@throttle_classes([AuthThrottle])
+@throttle_classes([AuthIPThrottle, AuthAccountThrottle])
 def registrar_cliente(request):
     serializer = RegistroClienteSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -109,7 +135,7 @@ def registrar_cliente(request):
                 telefone=data.get('telefone', ''), tipo='CLIENTE', empresa_id=data.get('empresa_id'),
             )
     except IntegrityError:
-        raise ValidationError({'email': 'Já existe um usuário com este e-mail.'})
+        raise ValidationError({'detail': 'Não foi possível concluir o cadastro. Verifique os dados informados.'})
     refresh = RefreshToken.for_user(usuario)
     return Response({
         'refresh': str(refresh), 'access': str(refresh.access_token),
@@ -119,7 +145,7 @@ def registrar_cliente(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@throttle_classes([AuthThrottle])
+@throttle_classes([AuthIPThrottle, AuthAccountThrottle])
 @transaction.atomic
 def registrar_saas(request):
     """
@@ -139,13 +165,13 @@ def registrar_saas(request):
 
     if not all([nome_barbearia, nome_admin, email, senha, whatsapp]):
         return Response(
-            {"error": "Todos os campos são obrigatórios."},
+            {"error": "Não foi possível concluir o cadastro. Verifique os dados informados."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
     if Usuario.objects.filter(username=email).exists() or Usuario.objects.filter(email=email).exists():
         return Response(
-            {"error": "Não foi possível realizar o cadastro. Verifique os dados ou tente fazer login se já possuir uma conta."},
+            {"error": "Não foi possível concluir o cadastro. Verifique os dados informados."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -215,11 +241,19 @@ class LogoutView(APIView):
 
     def post(self, request):
         try:
+            from django.core.cache import cache
+            from django.utils import timezone
             refresh_token = request.data.get("refresh_token")
             if not refresh_token:
                 return Response({"error": "O campo refresh_token é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
             token = RefreshToken(refresh_token)
             token.blacklist()
+            access_token = request.auth
+            jti = access_token.get('jti') if access_token else None
+            exp = access_token.get('exp') if access_token else None
+            if jti and exp:
+                timeout = max(1, int(exp - timezone.now().timestamp()))
+                cache.set(f'revoked_access:{jti}', True, timeout=timeout)
             return Response(status=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
             return Response({"error": "Token inválido ou já expirado."}, status=status.HTTP_400_BAD_REQUEST)

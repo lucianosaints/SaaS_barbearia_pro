@@ -227,6 +227,22 @@ Depois de receber as saídas:
 4. Conferir novas restrições operacionais, preparar backup/restauração e pacote de atualização mantendo banco e WAHA.
 5. Só então definir os comandos exatos de publicação/reinício dos serviços de aplicação e retorno. Não apagar volumes ou recriar o banco. Não executar seed em produção.
 
+## Auditoria e correções de segurança (22/09/2026)
+
+Foi auditada a lista de segurança solicitada e aplicadas correções na cópia integrada `SaaS_barbearia_pro_integracao`. Nenhuma alteração foi feita em produção.
+
+- Rate limit de autenticação agora combina limite por IP (`auth_ip`) e por identidade/conta (`auth_account`), com cache compartilhado configurável para produção.
+- CORS permanece em allowlist; origem não autorizada não recebe `Access-Control-Allow-Origin`.
+- Rotas públicas de empresa usam `EmpresaPublicaSerializer` e não expõem CNPJ, Pix, beneficiário, vencimentos ou dados administrativos.
+- Cadastro de cliente e SaaS usa mensagem genérica quando os dados não podem ser aceitos, evitando confirmação de e-mail existente.
+- Access tokens revogados no logout são rejeitados por `RevocableJWTAuthentication`; refresh tokens continuam na blacklist do SimpleJWT.
+- Endpoints WAHA exigem administrador da empresa (`IsTenantAdmin`), não apenas autenticação.
+- Não foram encontradas consultas SQL cruas nos fluxos auditados; os filtros de agenda mantêm isolamento por empresa/cliente/profissional.
+
+Testes de segurança: 8 aprovados (`apps.accounts.tests_security`). Suíte backend: 60 testes descobertos, 55 aprovados, 1 ignorado e 5 testes do entrypoint aprovados separadamente fora do sandbox por simularem caminhos Unix. Frontend: lint aprovado e 7 testes Vitest aprovados. O build frontend já havia sido aprovado anteriormente; repetir se houver alterações visuais.
+
+Pendências para a próxima sessão: revisar a política de armazenamento de JWT no `localStorage` (avaliar cookie HttpOnly com migração coordenada), confirmar cache Redis/Memcached no Compose de produção e executar uma homologação final com PostgreSQL e proxy reais. Não publicar ainda sem backup e janela de manutenção.
+
 ## Como retomar localmente
 
 Não reinstalar nem refazer alterações sem necessidade. Leia este arquivo e os dois guias, confira `git status` e prossiga do próximo passo pendente.

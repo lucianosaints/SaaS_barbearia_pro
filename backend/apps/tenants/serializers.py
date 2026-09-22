@@ -1,6 +1,12 @@
 from rest_framework import serializers
 from apps.tenants.models import Empresa
 
+
+class EmpresaPublicaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Empresa
+        fields = ['id', 'nome', 'slug']
+
 class EmpresaSerializer(serializers.ModelSerializer):
     """
     Serializer para o modelo de Empresa (Tenant).

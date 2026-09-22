@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django.db.models import Q
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from apps.tenants.models import Empresa
-from apps.tenants.serializers import EmpresaSerializer
+from apps.tenants.serializers import EmpresaSerializer, EmpresaPublicaSerializer
 from apps.accounts.permissions import CompanyPermission, IsDemoUserReadOnly
 
 class EmpresaViewSet(viewsets.ModelViewSet):
@@ -15,6 +15,11 @@ class EmpresaViewSet(viewsets.ModelViewSet):
     """
     serializer_class = EmpresaSerializer
     permission_classes = [CompanyPermission, IsDemoUserReadOnly]
+
+    def get_serializer_class(self):
+        if self.action in ('list', 'por_slug'):
+            return EmpresaPublicaSerializer
+        return EmpresaSerializer
 
     def get_queryset(self):
         # Permitir que qualquer pessoa veja as empresas ativas E (com assinatura ativa OU em trial)

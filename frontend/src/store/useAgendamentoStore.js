@@ -65,6 +65,20 @@ const useAgendamentoStore = create((set) => ({
   },
 
   logout: () => {
+    const accessToken = localStorage.getItem('access_token');
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (accessToken && refreshToken) {
+      const apiBase = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : '')).replace(/\/+$/, '');
+      fetch(`${apiBase}/api/logout/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        keepalive: true,
+      }).catch(() => {});
+    }
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_id');

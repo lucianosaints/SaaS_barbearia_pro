@@ -12,6 +12,13 @@ class PublicReadAdminWrite(BasePermission):
         return request.method in SAFE_METHODS or is_manager(request.user)
 
 
+class IsTenantAdmin(BasePermission):
+    message = 'Apenas administradores podem acessar esta funcionalidade.'
+
+    def has_permission(self, request, view):
+        return is_manager(request.user)
+
+
 class CompanyPermission(BasePermission):
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:

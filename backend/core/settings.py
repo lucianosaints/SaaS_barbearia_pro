@@ -158,13 +158,33 @@ AUTH_USER_MODEL = 'accounts.Usuario'
 # Django REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'apps.accounts.authentication.RevocableJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_THROTTLE_CLASSES': ['rest_framework.throttling.AnonRateThrottle', 'rest_framework.throttling.UserRateThrottle'],
-    'DEFAULT_THROTTLE_RATES': {'auth': os.environ.get('AUTH_RATE_LIMIT', '20/min'), 'anon': '100/minute', 'user': '1000/day', 'login': '5/minute', 'registro': '10/minute', 'fila_espera': '100/minute'},
+    'DEFAULT_THROTTLE_RATES': {
+        'auth_ip': os.environ.get('AUTH_IP_RATE_LIMIT', '20/min'),
+        'auth_account': os.environ.get('AUTH_ACCOUNT_RATE_LIMIT', '5/min'),
+        'anon': '100/minute', 'user': '1000/day', 'fila_espera': '100/minute',
+    },
+}
+
+# O cache de produção é compartilhado pelos workers do Gunicorn. Redis/Memcached
+# pode ser configurado no deploy substituindo este backend.
+CACHES = {
+    'default': {
+        'BACKEND': (
+            'django.core.cache.backends.locmem.LocMemCache'
+            if DEBUG else 'django.core.cache.backends.filebased.FileBasedCache'
+        ),
+        'LOCATION': (
+            'barbeiro-pro-local-cache'
+            if DEBUG else os.environ.get('DJANGO_CACHE_DIRECTORY', '/tmp/barbeiro-pro-cache')
+        ),
+        'TIMEOUT': 300,
+    }
 }
 
 # Simple JWT settings

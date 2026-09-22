@@ -4,7 +4,7 @@ import base64
 import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from apps.accounts.permissions import IsTenantAdmin
 from rest_framework import status
 from django.conf import settings
 
@@ -17,7 +17,7 @@ class WahaQRCodeView(APIView):
     2. Obter o QR Code atual para conexão do WhatsApp.
     """
     # Protege a rota, apenas usuários autenticados (administradores do painel) podem acessar
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsTenantAdmin]
 
     def get(self, request, *args, **kwargs):
         waha_url = getattr(settings, 'WAHA_API_URL', 'http://waha:3000').rstrip('/')
@@ -239,7 +239,7 @@ class WahaPairingCodeView(APIView):
     """
     View responsável por gerar o código numérico de 8 dígitos para parelhamento.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsTenantAdmin]
 
     def post(self, request, *args, **kwargs):
         waha_url = getattr(settings, 'WAHA_API_URL', 'http://waha:3000').rstrip('/')
@@ -329,7 +329,7 @@ class WahaSessionStatusView(APIView):
     """
     Retorna apenas o status atual da sessão sem tentar buscar QR Code (para evitar side-effects).
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsTenantAdmin]
 
     def get(self, request, *args, **kwargs):
         waha_url = getattr(settings, 'WAHA_API_URL', 'http://waha:3000').rstrip('/')
