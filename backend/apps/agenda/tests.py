@@ -112,7 +112,11 @@ class BusinessRulesTests(APITestCase):
 
     def test_public_catalog_has_no_private_user_fields(self):
         self.client.force_authenticate(None)
-        data = self.client.get('/api/usuarios/').data
+        missing_company = self.client.get('/api/usuarios/')
+        self.assertEqual(missing_company.status_code, 400)
+        missing_services = self.client.get('/api/servicos/')
+        self.assertEqual(missing_services.status_code, 400)
+        data = self.client.get('/api/usuarios/', {'empresa_id': self.company.pk}).data
         for user in data:
             self.assertFalse(set(user) & {'email', 'password', 'username', 'is_staff', 'taxa_comissao', 'ip_aceite_termos'})
         for endpoint, pk in (('usuarios', self.barber.pk), ('servicos', self.service.pk)):

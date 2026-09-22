@@ -247,7 +247,9 @@ Pendências para a próxima sessão: revisar a política de armazenamento de JWT
 
 Foi validado o isolamento multiempresa na branch integrada. A suíte cruzada executou 12 testes e todos passaram (`tests_cross_tenant`, `tests_waha_isolation` e `tests_integration`). Clientes consultam somente seus próprios agendamentos; profissionais ficam limitados à empresa e à própria agenda; gestores não conseguem editar usuários ou serviços de outra empresa; disponibilidade e reservas rejeitam serviços/profissionais de empresas diferentes; bloqueios e fila usam a empresa do usuário; e as notificações WhatsApp usam somente a sessão `tenant_<empresa_id>` correta.
 
-O catálogo público de profissionais e serviços exige `empresa_id` no fluxo do wizard frontend. Sem esse filtro, as rotas públicas mantêm listagem global de itens ativos por compatibilidade com o catálogo público; não há acesso a campos privados. Revisar se o produto deve tornar `empresa_id` obrigatório também para chamadas públicas fora do wizard.
+O catálogo público de profissionais e serviços já envia `empresa_id` no fluxo do wizard frontend. Antes da correção abaixo, chamadas anônimas sem esse filtro podiam listar itens ativos globalmente.
+
+Correção aplicada depois da revisão: chamadas anônimas a `/api/usuarios/` e `/api/servicos/` sem `empresa_id` agora retornam `400`; com `empresa_id`, retornam somente profissionais/serviços ativos daquela empresa. Os testes de catálogo público e isolamento foram atualizados. A suíte direcionada executou os cenários de agenda, cross-tenant, integração e segurança; os novos casos de ausência de empresa passaram. Repetir a suíte completa antes de qualquer publicação.
 
 ## Como retomar localmente
 

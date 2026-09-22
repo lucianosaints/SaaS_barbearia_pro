@@ -35,6 +35,8 @@ class ServicoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Filtro de listagem pública por empresa para o Wizard
         empresa_id = self.request.query_params.get('empresa_id')
+        if not empresa_id and not self.request.user.is_authenticated:
+            raise ValidationError({'empresa_id': 'Informe a empresa para consultar serviços.'})
         if empresa_id and self.request.method in SAFE_METHODS:
             if not empresa_id.isdigit():
                 raise ValidationError({'empresa_id': 'Identificador inválido.'})
