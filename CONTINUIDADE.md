@@ -293,6 +293,59 @@ Estado antes do envio solicitado: alterações de integração, pagamentos e vis
 
 ## Como retomar localmente
 
+## Atualização de produção em andamento (23/09/2026)
+
+O usuário autorizou o envio das melhorias para `develop` e iniciou a atualização guiada no servidor Vultr. Não há segredos registrados neste documento.
+
+### Código e migrações
+
+- O commit `93fdc0d` (`perf: adiciona redis e otimiza frontend`) foi enviado para `origin/develop`.
+- O servidor estava em `ca9b786`, oito commits atrás, e continha duas migrações não rastreadas já registradas como aplicadas no PostgreSQL: `tenants.0008_empresa_horas_limite_cancelamento` e `tenants.0009_merge_20260721_0129`.
+- As duas migrações originais do servidor foram movidas, sem exclusão, para `/root/SaaS_barbearia_pro_migration_backup_20260923/`.
+- Foi criada uma migração de compatibilidade vazia para `0008_empresa_horas_limite_cancelamento`, porque o campo já está consolidado em `0007`, e preservado o merge `0009`. Uma migração completa em SQLite novo passou. Commit `d161bb5` enviado para `develop`.
+- O servidor executou `git pull --ff-only origin develop` de `ca9b786` até `d161bb5`. Permaneceram não rastreados e preservados: a foto `backend/media/profissionais/pedro_0SJUBdN.jpg`, `backend/staticfiles/` e `backend/test_error.py`.
+- O plano do PostgreSQL mostrou somente `payments.0001_initial` pendente, que cria `CobrancaAssinatura`. Essa migração **ainda não foi aplicada**.
+- A auditoria encontrou um único agendamento legado concluído: empresa e serviços corretos, mas o mesmo perfil administrador havia sido usado historicamente como cliente e profissional. Nenhum dado foi alterado. A auditoria foi ajustada para tolerar perfil legado somente em registros finais (`CONCLUIDO`/`CANCELADO`), mantendo os bloqueios de empresa/serviço e de agendamentos ativos. Dois testes passaram. Commit `ef48955` enviado para `develop`.
+- **Ponto atual:** o servidor ainda precisa executar `git pull --ff-only origin develop` para receber `ef48955` e repetir `docker compose run --rm --no-deps backend python manage.py auditar_agenda --fail-on-issues`. Não aplicar migrações antes dessa confirmação.
+
+### Redis e rate limit
+
+- O Compose candidato foi validado com `docker compose config --quiet`.
+- As imagens candidatas de backend e frontend foram construídas com sucesso no servidor.
+- O Redis 7.4 Alpine foi iniciado isoladamente com `docker compose up -d redis`; não há porta publicada. `redis-cli ping` retornou `PONG`.
+- O Django candidato gravou e leu no cache compartilhado; resultado `CACHE_OK=True`.
+- O backend/frontend atuais ainda não foram recriados, portanto o rate limit da aplicação em execução ainda não usa o novo Redis.
+
+### Nginx e frontend
+
+- `docker compose run --rm --no-deps frontend nginx -t` passou: sintaxe e configuração válidas.
+- O aviso de container órfão `barbeiro_pro_db` é esperado porque o PostgreSQL ativo continua ausente do Compose atual. Não executar `--remove-orphans`, `docker compose down` ou limpeza de volumes.
+- A imagem frontend otimizada foi construída, mas o container frontend em produção ainda não foi substituído.
+
+### Credenciais e variáveis
+
+- A chave da API e a senha administrativa do WAHA foram rotacionadas diretamente no servidor sem impressão dos valores. A nova `WAHA_API_KEY` está sincronizada em `.env` e `backend/.env`; `WAHA_ADMIN_USER` e `WAHA_ADMIN_PASSWORD` estão no `.env` do Compose.
+- Cópias protegidas anteriores à rotação estão em `/root/SaaS_barbearia_pro_env_backup_20260923/`, com nomes distintos para Compose e backend. Não copiar esses arquivos para o Git nem compartilhar seu conteúdo.
+- A nova credencial WAHA ainda não está ativa porque os containers WAHA/backend não foram recriados. Preservar o volume `waha_data` durante a troca.
+- A chave Django antiga não atendia ao mínimo de segurança e foi rotacionada no servidor. `DJANGO_SECRET_KEY`, domínios permitidos, CORS, CSRF, proxy HTTPS e PostgreSQL foram configurados. A rotação invalidará sessões/JWT atuais quando o backend novo iniciar; usuários precisarão entrar novamente.
+- `python manage.py check --deploy` passou com somente dois avisos opcionais: HSTS para subdomínios e preload. Não ativar essas opções sem confirmar que todos os subdomínios usam HTTPS.
+- `PERMITIR_PAGAMENTOS=False` está explícito no Compose e no `backend/.env`. O Mercado Pago existente foi preservado; nenhuma transação real foi executada nesta etapa.
+
+### SMTP
+
+- Host, usuário, senha e remetente SMTP já existiam no servidor. `EMAIL_ALERT_TO` foi configurado internamente com a conta SMTP existente, sem exibir o endereço.
+- O envio conectado retornou `SMTP_ENVIADOS=1`, confirmando aceitação pelo servidor SMTP. A confirmação visual de chegada na caixa de entrada/spam ainda não foi informada pelo usuário.
+
+### Próxima sequência segura
+
+1. No servidor, receber `ef48955` com `git pull --ff-only origin develop`.
+2. Repetir `auditar_agenda --fail-on-issues`; o resultado esperado é zero inconsistências.
+3. Confirmar visualmente a chegada do e-mail SMTP.
+4. Aplicar somente `payments.0001_initial` de forma controlada.
+5. Recriar coordenadamente WAHA, backend e frontend, sem `down`, sem `--remove-orphans` e sem remover volumes. A troca ativa Redis, nova chave Django e credenciais WAHA; pode ser necessário reconectar a sessão WhatsApp por QR code.
+6. Verificar containers, logs filtrados, HTTP/HTTPS, login, catálogo público, painel e status WAHA. Enviar mensagem apenas para número autorizado.
+7. Manter pagamentos desabilitados até a homologação final. A confirmação do backup Vultr continua por último, conforme solicitado pelo usuário, mas permanece obrigatória antes da publicação definitiva.
+
 ### Ordem ajustada pelo usuário (23/09/2026)
 
 A confirmação de que o backup da Vultr cobre o PostgreSQL e o volume de fotos/mídia deve ficar por último no plano de preparação. Antes disso, continuar as verificações locais e a homologação que não alteram produção. A publicação em produção continua condicionada à confirmação do backup e dos demais requisitos de segurança.
