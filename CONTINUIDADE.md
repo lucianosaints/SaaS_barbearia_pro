@@ -267,6 +267,30 @@ Próximos passos combinados:
 
 Não publicar em produção nem executar seed até concluir essas verificações.
 
+## Homologação local de Nginx, WAHA, SMTP e Mercado Pago (22/09/2026)
+
+A etapa local foi executada e documentada em `deploy/HOMOLOGACAO_INTEGRACOES.md`. Nenhuma chamada real de pagamento, mensagem ou e-mail foi feita e produção não foi alterada.
+
+- Credenciais WAHA foram removidas do Compose atual e substituídas por variáveis obrigatórias. Como o valor anterior esteve versionado, a rotação continua obrigatória.
+- SMTP passou a validar TLS/SSL e campos obrigatórios em produção; destinatários de alerta usam `EMAIL_ALERT_TO`.
+- Mercado Pago agora registra cobranças locais, exige administrador, limita os planos, confere valor/moeda e processa webhook de forma idempotente. Foi criada a migração `payments.0001_initial`.
+- Sete testes dedicados passaram. Frontend: lint, sete testes e build aprovados. Os oito testes do entrypoint passaram fora do sandbox Windows. Checagens Django e de migrações passaram.
+- O daemon Docker local não estava ativo e o Nginx não está instalado localmente; falta `nginx -t` na imagem candidata e o ensaio conectado com credenciais TEST/caixas/números autorizados.
+
+Antes de publicar: aplicar a nova migração em homologação, rotacionar WAHA, validar a cadeia TLS/Nginx, testar SMTP real e executar o fluxo Mercado Pago com credenciais TEST. Manter `PERMITIR_PAGAMENTOS=False` até a conclusão.
+
+## Redesign visual e depoimentos ilustrativos (22/09/2026)
+
+O frontend recebeu uma nova direção visual para substituir o estilo escuro/dourado considerado vintage. A identidade agora usa azul-noite, coral, laranja e ciano, com tipografia mais forte, maior contraste, gradientes contemporâneos e superfícies translúcidas. Os fluxos funcionais de login, cadastro, agendamento e painéis foram preservados.
+
+A landing page foi reorganizada com hero em vídeo, chamada principal objetiva, painel visual de agenda, recursos e nova chamada de conversão. Foi criada uma seção de conversas inspirada no modo escuro do WhatsApp, com fundo texturizado, balões recebidos/enviados, horários e confirmação de leitura.
+
+Os depoimentos de Rafael, Juliana e Marcos são explicitamente identificados na interface como **exemplos ilustrativos**, não como avaliações de clientes reais. Foram gerados três retratos fictícios por IA e incluídos em `frontend/src/imagem/depoimento-*.png`. Não remover a indicação de conteúdo ilustrativo sem substituir os textos e imagens por depoimentos reais autorizados.
+
+Validações depois do redesign: lint aprovado, sete testes Vitest aprovados e build Vite aprovado. O bundle principal continua grande (aproximadamente 1,57 MB) e os três retratos somam aproximadamente 6,4 MB; otimizar carregamento/imagens antes da publicação definitiva. A prévia local foi executada em `127.0.0.1:3000`, com backend local em `127.0.0.1:8000` e conta de demonstração separada de produção.
+
+Estado antes do envio solicitado: alterações de integração, pagamentos e visual ainda estavam no diretório de trabalho. A foto local `backend/media/profissionais/carlos.barbergoldenbarber.com_b1f33bd6.jpg` pertence ao banco de prévia e deve permanecer fora do Git. Logs, SQLite, `.env` e credenciais também não devem ser enviados.
+
 ## Como retomar localmente
 
 Não reinstalar nem refazer alterações sem necessidade. Leia este arquivo e os dois guias, confira `git status` e prossiga do próximo passo pendente.

@@ -1,35 +1,16 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
-        background: {
-          DEFAULT: '#121212', // Fundo principal super escuro
-          paper: '#1e1e1e',      // Fundo secundário (cards/modais)
-          darker: '#0a0a0a',     // Fundo extra escuro
-        },
-        gold: {
-          light: '#f5df9e',
-          DEFAULT: '#d4af37',  // Dourado clássico para detalhes e acentos
-          dark: '#aa841c',
-        },
-        accent: {
-          orange: '#f97316',   // Laranja para destaque de interações críticas/botões
-          gold: '#d4af37',
-        },
-        text: {
-          primary: '#ffffff',
-          secondary: '#a0a0a0',
-          muted: '#666666',
-        }
+        background: { DEFAULT: '#07111f', paper: '#0d1b2e', darker: '#030914' },
+        gold: { light: '#ff9f8f', DEFAULT: '#ff5c6c', dark: '#e73f59' },
+        accent: { orange: '#ff7a45', gold: '#21d4d8' },
+        text: { primary: '#f7fbff', secondary: '#b6c6d9', muted: '#71839a' },
       },
-      fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-      },
+      fontFamily: { sans: ['Manrope', 'Inter', 'sans-serif'] },
+      boxShadow: { glow: '0 24px 80px rgba(255, 92, 108, 0.2)' },
     },
   },
   plugins: [],

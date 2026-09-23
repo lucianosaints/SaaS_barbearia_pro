@@ -49,7 +49,10 @@ class Command(BaseCommand):
             self.stderr.write(f"WAHA Desconectado/Erro: {error_msg}")
             
             # Envia o e-mail de alerta
-            email_to = 'infor@salaopro.site'
+            email_to = settings.EMAIL_ALERT_TO
+            if not email_to:
+                self.stderr.write("EMAIL_ALERT_TO nao configurado; alerta por e-mail nao enviado.")
+                return
             subject = "🚨 URGENTE: WhatsApp Desconectado no Salão_PRO!"
             body = (
                 "Olá Administrador,\n\n"
@@ -66,10 +69,10 @@ class Command(BaseCommand):
                     subject=subject,
                     body=body,
                     from_email=settings.DEFAULT_FROM_EMAIL,
-                    to=[email_to]
+                    to=email_to
                 )
                 email.send(fail_silently=False)
-                self.stdout.write(self.style.SUCCESS(f"Alerta enviado com sucesso para {email_to}"))
+                self.stdout.write(self.style.SUCCESS("Alerta de WAHA enviado por e-mail."))
             except Exception as e_mail:
                 self.stderr.write(f"Erro ao tentar enviar o e-mail de alerta: {str(e_mail)}")
         else:

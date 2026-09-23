@@ -47,7 +47,7 @@ function App() {
     <div 
       className="min-h-screen bg-background text-text-primary font-sans flex flex-col"
       style={{
-        backgroundImage: `linear-gradient(rgba(18, 18, 18, 0.88), rgba(18, 18, 18, 0.94)), url(${backgroundImg})`,
+        backgroundImage: `linear-gradient(145deg, rgba(3, 9, 20, 0.96), rgba(7, 17, 31, 0.90)), url(${backgroundImg})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed',

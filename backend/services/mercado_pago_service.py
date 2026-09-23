@@ -38,7 +38,7 @@ def criar_preferencia_assinatura(empresa_id: str, empresa_nome: str, valor: floa
     raise Exception(f"Erro ao criar preferência no Mercado Pago: {preference_response}")
 
 
-def criar_pagamento_pix(empresa_id: str, empresa_nome: str, valor: float, email: str) -> dict:
+def criar_pagamento_pix(external_reference: str, empresa_nome: str, valor: float, email: str) -> dict:
     """
     Cria um pagamento via PIX no Mercado Pago e retorna o QR Code em Base64 e o link do ticket.
     """
@@ -54,15 +54,9 @@ def criar_pagamento_pix(empresa_id: str, empresa_nome: str, valor: float, email:
         "description": f"Assinatura Mensal - {empresa_nome}",
         "payment_method_id": "pix",
         "payer": {
-            "email": email,
-            "first_name": "Usuário",
-            "last_name": "Teste",
-            "identification": {
-                "type": "CPF",
-                "number": "19119119100"
-            }
+            "email": email
         },
-        "external_reference": str(empresa_id),
+        "external_reference": str(external_reference),
     }
     
     payment_response = sdk.payment().create(payment_data)

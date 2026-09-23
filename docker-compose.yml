@@ -44,12 +44,12 @@ services:
       - "3000" # Acessível apenas pela rede interna Docker (barbeiro_pro_net)
     environment:
       - WHATSAPP_DEFAULT_ENGINE=WEBJS
-      - WAHA_API_KEY=BarbeariaPro!2026
-      - WHATSAPP_API_KEY=BarbeariaPro!2026
-      - WHATSAPP_SWAGGER_USERNAME=admin
-      - WHATSAPP_SWAGGER_PASSWORD=BarbeariaPro!2026
-      - WHATSAPP_DASHBOARD_USERNAME=admin
-      - WHATSAPP_DASHBOARD_PASSWORD=BarbeariaPro!2026
+      - WAHA_API_KEY=${WAHA_API_KEY:?Configure WAHA_API_KEY no ambiente}
+      - WHATSAPP_API_KEY=${WAHA_API_KEY:?Configure WAHA_API_KEY no ambiente}
+      - WHATSAPP_SWAGGER_USERNAME=${WAHA_ADMIN_USER:-admin}
+      - WHATSAPP_SWAGGER_PASSWORD=${WAHA_ADMIN_PASSWORD:?Configure WAHA_ADMIN_PASSWORD no ambiente}
+      - WHATSAPP_DASHBOARD_USERNAME=${WAHA_ADMIN_USER:-admin}
+      - WHATSAPP_DASHBOARD_PASSWORD=${WAHA_ADMIN_PASSWORD:?Configure WAHA_ADMIN_PASSWORD no ambiente}
     networks:
       - barbeiro_pro_net
     volumes:
