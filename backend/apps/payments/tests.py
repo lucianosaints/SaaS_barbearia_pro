@@ -51,6 +51,13 @@ class MercadoPagoHomologationTests(APITestCase):
         response = self.client.post('/api/assinaturas/criar-assinatura/', {'meses': 99}, format='json')
         self.assertEqual(response.status_code, 400)
 
+    @patch.dict('os.environ', {'PERMITIR_PAGAMENTOS': 'False'})
+    def test_charge_creation_stays_blocked_until_homologation(self):
+        self.client.force_authenticate(self.admin)
+        response = self.client.post('/api/assinaturas/criar-assinatura/', {'meses': 1}, format='json')
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(CobrancaAssinatura.objects.exists())
+
     @patch('apps.payments.views.mercadopago.SDK')
     def test_webhook_is_idempotent(self, sdk_class):
         charge = CobrancaAssinatura.objects.create(

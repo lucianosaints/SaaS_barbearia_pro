@@ -4,8 +4,6 @@ import {
   PieChart, Pie, Cell 
 } from 'recharts';
 import api from '../services/api';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 
 /**
  * Componente FinanceiroDashboard.
@@ -75,12 +73,16 @@ export default function FinanceiroDashboard() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
 
-  const exportarPDF = () => {
+  const exportarPDF = async () => {
     if (!data || data.desempenho_profissionais.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
 
+    const [{ default: jsPDF }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ]);
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.text('Relatório Financeiro - Salão Pro', 14, 22);

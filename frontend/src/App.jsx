@@ -1,16 +1,22 @@
-import React, { useState, useEffect } from 'react'
+import React, { lazy, Suspense, useState, useEffect } from 'react'
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import useAgendamentoStore from './store/useAgendamentoStore'
-import AdminDashboard from './pages/AdminDashboard'
-import AgendamentoWizard from './pages/AgendamentoWizard'
-import PainelCliente from './pages/PainelCliente'
-import FinanceiroDashboard from './pages/FinanceiroDashboard'
 import ProtectedRoute from './components/ProtectedRoute'
 import LandingPage from './pages/LandingPage'
-import Assinatura from './pages/Assinatura'
 import backgroundImg from './imagem/Background.jpg'
 import i9builderImg from './imagem/i9builder.png'
 
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const AgendamentoWizard = lazy(() => import('./pages/AgendamentoWizard'))
+const PainelCliente = lazy(() => import('./pages/PainelCliente'))
+const FinanceiroDashboard = lazy(() => import('./pages/FinanceiroDashboard'))
+const Assinatura = lazy(() => import('./pages/Assinatura'))
+
+const LoadingScreen = () => (
+  <div className="flex min-h-[50vh] items-center justify-center text-sm text-text-secondary">
+    Carregando…
+  </div>
+)
 
 function App() {
   const [currentTab, setCurrentTab] = useState('landing') // 'landing' por padrão para visitantes
@@ -162,6 +168,7 @@ function App() {
       )}
 
       <main className="flex-1 flex flex-col justify-start sm:justify-center py-4 sm:py-0">
+        <Suspense fallback={<LoadingScreen />}>
         {location.pathname.startsWith('/agendar/') ? (
           <Routes>
             <Route path="/agendar/:empresaSlug" element={<AgendamentoWizard />} />
@@ -199,6 +206,7 @@ function App() {
             {currentTab === 'landing' && <LandingPage />}
           </>
         )}
+        </Suspense>
       </main>
 
       {/* Rodapé institucional */}

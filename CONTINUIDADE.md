@@ -293,6 +293,20 @@ Estado antes do envio solicitado: alterações de integração, pagamentos e vis
 
 ## Como retomar localmente
 
+### Ordem ajustada pelo usuário (23/09/2026)
+
+A confirmação de que o backup da Vultr cobre o PostgreSQL e o volume de fotos/mídia deve ficar por último no plano de preparação. Antes disso, continuar as verificações locais e a homologação que não alteram produção. A publicação em produção continua condicionada à confirmação do backup e dos demais requisitos de segurança.
+
+## Cache, integrações e otimização (23/09/2026)
+
+- O candidato de produção passou a usar Redis compartilhado para o rate limit (`redis://redis:6379/1`). O Compose inclui Redis 7.4 Alpine sem porta publicada, com healthcheck, limite de 128 MB e política LRU; o backend aguarda o serviço saudável.
+- `PERMITIR_PAGAMENTOS=False` ficou explícito no Compose. O usuário confirmou que o Mercado Pago já funciona em produção; não executar transações reais durante os demais testes.
+- A mesma `WAHA_API_KEY` do ambiente do Compose agora é injetada no backend e no WAHA, evitando divergência durante a rotação. A chave e as senhas reais continuam fora do Git. A rotação no servidor ainda depende de acesso ao terminal e deve preservar `waha_data`.
+- Os três retratos foram convertidos de PNG 1254x1254 (aproximadamente 6,4 MB) para WebP 512x512 (aproximadamente 74 KB no total), com inspeção visual aprovada.
+- Telas administrativas, agenda, assinatura e financeiro passaram a carregar sob demanda. PDF, html2canvas e o painel financeiro foram separados em chunks próprios. O maior arquivo inicial caiu de aproximadamente 1,57 MB para aproximadamente 400 KB; nenhum chunk final excede 500 KB.
+- Validações: 26 testes direcionados do backend aprovados, incluindo Redis, bloqueio de pagamentos, segurança, WAHA/SMTP simulados e Mercado Pago; frontend com lint, 7 testes e build aprovados; `pip check`, `manage.py check`, `git diff --check` e `docker compose config --quiet` aprovados.
+- Docker local permanece sem daemon, portanto `nginx -t`, Redis em execução e ensaios conectados de SMTP/WAHA precisam ser feitos na imagem/servidor de homologação. Nenhuma credencial real foi solicitada ou registrada.
+
 Não reinstalar nem refazer alterações sem necessidade. Leia este arquivo e os dois guias, confira `git status` e prossiga do próximo passo pendente.
 
 Para repetir testes backend quando houver novas alterações, a partir de `backend`, no PowerShell:

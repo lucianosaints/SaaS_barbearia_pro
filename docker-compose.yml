@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -15,9 +13,15 @@ services:
       - django_media:/app/media # Persiste arquivos de mídia (fotos, uploads)
     env_file:
       - ./backend/.env
-    # Se mudar para postgres futuramente, habilitar o depends_on:
-    # depends_on:
-    #   - db
+    environment:
+      CACHE_URL: redis://redis:6379/1
+      PERMITIR_PAGAMENTOS: "False"
+      WAHA_API_URL: http://waha:3000
+      WAHA_API_KEY: ${WAHA_API_KEY:?Configure WAHA_API_KEY no ambiente}
+    depends_on:
+      redis:
+        condition: service_healthy
+    # Ao reintegrar a definicao do PostgreSQL, inclua tambem a dependencia de db.
     networks:
       - barbeiro_pro_net
 
@@ -54,6 +58,21 @@ services:
       - barbeiro_pro_net
     volumes:
       - waha_data:/app/.waha
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: barbeiro_pro_redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - barbeiro_pro_net
 
 volumes:
   waha_data:

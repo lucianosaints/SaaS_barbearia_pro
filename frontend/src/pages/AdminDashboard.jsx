@@ -1,14 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { FiMenu, FiX } from 'react-icons/fi';
 import FilterBar from '../components/FilterBar';
 import AgendaTable from '../components/AgendaTable';
 import GestaoServicos from './GestaoServicos';
 import GestaoEquipe from './GestaoEquipe';
 import GestaoClientes from './GestaoClientes';
-import FinanceiroDashboard from './FinanceiroDashboard';
 import GestaoConfiguracoes from './GestaoConfiguracoes';
 import BloqueioHorarioModal from '../components/BloqueioHorarioModal';
 import GerenciarBloqueiosModal from '../components/GerenciarBloqueiosModal';
@@ -16,6 +13,8 @@ import ConfirmModal from '../components/ConfirmModal';
 import LockoutScreen from '../components/LockoutScreen';
 import useAgendamentoStore from '../store/useAgendamentoStore';
 import PlacaQRCode from '../components/PlacaQRCode';
+
+const FinanceiroDashboard = lazy(() => import('./FinanceiroDashboard'));
 
 /**
  * Página AdminDashboard.
@@ -40,6 +39,10 @@ export default function AdminDashboard() {
     if (!placaRef.current || !userEmpresa) return;
     try {
       setGerandoPDF(true);
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
       const element = placaRef.current;
       const canvas = await html2canvas(element, { scale: 2 });
       const imgData = canvas.toDataURL('image/png');
@@ -476,7 +479,11 @@ export default function AdminDashboard() {
         {activeTab === 'equipe' && <GestaoEquipe />}
 
         {/* ABA: FINANCEIRO */}
-        {activeTab === 'financeiro' && <FinanceiroDashboard />}
+        {activeTab === 'financeiro' && (
+          <Suspense fallback={<div className="p-8 text-center text-sm text-text-secondary">Carregando financeiro…</div>}>
+            <FinanceiroDashboard />
+          </Suspense>
+        )}
 
         {/* ABA: CONFIGURACOES */}
         {activeTab === 'configuracoes' && userTipo === 'ADMINISTRADOR' && (

@@ -51,6 +51,16 @@ class DatabaseConfigurationTests(SimpleTestCase):
         config = self.settings(DJANGO_DEBUG='True', DB_ENGINE=None)['DATABASES']['default']
         self.assertEqual(config['ENGINE'], 'django.db.backends.sqlite3')
 
+    def test_production_rate_limit_uses_shared_redis_cache(self):
+        config = self.settings(CACHE_URL='redis://cache.internal:6379/7')['CACHES']['default']
+        self.assertEqual(config['BACKEND'], 'django.core.cache.backends.redis.RedisCache')
+        self.assertEqual(config['LOCATION'], 'redis://cache.internal:6379/7')
+        self.assertEqual(config['KEY_PREFIX'], 'barbeiro-pro')
+
+    def test_development_cache_remains_local(self):
+        config = self.settings(DJANGO_DEBUG='True', DB_ENGINE=None)['CACHES']['default']
+        self.assertEqual(config['BACKEND'], 'django.core.cache.backends.locmem.LocMemCache')
+
     def test_production_paths_match_existing_nginx(self):
         config = self.settings(MEDIA_DIRECTORY='/app/media')
         self.assertEqual(config['ADMIN_URL'], 'painel-master/')

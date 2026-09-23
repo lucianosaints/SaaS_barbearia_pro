@@ -3,9 +3,9 @@ import { motion } from 'framer-motion';
 import { FiArrowUpRight, FiCalendar, FiCheck, FiCreditCard, FiMessageCircle, FiUsers, FiZap } from 'react-icons/fi';
 import useAgendamentoStore from '../store/useAgendamentoStore';
 import videoBackground from '../imagem/salao_pro.mp4';
-import rafaelAvatar from '../imagem/depoimento-rafael.png';
-import julianaAvatar from '../imagem/depoimento-juliana.png';
-import marcosAvatar from '../imagem/depoimento-marcos.png';
+import rafaelAvatar from '../imagem/depoimento-rafael.webp';
+import julianaAvatar from '../imagem/depoimento-juliana.webp';
+import marcosAvatar from '../imagem/depoimento-marcos.webp';
 import OnboardingModal from '../components/OnboardingModal';
 import AuthModal from '../components/AuthModal';
 
