@@ -27,7 +27,15 @@ class Command(BaseCommand):
         latest = {}
         for appointment in appointments.iterator(chunk_size=500):
             services = list(appointment.servicos.all())
-            if appointment.profissional.tipo != 'PROFISSIONAL' or appointment.cliente.tipo != 'CLIENTE' or appointment.profissional.empresa_id != appointment.empresa_id or any(s.empresa_id != appointment.empresa_id for s in services):
+            company_mismatch = (
+                appointment.profissional.empresa_id != appointment.empresa_id
+                or any(service.empresa_id != appointment.empresa_id for service in services)
+            )
+            profile_mismatch = (
+                appointment.profissional.tipo != 'PROFISSIONAL'
+                or appointment.cliente.tipo != 'CLIENTE'
+            )
+            if company_mismatch or (profile_mismatch and appointment.status not in ('CONCLUIDO', 'CANCELADO')):
                 issues.append(f'Agendamento {appointment.pk}: perfil ou empresa incompatível.')
             if not services or not appointment.data_hora_fim or appointment.data_hora_fim <= appointment.data_hora_inicio:
                 issues.append(f'Agendamento {appointment.pk}: serviços/término inválidos.')

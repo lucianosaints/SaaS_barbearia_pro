@@ -227,6 +227,22 @@ class BusinessRulesTests(APITestCase):
         self.assertIn(str(pk), output.getvalue())
         self.assertIsNone(Agendamento.objects.get(pk=pk).data_hora_fim)
 
+    def test_audit_accepts_final_legacy_appointment_with_old_profiles(self):
+        from io import StringIO
+        from django.core.management import call_command
+        appointment = Agendamento.objects.create(
+            empresa=self.company,
+            cliente=self.manager,
+            profissional=self.manager,
+            data_hora_inicio=self.start,
+            data_hora_fim=self.start + timedelta(minutes=30),
+            status='CANCELADO',
+        )
+        appointment.servicos.add(self.service)
+        output = StringIO()
+        call_command('auditar_agenda', fail_on_issues=True, stdout=output)
+        self.assertIn('0 inconsist', output.getvalue())
+
     def test_email_failure_does_not_undo_booking(self):
         with patch('apps.agenda.signals.send_mail', side_effect=RuntimeError('SMTP unavailable')):
             with self.assertLogs('apps.agenda.signals', level='ERROR'):
