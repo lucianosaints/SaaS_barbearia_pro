@@ -373,3 +373,49 @@ $env:TEST_DATABASE_NAME = Join-Path $PWD 'test-concurrency.sqlite3'
 O arquivo indicado por TEST_DATABASE_NAME é descartável: o Django o cria e destrói. Nunca utilizar caminho ou credenciais de produção nos testes.
 
 No frontend: `npm.cmd run lint`, `npm.cmd test` e `npm.cmd run build`. O ambiente restrito bloqueou esbuild e downloads em algumas execuções; quando isso ocorreu, foi necessário solicitar a execução com a permissão apropriada. Não confundir bloqueio do ambiente com falha do projeto.
+
+## Continuidade após a atualização de produção (24/09/2026)
+
+Esta seção substitui os pontos desatualizados da seção "Atualização de produção em andamento". Não há credenciais, chaves PIX, tokens ou dados pessoais registrados aqui.
+
+### Atualização e verificações concluídas no servidor
+
+- O servidor recebeu as atualizações de `develop`, as imagens de backend e frontend foram construídas e os containers de aplicação foram recriados sem interromper ou remover o PostgreSQL órfão do Compose.
+- A auditoria da agenda foi repetida depois do commit `ef48955` e retornou zero inconsistências.
+- A migração `payments.0001_initial` foi aplicada com sucesso. `python manage.py migrate --plan` passou a informar que não há operações pendentes.
+- O backend iniciou normalmente com Gunicorn, executou as migrações sem pendências e coletou os arquivos estáticos.
+- Redis respondeu `PONG` e o teste pelo cache Django retornou `CACHE_OK=True`; o rate limit passou a usar o cache compartilhado.
+- O Nginx da imagem frontend passou em `nginx -t`. Pela URL pública HTTPS, a página inicial respondeu 200, a API protegida respondeu 401 e o Django Admin respondeu 200.
+- Requisições diretas ao IP produziram `DisallowedHost`, comportamento esperado. Não adicionar o IP público aos hosts permitidos apenas para eliminar sondagens diretas.
+- O teste SMTP conectado foi aceito pelo servidor (`SMTP_ENVIADOS=1`). Ainda registrar separadamente se a mensagem chegou na caixa de entrada ou spam.
+- O WAHA respondeu HTTP 200 com a chave rotacionada. A sessão foi reconectada pelo QR code e a interface da aplicação indicou conexão bem-sucedida. O volume persistente `saas_barbearia_pro_waha_data` está montado em `/app/.waha`.
+- A chave secreta Django e as credenciais WAHA foram rotacionadas no servidor sem imprimir os valores. Os backups protegidos de ambiente permanecem fora do repositório.
+- Não usar `docker compose down`, `--remove-orphans` ou remover volumes. O container `barbeiro_pro_db` continua sendo um órfão intencional que deve ser preservado.
+
+### Correções funcionais publicadas em `develop`
+
+- `7d42461`: corrigiu o cadastro de serviços por gestores. O serializer agora associa a empresa autenticada sem exigir que o frontend envie o tenant e preserva a validação de nomes duplicados por empresa.
+- `f712990`: novos membros cadastrados em Gestão de Equipe passam a ser profissionais por padrão. Uma conta criada anteriormente com tipo incorreto foi corrigida de forma controlada no servidor.
+- `9dfc40d`: o painel do cliente agora mostra o motivo devolvido pela API quando um cancelamento é bloqueado. No caso verificado, faltavam aproximadamente 10 a 11 horas para o atendimento e a empresa exigia 24 horas de antecedência; a regra estava correta e somente a mensagem era genérica.
+- `8ce75dd`: a mensagem de solicitação do sinal PIX foi suavizada. Ela explica que o horário foi reservado especialmente para o cliente, que os 50% confirmam a reserva, mantém o prazo de 15 minutos e usa o limite de cancelamento configurado na empresa em vez de texto fixo de 24 horas.
+- Para a empresa nova verificada, `exigir_sinal` foi ativado de forma controlada. Naquele momento a chave PIX e o beneficiário ainda não estavam configurados; o usuário informou que faria essa configuração pela interface. Nunca registrar ou compartilhar a chave neste arquivo.
+- `6e4dfff`: o Django Admin recebeu as ações "Desativar clientes selecionados (preserva o histórico)" e "Reativar clientes selecionados". A remoção definitiva continua bloqueada porque as relações usam exclusão em cascata e apagariam histórico de agenda/fidelidade.
+- `91284c6`: o Django Admin recebeu um filtro combinado com "Clientes ativos" e "Clientes inativos". Essa versão foi construída e o backend foi recriado com sucesso no servidor.
+- `c023205`: o Compose deixou de sobrescrever `PERMITIR_PAGAMENTOS` com `False`; a chave volta a ser controlada por `backend/.env`. O padrão documentado permanece `False`. Sempre conferir o valor efetivamente carregado no container depois de qualquer alteração e recriar somente o backend.
+- `463278d`: o backend passou a aceitar assinatura por 2 meses, alinhando-se às opções que o frontend já exibia. O valor esperado é calculado como `2 x R$ 49,99 = R$ 99,98`, e foi adicionado teste de regressão. Este commit foi enviado para `develop`, mas ainda falta confirmação explícita de que foi puxado, construído e recriado no servidor.
+
+### Acesso administrativo ao WAHA
+
+- O painel WAHA não está publicado na internet; o serviço usa somente `expose: 3000` na rede Docker.
+- O acesso deve ser feito por túnel SSH local. O IP interno observado foi `172.18.0.3`, mas ele pode mudar depois de recriar o container; sempre consultar novamente com `docker inspect` antes de abrir o túnel.
+- Com o túnel ativo, o painel é acessado em `http://127.0.0.1:3001/dashboard`. Usuário e senha estão em `WAHA_ADMIN_USER` e `WAHA_ADMIN_PASSWORD` no `.env` da raiz do projeto no servidor. Não publicar a porta, não copiar esses valores para o Git e não registrar as credenciais neste documento.
+- Para abrir o arquivo correto no servidor, primeiro entrar em `/root/SaaS_barbearia_pro` e usar `nano .env`. O erro "Directory 'backend' does not exist" ocorreu porque o comando havia sido executado a partir de `/root`.
+
+### Estado e próximos passos
+
+1. Confirmar se o servidor recebeu o commit `463278d`; se não, executar pull, construir e recriar somente o backend. Depois testar a opção de assinatura por 2 meses.
+2. Verificar no container o valor atual de `PERMITIR_PAGAMENTOS`. Não presumir que continua `False`, pois o usuário iniciou testes reais da tela de pagamento. Alterações em `backend/.env` só entram no processo após recriar o backend.
+3. Testar um novo agendamento com sinal depois de configurar PIX/beneficiário, usando apenas dados e número autorizados, e confirmar o texto acolhedor enviado pelo WhatsApp.
+4. Confirmar visualmente o recebimento do teste SMTP, caso ainda não tenha sido feito.
+5. Continuar preservando os arquivos não rastreados do servidor e a foto local de prévia. A foto local `backend/media/profissionais/carlos.barbergoldenbarber.com_b1f33bd6.jpg` permanece fora do Git.
+6. Por solicitação do usuário, deixar por último a confirmação de que o backup Vultr cobre PostgreSQL e fotos/mídia. Apesar de ficar por último na ordem operacional, essa confirmação é um requisito antes de considerar a publicação definitivamente homologada.
