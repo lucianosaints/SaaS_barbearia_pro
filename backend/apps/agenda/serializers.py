@@ -16,6 +16,9 @@ class ServicoSerializer(serializers.ModelSerializer):
         model = Servico
         fields = ['id', 'empresa', 'nome', 'preco', 'duracao_minutos', 'ativo']
         extra_kwargs = {'empresa': {'required': False}}
+        # A validacao automatica de unique_together exige empresa cedo demais;
+        # a validacao abaixo associa o tenant autenticado antes de checar duplicatas.
+        validators = []
 
     def validate(self, attrs):
         user = self.context['request'].user
@@ -27,6 +30,13 @@ class ServicoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'empresa': 'Não é permitido transferir um serviço.'})
         if not self.instance and not attrs.get('empresa'):
             raise serializers.ValidationError({'empresa': 'Informe a barbearia.'})
+        empresa = attrs.get('empresa', self.instance.empresa if self.instance else None)
+        nome = attrs.get('nome', self.instance.nome if self.instance else None)
+        duplicates = Servico.objects.filter(empresa=empresa, nome=nome)
+        if self.instance:
+            duplicates = duplicates.exclude(pk=self.instance.pk)
+        if nome and duplicates.exists():
+            raise serializers.ValidationError({'nome': 'Ja existe um servico com este nome nesta barbearia.'})
         return attrs
 
 

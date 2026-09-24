@@ -94,7 +94,11 @@ export default function GestaoServicos() {
       closeModal();
     } catch (err) {
       console.error(err);
-      setError('Erro ao salvar serviço. Verifique seus dados ou permissões.');
+      const apiError = err.response?.data;
+      const details = apiError && typeof apiError === 'object'
+        ? Object.values(apiError).flat().join(' ')
+        : '';
+      setError(details || 'Erro ao salvar serviço. Verifique seus dados ou permissões.');
       setTimeout(() => setError(null), 5000);
     } finally {
       setIsSubmitting(false);

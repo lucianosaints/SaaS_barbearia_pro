@@ -47,6 +47,17 @@ class BusinessRulesTests(APITestCase):
         self.assertEqual(appointment.status, 'PENDENTE')
         self.assertEqual(appointment.data_hora_fim, self.start + timedelta(minutes=30))
 
+    def test_manager_creates_service_for_own_company_without_company_field(self):
+        self.client.force_authenticate(self.manager)
+        payload = {'nome': 'Barba', 'preco': '35.00', 'duracao_minutos': 30, 'ativo': True}
+        response = self.client.post('/api/servicos/', payload, format='json')
+        self.assertEqual(response.status_code, 201, response.data)
+        service = Servico.objects.get(pk=response.data['id'])
+        self.assertEqual(service.empresa, self.company)
+        duplicate = self.client.post('/api/servicos/', payload, format='json')
+        self.assertEqual(duplicate.status_code, 400)
+        self.assertIn('nome', duplicate.data)
+
     def test_conflict_is_rechecked_at_write(self):
         self.book()
         for start in (self.start, self.start + timedelta(minutes=15)):
