@@ -419,3 +419,45 @@ Esta seção substitui os pontos desatualizados da seção "Atualização de pro
 4. Confirmar visualmente o recebimento do teste SMTP, caso ainda não tenha sido feito.
 5. Continuar preservando os arquivos não rastreados do servidor e a foto local de prévia. A foto local `backend/media/profissionais/carlos.barbergoldenbarber.com_b1f33bd6.jpg` permanece fora do Git.
 6. Por solicitação do usuário, deixar por último a confirmação de que o backup Vultr cobre PostgreSQL e fotos/mídia. Apesar de ficar por último na ordem operacional, essa confirmação é um requisito antes de considerar a publicação definitivamente homologada.
+
+## Auditoria de portas e endurecimento de rede (24/09/2026)
+
+Foi feita uma verificação das portas realmente abertas no host e um teste externo a partir de outra rede. Nenhum segredo foi registrado.
+
+### Exposição encontrada e correções
+
+- Nginx público permanece nas portas `80` e `443`, como necessário para o site.
+- SSH permanece público na porta `22`. Revisar posteriormente autenticação por chave, bloqueio de login root por senha e restrição por IP, sem alterar acesso antes de preparar uma sessão de recuperação.
+- O backend já estava vinculado somente a `127.0.0.1:8000`. Teste externo confirmou `TcpTestSucceeded=False`.
+- Redis e WAHA não aparecem como portas publicadas no host; permanecem na rede Docker.
+- O PostgreSQL órfão estava publicado em todas as interfaces na porta `5432`. Teste externo confirmou que a porta respondia pela internet.
+- Foram adicionadas regras IPv4 e IPv6 na cadeia `DOCKER-USER`, limitadas à interface pública, para descartar conexões externas destinadas à porta `5432`. Depois da mudança, o teste externo retornou `False`, enquanto o backend confirmou `DATABASE_OK=True` pela rede interna.
+- O frontend Docker estava publicado em todas as interfaces na porta `3000`. Regras temporárias foram adicionadas ao firewall e o Compose foi corrigido no commit `70ad17e` para usar `127.0.0.1:3000:80`. O container frontend foi recriado e `docker compose ps frontend` confirmou somente o vínculo local. Teste externo retornou `TcpTestSucceeded=False`.
+- O aviso do container órfão `barbeiro_pro_db` continua esperado. Não usar `--remove-orphans`, `docker compose down` ou remover volumes.
+
+### Persistência do firewall
+
+- Foi instalado `iptables-persistent`/`netfilter-persistent` e as regras IPv4/IPv6 foram salvas em `/etc/iptables/rules.v4` e `/etc/iptables/rules.v6`. Os dois arquivos contêm o bloqueio externo da porta `5432` na cadeia `DOCKER-USER`.
+- Atenção: nessa versão do Ubuntu, a instalação de `iptables-persistent` removeu o pacote `ufw` por conflito. As cadeias e regras que o UFW já havia carregado permaneceram na memória e foram incluídas no estado salvo, mas o comando `ufw` não deve mais ser tratado como a fonte de verdade.
+- Não reiniciar o servidor apenas para testar essas regras. Quando houver janela segura e backup confirmado, validar cuidadosamente a restauração do `netfilter-persistent` após reboot, mantendo uma sessão/console de recuperação disponível para não perder o acesso SSH.
+- Depois de qualquer mudança no firewall, repetir testes externos das portas `22`, `80`, `443`, `3000`, `5432` e `8000`, além de confirmar o acesso interno do backend ao banco.
+
+### Nginx do host
+
+- Após restringir o frontend ao loopback, o site apresentou `502` porque o Nginx do host ainda encaminhava a rota principal para o IP público na porta `3000`.
+- A configuração ativa `/etc/nginx/sites-available/salaopro.site` foi ajustada para encaminhar o frontend a `127.0.0.1:3000` e o backend a `127.0.0.1:8000`.
+- Antes das alterações foram criadas cópias locais no servidor com os sufixos `.before-loopback-20260924` e `.before-backend-loopback-20260924`. Não enviar esses arquivos ao Git e não removê-los por enquanto.
+- `nginx -t` passou antes de cada reload. Após a correção, os testes públicos retornaram `frontend=200`, `api=401` e `admin=200`. O `401` na raiz protegida da API é esperado e confirma exigência de autenticação.
+
+### Superfície pública intencional
+
+- A aplicação expõe `/api/` por HTTPS porque frontend, cadastro e agendamento público dependem dela.
+- Permanecem públicas somente as operações necessárias, como login/refresh, cadastro, catálogo público filtrado por empresa, disponibilidade, entrada na fila e webhook do Mercado Pago. Rotas de agenda privada, financeiro, criação de cobrança e controle do WAHA exigem autenticação/permissões.
+- Arquivos de mídia em `/arquivos/` também são públicos. Revisar futuramente se o volume contém somente fotos destinadas à exibição pública.
+
+### Retomada após esta auditoria
+
+1. Confirmar o valor efetivamente carregado de `PERMITIR_PAGAMENTOS` e testar a assinatura de 2 meses; o código `463278d` já está presente no checkout do servidor, mas ainda falta confirmação funcional final.
+2. Registrar no repositório uma referência segura da configuração Nginx do host, sem certificados, chaves ou dados específicos do servidor, para evitar divergência futura.
+3. Revisar a política SSH e a persistência do firewall em janela controlada.
+4. Manter por último, conforme solicitado, a confirmação de que o backup Vultr cobre PostgreSQL e fotos/mídia, seguida de ensaio de restauração antes de considerar a homologação encerrada.
