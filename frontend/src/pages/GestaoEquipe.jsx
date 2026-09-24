@@ -108,6 +108,7 @@ export default function GestaoEquipe() {
       payload.append('email', formData.email);
       payload.append('username', formData.email);
       payload.append('telefone', formData.telefone);
+      payload.append('tipo', formData.tipo || 'PROFISSIONAL');
       
       const isActiveToSubmit = (formData.tipo === 'ADMINISTRADOR' || formData.tipo === 'DONO') ? true : formData.is_active;
       payload.append('is_active', isActiveToSubmit);

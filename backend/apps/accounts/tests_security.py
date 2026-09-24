@@ -60,6 +60,18 @@ class SecurityHardeningTests(APITestCase):
         self.client.force_authenticate(self.professional)
         self.assertEqual(self.client.get('/api/whatsapp/status/').status_code, 403)
 
+    def test_manager_created_team_member_defaults_to_professional(self):
+        self.client.force_authenticate(self.manager)
+        response = self.client.post('/api/usuarios/', {
+            'username': 'team@example.test', 'email': 'team@example.test',
+            'first_name': 'Equipe', 'password': 'TeamMember!2026',
+            'telefone': '11999999999', 'is_active': True,
+        }, format='multipart')
+        self.assertEqual(response.status_code, 201, response.data)
+        member = Usuario.objects.get(pk=response.data['id'])
+        self.assertEqual(member.tipo, 'PROFISSIONAL')
+        self.assertEqual(member.empresa, self.company)
+
     def test_cors_allowlist_and_clickjacking_header(self):
         denied = self.client.get('/api/empresas/', HTTP_ORIGIN='https://evil.example')
         allowed = self.client.get('/api/empresas/', HTTP_ORIGIN='http://127.0.0.1:3000')

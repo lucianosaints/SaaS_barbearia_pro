@@ -38,6 +38,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
             if attrs.get('empresa', user.empresa) != user.empresa:
                 raise serializers.ValidationError({'empresa': 'Empresa inválida.'})
             attrs['empresa'] = user.empresa
+            if not self.instance:
+                attrs.setdefault('tipo', 'PROFISSIONAL')
         if self.instance and attrs.get('empresa', self.instance.empresa) != self.instance.empresa:
             raise serializers.ValidationError({'empresa': 'Não é permitido transferir usuários com histórico.'})
         if not self.instance and not attrs.get('password'):
