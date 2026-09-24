@@ -15,7 +15,6 @@ services:
       - ./backend/.env
     environment:
       CACHE_URL: redis://redis:6379/1
-      PERMITIR_PAGAMENTOS: "False"
       WAHA_API_URL: http://waha:3000
       WAHA_API_KEY: ${WAHA_API_KEY:?Configure WAHA_API_KEY no ambiente}
     depends_on:
