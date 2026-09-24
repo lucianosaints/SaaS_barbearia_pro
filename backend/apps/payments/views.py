@@ -97,8 +97,8 @@ class CriarPagamentoAssinaturaView(APIView):
             meses = int(request.data.get('meses', 1))
         except (ValueError, TypeError):
             return Response({'error': 'Quantidade de meses invalida.'}, status=status.HTTP_400_BAD_REQUEST)
-        if meses not in (1, 3, 6, 12):
-            return Response({'error': 'Escolha 1, 3, 6 ou 12 meses.'}, status=status.HTTP_400_BAD_REQUEST)
+        if meses not in (1, 2, 3, 6, 12):
+            return Response({'error': 'Escolha 1, 2, 3, 6 ou 12 meses.'}, status=status.HTTP_400_BAD_REQUEST)
 
         empresa = request.user.empresa
         valor_total = Decimal('49.99') * meses

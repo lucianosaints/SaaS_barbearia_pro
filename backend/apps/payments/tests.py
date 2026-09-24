@@ -39,6 +39,20 @@ class MercadoPagoHomologationTests(APITestCase):
         self.assertEqual(payload['external_reference'], str(charge.external_reference))
 
     @patch.dict('os.environ', {'PERMITIR_PAGAMENTOS': 'true'})
+    @patch('services.mercado_pago_service.mercadopago.SDK')
+    def test_admin_can_pay_for_two_months(self, sdk_class):
+        sdk_class.return_value.payment.return_value.create.return_value = {
+            'status': 201,
+            'response': {'id': 124, 'point_of_interaction': {'transaction_data': {'qr_code': 'safe-code'}}},
+        }
+        self.client.force_authenticate(self.admin)
+        response = self.client.post('/api/assinaturas/criar-assinatura/', {'meses': 2}, format='json')
+        self.assertEqual(response.status_code, 201)
+        charge = CobrancaAssinatura.objects.get()
+        self.assertEqual(charge.meses, 2)
+        self.assertEqual(charge.valor, Decimal('99.98'))
+
+    @patch.dict('os.environ', {'PERMITIR_PAGAMENTOS': 'true'})
     def test_professional_cannot_create_subscription_charge(self):
         self.client.force_authenticate(self.profissional)
         response = self.client.post('/api/assinaturas/criar-assinatura/', {'meses': 1}, format='json')
