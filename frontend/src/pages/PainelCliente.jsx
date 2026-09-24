@@ -93,7 +93,11 @@ export default function PainelCliente() {
       fetchAgendamentos();
     } catch (err) {
       console.error('Erro ao cancelar agendamento:', err);
-      setError('Falha ao cancelar o agendamento. Tente novamente mais tarde.');
+      const apiError = err.response?.data;
+      const details = apiError && typeof apiError === 'object'
+        ? Object.values(apiError).flat().join(' ')
+        : '';
+      setError(details || 'Falha ao cancelar o agendamento. Tente novamente mais tarde.');
     } finally {
       setCanceling(false);
     }
