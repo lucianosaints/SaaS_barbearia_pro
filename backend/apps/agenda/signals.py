@@ -145,10 +145,12 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
                         valor_sinal = total_servicos / 2
                         chave = empresa.chave_pix
                         beneficiario = getattr(empresa, 'beneficiario_pix', '')
+                        horas_limite_cancelamento = getattr(empresa, 'horas_limite_cancelamento', 24)
                         
                         msg_cliente += (
-                            f"\n⚠️ *ATENÇÃO: CONFIRMAÇÃO NECESSÁRIA*\n"
-                            f"Para garantir sua vaga, solicitamos o pagamento de um sinal de 50% do valor do serviço.\n\n"
+                            f"\n✨ *SEU HORÁRIO ESTÁ RESERVADO ESPECIALMENTE PARA VOCÊ*\n"
+                            f"Para confirmarmos essa reserva e mantermos esse período dedicado exclusivamente ao seu atendimento, "
+                            f"solicitamos um sinal de 50% do valor do serviço via PIX.\n\n"
                             f"💰 *Valor do Sinal:* R$ {valor_sinal:.2f}\n"
                             f"🔑 *Chave PIX:* `{chave}`\n"
                         )
@@ -156,8 +158,10 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
                             msg_cliente += f"👤 *Beneficiário:* {beneficiario}\n"
                         
                         msg_cliente += (
-                            f"\nEnvie o comprovante de pagamento em até *15 minutos* para que sua vaga não seja cancelada.\n"
-                            f"⚠️ Atenção: Em caso de cancelamento com menos de 24h de antecedência, o sinal não será reembolsável.\n"
+                            f"\nPor gentileza, envie o comprovante em até *15 minutos*. Assim, seu horário ficará confirmado e reservado para você.\n"
+                            f"ℹ️ Como esse período é separado especialmente para o seu atendimento, em caso de cancelamento com menos de "
+                            f"{horas_limite_cancelamento}h de antecedência, o sinal não será reembolsável.\n"
+                            f"Agradecemos a confiança e esperamos por você! 😊"
                         )
                     else:
                         msg_cliente += f"\nCaso precise remarcar ou cancelar, acesse nosso app.\n"
