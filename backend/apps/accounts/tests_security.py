@@ -10,7 +10,7 @@ class SecurityHardeningTests(APITestCase):
     def setUp(self):
         cache.clear()
         self.company = Empresa.objects.create(
-            nome='Segura', slug='segura', cnpj='00.000.000/0001-00',
+            nome='Segura', slug='segura', cnpj='00000000000100',
             chave_pix='pix@example.test', beneficiario_pix='Titular Privado',
             ativo=True, em_trial=True,
         )
