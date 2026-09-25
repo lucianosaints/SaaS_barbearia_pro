@@ -461,3 +461,82 @@ Foi feita uma verificação das portas realmente abertas no host e um teste exte
 2. Registrar no repositório uma referência segura da configuração Nginx do host, sem certificados, chaves ou dados específicos do servidor, para evitar divergência futura.
 3. Revisar a política SSH e a persistência do firewall em janela controlada.
 4. Manter por último, conforme solicitado, a confirmação de que o backup Vultr cobre PostgreSQL e fotos/mídia, seguida de ensaio de restauração antes de considerar a homologação encerrada.
+
+## Confirmações operacionais do usuário (24/09/2026)
+
+Esta seção registra o estado final e substitui as pendências históricas conflitantes das seções anteriores.
+
+- O usuário confirmou que controla `PERMITIR_PAGAMENTOS` pelo arquivo de ambiente no servidor e que o fluxo de pagamentos está funcionando.
+- Um novo agendamento com sinal PIX e envio por WhatsApp foi testado com dados autorizados e funcionou.
+- A entrega SMTP foi confirmada visualmente na caixa de entrada por meio de um alerta do monitoramento do WAHA. O alerta exibido era referente a uma desconexão anterior; o usuário confirmou que o WhatsApp está conectado e enviando normalmente depois da reconexão.
+- Inicialmente o usuário acreditava que o backup da Vultr estava ativo, mas o painel confirmou `Auto Backups: Not Enabled`. Foi adotado e validado um backup manual de PostgreSQL e mídia; o backup automático pago continua desativado.
+- Os pontos antes pendentes desta etapa foram concluídos: assinatura de 2 meses, referência sanitizada do Nginx, endurecimento do SSH, persistência do firewall após reboot e ensaio isolado de restauração do backup manual.
+- O teste isolado `MercadoPagoHomologationTests.test_admin_can_pay_for_two_months` passou no container de produção com redirecionamento HTTPS desativado somente para o processo de teste. O Mercado Pago foi simulado, nenhuma cobrança real foi criada, e foram validados 2 meses por R$ 99,98.
+- A configuração observada do Nginx do host foi registrada sem certificados ou parâmetros secretos em `deploy/references/host.nginx.production.sanitized.conf`. Ela ainda contém rotas legadas `/admin/`, `/static/` e `/media/`; o Nginx interno do frontend usa `/painel-master/`, `/estaticos/` e `/arquivos/`. Como o acesso público está funcional, essa divergência foi apenas documentada e não foi alterada no servidor.
+- O acesso SSH foi endurecido depois da criação e validação de uma nova chave Ed25519 protegida por frase secreta. O arquivo `/etc/ssh/sshd_config.d/00-salaopro-hardening.conf` define autenticação por chave, `PermitRootLogin prohibit-password`, desativa senha, autenticação interativa e X11 forwarding. `sshd -t` passou, o serviço permaneceu ativo após reload, uma nova conexão por chave retornou `ACESSO_SEGURO_OK` e uma tentativa forçada por senha foi recusada com `Permission denied (publickey)`. A sessão existente foi mantida durante a validação. Há uma cópia de segurança em `/etc/ssh/sshd_config.before-key-hardening-20260924`.
+- A chave SSH antiga, cuja frase secreta não estava mais disponível, foi removida de `authorized_keys` depois de criar a cópia `/root/.ssh/authorized_keys.before-old-key-removal-20260924`. Somente a chave nova identificada pelo comentário `salaopro-vultr` permanece autorizada; uma conexão independente por ela retornou `CHAVE_UNICA_OK`.
+- Como alternativa ao backup automático da Vultr, que acrescentaria 20% ao preço-base da instância, foi criado um backup manual consistente em `/root/salaopro-backup-20260924`: dump PostgreSQL em formato customizado e arquivo compactado do volume de mídia. Os arquivos foram validados, baixados para `C:\Users\lucia\Desktop\salaopro-backup-20260924` e os hashes SHA-256 locais coincidiram com os do servidor. O dump foi restaurado com sucesso em um PostgreSQL 15 Alpine temporário e isolado, resultando em 20 tabelas e 55 migrações; o container temporário foi removido. O backup automático da Vultr permanece desativado.
+- Depois do backup e da validação das políticas de reinício dos containers, o servidor foi reiniciado de forma autorizada. Após o reboot, `netfilter-persistent` restaurou os bloqueios IPv4 e IPv6 da porta 5432 (`FIREWALL_POS_REBOOT_OK`). Frontend, backend, WAHA, Redis e PostgreSQL retornaram; Redis ficou saudável, o backend confirmou `DATABASE_OK=True`, e os testes públicos retornaram frontend 200, API 401 e painel 200.
+- A sessão WAHA `tenant_3` permaneceu em estado `WORKING` após a reinicialização, com resposta HTTP 200 da API interna.
+
+## Procedimento de backup manual e restauração (24/09/2026)
+
+O backup manual protege os dados principais da aplicação sem o custo adicional do backup automático da Vultr. Ele não é uma imagem completa do servidor. Repetir periodicamente, baixar os arquivos para outro equipamento e conferir os hashes. Não enviar por e-mail porque os arquivos contêm dados da aplicação e anexos podem falhar ou exceder limites.
+
+### Criar e validar o backup no servidor
+
+```bash
+SALAOPRO_BACKUP_TAG=$(date +%Y%m%d-%H%M%S)
+SALAOPRO_BACKUP_DIR="/root/salaopro-backup-$SALAOPRO_BACKUP_TAG"
+install -d -m 700 "$SALAOPRO_BACKUP_DIR"
+docker exec barbeiro_pro_db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$SALAOPRO_BACKUP_DIR/postgresql.dump"
+tar -C /var/lib/docker/volumes/saas_barbearia_pro_django_media/_data -czf "$SALAOPRO_BACKUP_DIR/media.tar.gz" .
+docker exec -i barbeiro_pro_db pg_restore -l < "$SALAOPRO_BACKUP_DIR/postgresql.dump" > /dev/null
+tar -tzf "$SALAOPRO_BACKUP_DIR/media.tar.gz" > /dev/null
+sha256sum "$SALAOPRO_BACKUP_DIR/postgresql.dump" "$SALAOPRO_BACKUP_DIR/media.tar.gz"
+echo "$SALAOPRO_BACKUP_DIR"
+```
+
+No PowerShell local, substituir o sufixo pela pasta exibida e baixar com a chave nova:
+
+```powershell
+scp -i "$env:USERPROFILE\.ssh\id_ed25519_salaopro" -o IdentitiesOnly=yes -r root@140.82.30.186:/root/salaopro-backup-AAAAMMDD-HHMMSS "$env:USERPROFILE\Desktop\"
+Get-FileHash "$env:USERPROFILE\Desktop\salaopro-backup-AAAAMMDD-HHMMSS\postgresql.dump","$env:USERPROFILE\Desktop\salaopro-backup-AAAAMMDD-HHMMSS\media.tar.gz" -Algorithm SHA256
+```
+
+Os hashes locais devem ser idênticos aos hashes calculados no servidor.
+
+### Ensaio de restauração isolado
+
+O teste abaixo não publica porta e não toca no PostgreSQL de produção:
+
+```bash
+SALAOPRO_RESTORE_DIR="/root/salaopro-backup-AAAAMMDD-HHMMSS"
+docker run -d --rm --name salaopro_restore_test -e POSTGRES_PASSWORD=restore-test-only postgres:15-alpine
+until docker exec salaopro_restore_test pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done
+docker exec salaopro_restore_test createdb -U postgres restore_test
+docker exec -i salaopro_restore_test pg_restore -U postgres -d restore_test --no-owner --no-privileges --exit-on-error < "$SALAOPRO_RESTORE_DIR/postgresql.dump"
+docker exec salaopro_restore_test psql -U postgres -d restore_test -Atc "SELECT 'TABELAS=' || count(*) FROM pg_tables WHERE schemaname='public'; SELECT 'MIGRACOES=' || count(*) FROM django_migrations;"
+docker stop salaopro_restore_test
+```
+
+### Restauração real em produção
+
+Esta operação substitui o banco atual e causa indisponibilidade. Antes dela, manter um backup adicional do estado atual. Não executar `docker compose down`, `--remove-orphans` nem remover volumes.
+
+```bash
+cd /root/SaaS_barbearia_pro
+SALAOPRO_RESTORE_DIR="/root/salaopro-backup-AAAAMMDD-HHMMSS"
+docker compose stop backend frontend
+docker exec barbeiro_pro_db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "/root/pre-restore-$(date +%Y%m%d-%H%M%S).dump"
+docker exec barbeiro_pro_db sh -c 'dropdb --force -U "$POSTGRES_USER" "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" -O "$POSTGRES_USER" "$POSTGRES_DB"'
+docker exec -i barbeiro_pro_db sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --no-privileges --exit-on-error' < "$SALAOPRO_RESTORE_DIR/postgresql.dump"
+tar -C /var/lib/docker/volumes/saas_barbearia_pro_django_media/_data -czf "/root/media-before-restore-$(date +%Y%m%d-%H%M%S).tar.gz" .
+tar -C /var/lib/docker/volumes/saas_barbearia_pro_django_media/_data -xzf "$SALAOPRO_RESTORE_DIR/media.tar.gz"
+docker compose up -d backend frontend
+docker compose exec -T backend python manage.py migrate --plan
+docker compose exec -T backend python manage.py shell -c "from django.db import connection; connection.ensure_connection(); print('DATABASE_OK=True')"
+docker compose ps
+```
+
+Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/painel-master/login/` 200, Redis saudável e sessão WAHA em `WORKING`.
