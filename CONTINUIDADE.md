@@ -549,3 +549,13 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Foi criado um modal de Termos de Uso e Aviso de Privacidade, acessível nos cadastros e no rodapé público. O texto cobre serviço, responsabilidades, categorias e finalidades de dados, bases legais, papéis de controlador/operador, compartilhamentos, retenção, segurança, direitos do titular, comunicações, encerramento e contato. A versão operacional deve receber revisão jurídica antes de ser considerada parecer de conformidade.
 - A implementação foi baseada nos princípios e direitos da Lei nº 13.709/2018 e em materiais orientativos da ANPD. Ela não presume que todo tratamento dependa de consentimento.
 - Validações locais: lint aprovado; 9 testes frontend aprovados; build Vite aprovado; 36 testes direcionados do backend aprovados; `git diff --check` aprovado.
+
+### Publicação em produção (25/09/2026)
+
+- Funcionalidade enviada à `develop` no commit `120e809`; o fixture PostgreSQL do teste foi corrigido no commit `8d7a9ae`, usando CNPJ sem pontuação para respeitar o limite de 14 caracteres.
+- Antes da atualização foi criado e validado o backup `/root/salaopro-predeploy-20260925-015559`, contendo dump PostgreSQL e mídia compactada. O dump e o arquivo de mídia passaram nas verificações estruturais e receberam hashes SHA-256.
+- O servidor avançou por `git pull --ff-only` até `8d7a9ae`. Os arquivos não rastreados `backend/media/profissionais/pedro_0SJUBdN.jpg` e `backend/test_error.py` foram preservados.
+- Imagens de backend e frontend construídas com sucesso. O teste de registro de aceite passou no PostgreSQL candidato e `nginx -t` passou no frontend candidato.
+- Somente backend e frontend foram recriados com `docker compose up -d --no-deps backend frontend`. Não houve `down`, remoção de órfãos ou remoção de volumes. O PostgreSQL órfão foi preservado.
+- Inicialização: configuração Django válida, nenhuma migração pendente, arquivos estáticos coletados, Gunicorn e Nginx ativos.
+- Verificação final: frontend 200, API protegida 401, painel 200, `DATABASE_OK=True`, Redis `PONG` e sessão WAHA `tenant_3` em `WORKING` com HTTP 200.
