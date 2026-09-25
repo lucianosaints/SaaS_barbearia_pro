@@ -51,10 +51,28 @@ class SecurityHardeningTests(APITestCase):
         response = self.client.post('/api/clientes/registrar/', {
             'nome': 'Outro Nome', 'email': self.manager.email,
             'senha': 'AnotherStrong!2026', 'telefone': '11999999999',
+            'aceitou_termos': True,
         }, format='json')
         self.assertEqual(response.status_code, 400)
         self.assertNotIn('existe', str(response.data).casefold())
         self.assertIn('não foi possível concluir', str(response.data).casefold())
+
+    def test_registration_requires_terms_and_records_acceptance(self):
+        payload = {
+            'nome': 'Cliente LGPD', 'email': 'lgpd@example.test',
+            'senha': 'PrivacyTest!2026', 'telefone': '11999999999',
+        }
+        denied = self.client.post('/api/clientes/registrar/', payload, format='json')
+        self.assertEqual(denied.status_code, 400)
+        self.assertIn('aceitou_termos', denied.data)
+
+        payload['aceitou_termos'] = True
+        accepted = self.client.post('/api/clientes/registrar/', payload, format='json', REMOTE_ADDR='10.20.30.40')
+        self.assertEqual(accepted.status_code, 201, accepted.data)
+        user = Usuario.objects.get(email='lgpd@example.test')
+        self.assertTrue(user.aceitou_termos)
+        self.assertIsNotNone(user.data_aceite_termos)
+        self.assertEqual(user.ip_aceite_termos, '10.20.30.40')
 
     def test_waha_requires_tenant_manager(self):
         self.client.force_authenticate(self.professional)

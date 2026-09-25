@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { FaWhatsapp } from 'react-icons/fa';
 import useAgendamentoStore from '../store/useAgendamentoStore';
 import api from '../services/api';
+import PasswordRequirements, { isPasswordReady } from './PasswordRequirements';
+import TermsModal from './TermsModal';
 
 /**
  * Componente AuthModal.
@@ -18,6 +20,9 @@ export default function AuthModal({ onAuthSuccess }) {
   const [senha, setSenha] = useState('');
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [aceitouTermos, setAceitouTermos] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
 
   if (!authModalOpen) return null;
 
@@ -51,6 +56,10 @@ export default function AuthModal({ onAuthSuccess }) {
 
   const handleCadastro = async (e) => {
     e.preventDefault();
+    if (!isPasswordReady(senha) || senha !== confirmarSenha || !aceitouTermos) {
+      setError('Complete os requisitos da senha, confirme-a e aceite os Termos de Uso.');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -60,6 +69,7 @@ export default function AuthModal({ onAuthSuccess }) {
         senha,
         telefone,
         empresa_id: empresaId || null,
+        aceitou_termos: aceitouTermos,
       });
 
       const token = response.data.access;
@@ -214,11 +224,22 @@ export default function AuthModal({ onAuthSuccess }) {
                   placeholder="Mínimo 8 caracteres"
                   className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold transition-colors"
                 />
+                <PasswordRequirements password={senha} confirmation={confirmarSenha} />
               </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Confirmar senha</label>
+                <input type="password" required value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} placeholder="Digite a senha novamente" className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold transition-colors" />
+              </div>
+
+              <label className="flex items-start gap-3 text-xs text-text-secondary">
+                <input type="checkbox" checked={aceitouTermos} onChange={(e) => setAceitouTermos(e.target.checked)} required className="mt-0.5 h-4 w-4 accent-amber-400" />
+                <span>Li e concordo com os <button type="button" onClick={() => setTermsOpen(true)} className="font-semibold text-gold underline">Termos de Uso e o Aviso de Privacidade</button>.</span>
+              </label>
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !isPasswordReady(senha) || senha !== confirmarSenha || !aceitouTermos}
                 className="btn-accent w-full py-3 mt-2 text-sm"
               >
                 {loading ? 'Carregando...' : 'Cadastrar e Continuar'}
@@ -227,6 +248,7 @@ export default function AuthModal({ onAuthSuccess }) {
           )}
         </div>
       </div>
+      <TermsModal isOpen={termsOpen} onClose={() => setTermsOpen(false)} />
     </div>
   );
 }

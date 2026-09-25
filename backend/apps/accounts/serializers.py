@@ -75,11 +75,14 @@ class RegistroClienteSerializer(serializers.Serializer):
     senha = serializers.CharField(write_only=True, trim_whitespace=False)
     telefone = serializers.CharField(max_length=20, required=False, allow_blank=True)
     empresa_id = serializers.IntegerField(required=False, allow_null=True, min_value=1)
+    aceitou_termos = serializers.BooleanField(required=True)
 
     def validate_email(self, value):
         return value.strip().lower()
 
     def validate(self, attrs):
+        if not attrs.get('aceitou_termos'):
+            raise serializers.ValidationError({'aceitou_termos': 'É necessário aceitar os Termos de Uso e o Aviso de Privacidade.'})
         names = attrs['nome'].split(' ', 1)
         candidate = Usuario(username=attrs['email'], email=attrs['email'], first_name=names[0],
                             last_name=names[1] if len(names) > 1 else '')

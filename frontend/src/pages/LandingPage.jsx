@@ -8,6 +8,7 @@ import julianaAvatar from '../imagem/depoimento-juliana.webp';
 import marcosAvatar from '../imagem/depoimento-marcos.webp';
 import OnboardingModal from '../components/OnboardingModal';
 import AuthModal from '../components/AuthModal';
+import TermsModal from '../components/TermsModal';
 
 const benefits = [
   { icon: FiCalendar, title: 'Agenda que trabalha por você', text: 'Horários, bloqueios e fila de espera organizados em uma experiência simples para equipe e clientes.' },
@@ -45,6 +46,7 @@ const testimonials = [
 export default function LandingPage() {
   const { setAuthModalOpen } = useAgendamentoStore();
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
 
   return (
     <div className="min-h-screen overflow-hidden bg-background text-text-primary">
@@ -176,9 +178,10 @@ export default function LandingPage() {
         </section>
       </main>
 
-      <footer className="border-t border-white/10 px-5 py-8 text-sm text-text-muted"><div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 sm:flex-row"><p>© {new Date().getFullYear()} Salão PRO · i9builder</p><div className="flex gap-5"><span>LGPD</span><a href="mailto:infor@salaopro.site" className="transition hover:text-white">infor@salaopro.site</a></div></div></footer>
+      <footer className="border-t border-white/10 px-5 py-8 text-sm text-text-muted"><div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 sm:flex-row"><p>© {new Date().getFullYear()} Salão PRO · i9builder</p><div className="flex gap-5"><button type="button" onClick={() => setTermsOpen(true)} className="transition hover:text-white">Termos e Privacidade (LGPD)</button><a href="mailto:infor@salaopro.site" className="transition hover:text-white">infor@salaopro.site</a></div></div></footer>
       <OnboardingModal isOpen={isOnboardingOpen} onClose={() => setIsOnboardingOpen(false)} />
       <AuthModal />
+      <TermsModal isOpen={termsOpen} onClose={() => setTermsOpen(false)} />
     </div>
   );
 }

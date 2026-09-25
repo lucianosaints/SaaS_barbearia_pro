@@ -214,7 +214,7 @@ class BusinessRulesTests(APITestCase):
                      {'nome': 'Teste', 'email': 'new@example.com', 'senha': '123'},
                      {'nome': 'Teste', 'email': 'CLIENTE@EXAMPLE.COM', 'senha': 'SomeStrongPassword987!'}):
             self.assertEqual(self.client.post(endpoint, data, format='json').status_code, 400)
-        response = self.client.post(endpoint, {'nome': 'Teste Novo', 'email': 'NOVO@example.com', 'senha': 'SomeStrongPassword987!'}, format='json')
+        response = self.client.post(endpoint, {'nome': 'Teste Novo', 'email': 'NOVO@example.com', 'senha': 'SomeStrongPassword987!', 'aceitou_termos': True}, format='json')
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(Usuario.objects.get(username='novo@example.com').tipo, 'CLIENTE')
 

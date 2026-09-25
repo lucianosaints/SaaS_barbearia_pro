@@ -1,5 +1,6 @@
 from django.db import IntegrityError, transaction
 from django.conf import settings
+from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny, SAFE_METHODS, IsAuthenticated
 from rest_framework.views import APIView
@@ -135,6 +136,8 @@ def registrar_cliente(request):
                 username=data['email'], email=data['email'], password=data['senha'],
                 first_name=names[0], last_name=names[1] if len(names) > 1 else '',
                 telefone=data.get('telefone', ''), tipo='CLIENTE', empresa_id=data.get('empresa_id'),
+                aceitou_termos=True, data_aceite_termos=timezone.now(),
+                ip_aceite_termos=request.META.get('REMOTE_ADDR'),
             )
     except IntegrityError:
         raise ValidationError({'detail': 'Não foi possível concluir o cadastro. Verifique os dados informados.'})
@@ -155,7 +158,6 @@ def registrar_saas(request):
     Inicia o período de teste grátis (Trial).
     """
     from datetime import timedelta
-    from django.utils import timezone
     from django.utils.text import slugify
     from apps.tenants.models import Empresa
 
@@ -164,6 +166,7 @@ def registrar_saas(request):
     email = str(request.data.get('email') or '').strip().lower()
     senha = request.data.get('senha')
     whatsapp = request.data.get('whatsapp')
+    aceitou_termos = request.data.get('aceitou_termos') is True
 
     if not all([nome_barbearia, nome_admin, email, senha, whatsapp]):
         return Response(
@@ -177,7 +180,7 @@ def registrar_saas(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    registration = RegistroClienteSerializer(data={'nome': nome_admin, 'email': email, 'senha': senha, 'telefone': whatsapp})
+    registration = RegistroClienteSerializer(data={'nome': nome_admin, 'email': email, 'senha': senha, 'telefone': whatsapp, 'aceitou_termos': aceitou_termos})
     registration.is_valid(raise_exception=True)
 
     # Criar a Empresa com 30 dias de trial
@@ -209,7 +212,10 @@ def registrar_saas(request):
         telefone=whatsapp,
         tipo='ADMINISTRADOR',
         is_active=True,
-        empresa=empresa
+        empresa=empresa,
+        aceitou_termos=True,
+        data_aceite_termos=timezone.now(),
+        ip_aceite_termos=request.META.get('REMOTE_ADDR'),
     )
     usuario.set_password(senha)
     usuario.save()

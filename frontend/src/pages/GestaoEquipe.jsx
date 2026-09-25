@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import PasswordRequirements, { isPasswordReady } from '../components/PasswordRequirements';
 
 export default function GestaoEquipe() {
   const [profissionais, setProfissionais] = useState([]);
@@ -99,6 +100,10 @@ export default function GestaoEquipe() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if ((!formData.id || formData.password) && !isPasswordReady(formData.password)) {
+      setError('A senha precisa atender a todos os requisitos de segurança.');
+      return;
+    }
     setIsSubmitting(true);
     
     try {
@@ -378,6 +383,7 @@ export default function GestaoEquipe() {
                     placeholder="******"
                     className="w-full bg-background border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-gold"
                   />
+                  {(!formData.id || formData.password) && <PasswordRequirements password={formData.password} />}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

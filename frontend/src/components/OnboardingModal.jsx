@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 import useAgendamentoStore from '../store/useAgendamentoStore';
+import PasswordRequirements, { isPasswordReady } from './PasswordRequirements';
+import TermsModal from './TermsModal';
 
 export default function OnboardingModal({ isOpen, onClose }) {
   const { login } = useAgendamentoStore();
@@ -10,24 +12,36 @@ export default function OnboardingModal({ isOpen, onClose }) {
     nome_admin: '',
     email: '',
     senha: '',
-    whatsapp: ''
+    whatsapp: '',
+    confirmar_senha: '',
+    aceitou_termos: false,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [termsOpen, setTermsOpen] = useState(false);
 
   if (!isOpen) return null;
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData({ ...formData, [e.target.name]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isPasswordReady(formData.senha) || formData.senha !== formData.confirmar_senha) {
+      setError('Complete todos os requisitos da senha e confirme-a corretamente.');
+      return;
+    }
+    if (!formData.aceitou_termos) {
+      setError('Leia e aceite os Termos de Uso e o Aviso de Privacidade.');
+      return;
+    }
     setLoading(true);
     setError(null);
 
     try {
-      const response = await api.post('/api/saas/registrar/', formData);
+      const { confirmar_senha: _confirmarSenha, ...payload } = formData;
+      const response = await api.post('/api/saas/registrar/', payload);
       const token = response.data.access;
       const user = response.data.user;
       
@@ -132,11 +146,20 @@ export default function OnboardingModal({ isOpen, onClose }) {
                     className="input-premium w-full" 
                     placeholder="••••••••" 
                   />
+                  <PasswordRequirements password={formData.senha} confirmation={formData.confirmar_senha} />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">Confirmar senha</label>
+                  <input type="password" name="confirmar_senha" value={formData.confirmar_senha} onChange={handleChange} required className="input-premium w-full" placeholder="Digite a senha novamente" />
+                </div>
+                <label className="flex items-start gap-3 text-sm text-text-secondary">
+                  <input type="checkbox" name="aceitou_termos" checked={formData.aceitou_termos} onChange={handleChange} required className="mt-1 h-4 w-4 accent-amber-400" />
+                  <span>Li e concordo com os <button type="button" onClick={() => setTermsOpen(true)} className="font-semibold text-gold underline">Termos de Uso e o Aviso de Privacidade</button>.</span>
+                </label>
                 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !isPasswordReady(formData.senha) || formData.senha !== formData.confirmar_senha || !formData.aceitou_termos}
                   className="w-full mt-6 bg-primary hover:bg-primary-hover text-bg-primary font-bold py-3 px-4 rounded-xl transition-all shadow-[0_0_15px_rgba(212,175,55,0.4)] disabled:opacity-50"
                 >
                   {loading ? 'Criando Conta...' : 'Criar Conta e Iniciar Teste Grátis'}
@@ -146,6 +169,7 @@ export default function OnboardingModal({ isOpen, onClose }) {
           </motion.div>
         </div>
       )}
+      <TermsModal isOpen={termsOpen} onClose={() => setTermsOpen(false)} />
     </AnimatePresence>
   );
 }

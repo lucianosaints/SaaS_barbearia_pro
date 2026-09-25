@@ -113,7 +113,7 @@ class DevelopIntegrationTests(APITestCase):
 
     def test_signup_without_company_and_subscription_routes_survive(self):
         self.client.force_authenticate(None)
-        response = self.client.post('/api/clientes/registrar/', {'nome': 'Cliente Novo', 'email': 'new@example.test', 'senha': 'IntegrationTest!2026', 'empresa_id': None}, format='json')
+        response = self.client.post('/api/clientes/registrar/', {'nome': 'Cliente Novo', 'email': 'new@example.test', 'senha': 'IntegrationTest!2026', 'empresa_id': None, 'aceitou_termos': True}, format='json')
         self.assertEqual(response.status_code, 201, response.data)
         self.assertIsNone(response.data['user']['empresa'])
         for url in ('/api/saas/registrar/', '/api/whatsapp/status/', '/api/fidelidade/meu-cartao/', '/api/assinaturas/webhook/'):

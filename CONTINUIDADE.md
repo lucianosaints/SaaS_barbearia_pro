@@ -540,3 +540,12 @@ docker compose ps
 ```
 
 Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/painel-master/login/` 200, Redis saudável e sessão WAHA em `WORKING`.
+
+## Senhas, Termos de Uso e privacidade (24/09/2026)
+
+- Os cadastros públicos de barbearia e cliente agora exibem requisitos de senha com indicadores individuais, confirmação da senha e bloqueio do envio enquanto houver requisito pendente.
+- A criação e alteração de senha de membros da equipe também exibe os mesmos indicadores. O backend passou a exigir, além dos validadores nativos do Django, letra maiúscula, letra minúscula, número e caractere especial.
+- O cadastro público exige checkbox de concordância com os Termos de Uso e ciência do Aviso de Privacidade. O backend rejeita cadastros sem aceite e registra o aceite, data/hora e IP de origem nos campos já existentes do usuário.
+- Foi criado um modal de Termos de Uso e Aviso de Privacidade, acessível nos cadastros e no rodapé público. O texto cobre serviço, responsabilidades, categorias e finalidades de dados, bases legais, papéis de controlador/operador, compartilhamentos, retenção, segurança, direitos do titular, comunicações, encerramento e contato. A versão operacional deve receber revisão jurídica antes de ser considerada parecer de conformidade.
+- A implementação foi baseada nos princípios e direitos da Lei nº 13.709/2018 e em materiais orientativos da ANPD. Ela não presume que todo tratamento dependa de consentimento.
+- Validações locais: lint aprovado; 9 testes frontend aprovados; build Vite aprovado; 36 testes direcionados do backend aprovados; `git diff --check` aprovado.
