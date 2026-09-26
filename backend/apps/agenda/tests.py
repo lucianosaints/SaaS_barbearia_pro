@@ -107,9 +107,15 @@ class BusinessRulesTests(APITestCase):
         pk = self.book()
         url = '/api/disponibilidade/'
         params = {'data': self.start.date().isoformat(), 'barbeiro_id': self.barber.pk, 'servicos': str(self.service.pk)}
-        self.assertNotIn('10:00', self.client.get(url, params).data['horarios_disponiveis'])
+        occupied = self.client.get(url, params).data
+        self.assertNotIn('10:00', occupied['horarios_disponiveis'])
+        self.assertIn('10:00', occupied['horarios_ocupados'])
         self.assertEqual(self.client.patch(f'/api/agendamentos/{pk}/cancelar/').status_code, 200)
-        self.assertIn('10:00', self.client.get(url, params).data['horarios_disponiveis'])
+        released = self.client.get(url, params).data
+        self.assertIn('10:00', released['horarios_disponiveis'])
+        self.assertNotIn('10:00', released['horarios_ocupados'])
+        appointment = Agendamento.objects.get(pk=pk)
+        self.assertEqual(appointment.status, 'CANCELADO')
         self.assertEqual(self.client.patch(f'/api/agendamentos/{pk}/cancelar/').status_code, 400)
         self.book()
 

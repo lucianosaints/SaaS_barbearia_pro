@@ -559,3 +559,39 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Somente backend e frontend foram recriados com `docker compose up -d --no-deps backend frontend`. Não houve `down`, remoção de órfãos ou remoção de volumes. O PostgreSQL órfão foi preservado.
 - Inicialização: configuração Django válida, nenhuma migração pendente, arquivos estáticos coletados, Gunicorn e Nginx ativos.
 - Verificação final: frontend 200, API protegida 401, painel 200, `DATABASE_OK=True`, Redis `PONG` e sessão WAHA `tenant_3` em `WORKING` com HTTP 200.
+
+## Marketing, testes ponta a ponta e homologação complementar (25/09/2026)
+
+### Materiais de marketing locais
+
+- Foi criada a pasta `marketing/` com artes e vídeos promocionais. As versões mais importantes são `marketing/salaopro-video-30s-prints-reais.mp4`, montada somente com os prints reais enviados pelo usuário, e `marketing/checklist-funcoes-gestor-salaopro.png`, com as funções disponíveis ao gestor.
+- Os prints originais foram guardados em `marketing/prints-reais/`. Os scripts `marketing/render_video_real.py` e `marketing/criar_checklist_gestor.py` permitem reproduzir os materiais. O primeiro vídeo e as imagens geradas artificialmente permanecem como versões anteriores; para divulgação do funcionamento real, preferir a versão `prints-reais`.
+- Foi instalada localmente, fora do código da aplicação, a dependência `imageio-ffmpeg` em `.video_tools/` para codificação dos vídeos. Não é uma dependência de produção.
+
+### Jornada completa automatizada em ambiente local
+
+- Foi criado `backend/apps/agenda/tests_e2e_journey.py`, que testa por API a jornada completa em banco descartável: cadastro da barbearia e gestor, período de teste, configurações, criação de serviço e profissional, catálogo público sem dados privados, cadastro do cliente com aceite dos termos, disponibilidade, agendamento, ocupação do horário, visualização pelo gestor, confirmação e visualização pelo cliente.
+- A jornada passou isoladamente. Em conjunto com `apps.agenda.tests_integration`, foram executados **11 testes aprovados**.
+- O teste observou que `registrar_saas` calcula `data_fim_trial` com `timezone.now().date()` (UTC). Perto da virada do dia em São Paulo isso pode conceder um dia adicional. O usuário decidiu manter o comportamento e tratá-lo como bônus; não corrigir sem nova solicitação.
+- O teste existente `BusinessRulesTests.test_cancel_frees_slot` foi reforçado: antes do cancelamento, o horário deve estar em `horarios_ocupados`; depois, deve voltar para `horarios_disponiveis`, sair dos ocupados e o registro deve permanecer com status `CANCELADO`. O teste isolado passou. Uma segunda tentativa de cancelamento é recusada, como esperado.
+
+### Jornada controlada executada em produção
+
+- Com autorização explícita do usuário, `backend/qa_production_journey.py` executou uma homologação real pela API pública HTTPS sem imprimir tokens, senhas ou telefone.
+- A empresa de homologação `QA Homologação ...`, ID `4`, foi criada. Foram validados cadastro do gestor, serviço, profissional, cliente, consulta de disponibilidade, criação do agendamento, confirmação pelo gestor, visualização pelo cliente, cancelamento e liberação imediata do horário.
+- Ao terminar, serviço e profissional de teste foram desativados e a empresa ID `4` foi desativada. Uma consulta pública posterior confirmou que ela não aparece no catálogo ativo. Preservar o histórico para auditoria.
+- Como cada empresa possui sessão WAHA própria e a empresa de homologação não tinha WhatsApp conectado, a entrega real foi testada separadamente na empresa ativa ID `3`, que já possuía WAHA conectado. Foi criado o agendamento de teste ID `17` para **02/10/2026 às 09:00**, usando o número autorizado pelo usuário; o agendamento foi cancelado logo depois e o horário voltou a ficar disponível.
+- O sistema disparou as mensagens de criação e cancelamento para o cliente. A confirmação visual do recebimento pelo usuário ainda deve ser registrada se ele responder. O agendamento ID `17` e o cliente QA permanecem no histórico real; o agendamento está cancelado e não ocupa a agenda.
+- O script de QA de produção é potencialmente mutável: não executá-lo novamente por rotina nem em CI. Ele requer `QA_CLIENT_PHONE` e cria registros reais.
+
+### Fluxo financeiro conferido em produção
+
+- O usuário perguntou por que um atendimento pago de R$ 80 não aparecia no Dashboard Financeiro. A regra foi conferida: o endpoint financeiro contabiliza apenas agendamentos com status `CONCLUIDO`, não apenas `PAGO` ou `CONFIRMADO`.
+- O usuário alterou o atendimento para `CONCLUIDO` e confirmou que faturamento bruto, comissão e lucro líquido apareceram corretamente. O fluxo financeiro de produção está validado nesse ponto.
+- Há uma inconsistência visual pendente: `AgendaTable.jsx` calcula “Total de Vendas Hoje” somando `valor_total` de todos os agendamentos exibidos, inclusive confirmados e cancelados, enquanto o Dashboard Financeiro soma somente concluídos. Corrigir o cálculo ou renomear o indicador em uma próxima alteração; nenhuma correção foi aplicada nesta sessão.
+
+### Estado local ao encerrar
+
+- Alterados/novos desta sessão: `backend/apps/agenda/tests.py`, `backend/apps/agenda/tests_e2e_journey.py`, `backend/qa_production_journey.py` e `marketing/`.
+- A foto local não rastreada `backend/media/profissionais/carlos.barbergoldenbarber.com_b1f33bd6.jpg` já existia e continua preservada; não adicionar nem remover sem decisão explícita.
+- As mudanças desta sessão ainda não receberam commit nem foram enviadas para `develop`. Não descartar os arquivos locais.
