@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiArrowUpRight, FiCalendar, FiCheck, FiCreditCard, FiMessageCircle, FiUsers, FiZap } from 'react-icons/fi';
 import useAgendamentoStore from '../store/useAgendamentoStore';
@@ -9,6 +9,7 @@ import marcosAvatar from '../imagem/depoimento-marcos.webp';
 import OnboardingModal from '../components/OnboardingModal';
 import AuthModal from '../components/AuthModal';
 import TermsModal from '../components/TermsModal';
+import api from '../services/api';
 
 const benefits = [
   { icon: FiCalendar, title: 'Agenda que trabalha por você', text: 'Horários, bloqueios e fila de espera organizados em uma experiência simples para equipe e clientes.' },
@@ -47,6 +48,18 @@ export default function LandingPage() {
   const { setAuthModalOpen } = useAgendamentoStore();
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
+  const [visitas, setVisitas] = useState(null);
+
+  useEffect(() => {
+    const countedKey = 'salaopro_visit_counted';
+    const method = sessionStorage.getItem(countedKey) ? 'get' : 'post';
+    api[method]('/api/site/visitas/')
+      .then((response) => {
+        setVisitas(response.data.total);
+        if (method === 'post') sessionStorage.setItem(countedKey, '1');
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen overflow-hidden bg-background text-text-primary">
@@ -75,7 +88,8 @@ export default function LandingPage() {
           <div className="relative mx-auto grid w-full max-w-7xl gap-12 px-5 pb-16 lg:grid-cols-[1.08fr_.92fr] lg:px-8">
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .65 }} className="max-w-3xl">
               <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 text-sm font-bold text-cyan-200">
-                <FiZap /> Sua operação no ritmo do seu talento
+                <FiZap /> Plataforma em crescimento
+                {visitas !== null && <span className="border-l border-cyan-200/30 pl-2">{visitas.toLocaleString('pt-BR')} visitas reais</span>}
               </div>
               <h1 className="text-5xl font-black leading-[.98] tracking-[-.055em] text-white sm:text-6xl lg:text-7xl xl:text-[5.4rem]">
                 Agenda cheia.<br />Gestão <span className="bg-gradient-to-r from-gold via-orange-400 to-cyan-300 bg-clip-text text-transparent">leve.</span>

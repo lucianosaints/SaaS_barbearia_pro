@@ -148,3 +148,15 @@ class Empresa(models.Model):
                 counter += 1
             self.slug = slug
         super().save(*args, **kwargs)
+
+
+class SiteVisitCounter(models.Model):
+    total = models.PositiveBigIntegerField(default=0)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _('Contador de visitas do site')
+        verbose_name_plural = _('Contador de visitas do site')
+
+    def __str__(self):
+        return f'{self.total} visitas'

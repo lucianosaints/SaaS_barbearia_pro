@@ -169,6 +169,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'auth_ip': os.environ.get('AUTH_IP_RATE_LIMIT', '20/min'),
         'auth_account': os.environ.get('AUTH_ACCOUNT_RATE_LIMIT', '5/min'),
+        'site_visit': os.environ.get('SITE_VISIT_RATE_LIMIT', '30/min'),
         'anon': '100/minute', 'user': '1000/day', 'fila_espera': '100/minute',
     },
 }
