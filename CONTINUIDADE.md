@@ -627,3 +627,11 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Validação local: migrações sem divergência, 84 testes backend aprovados (um ignorado), 11 testes frontend aprovados, lint e build aprovados. Os dois testes específicos também passaram na imagem candidata.
 - Somente backend e frontend foram recriados com `--no-deps`. A migração `tenants.0010_sitevisitcounter` foi aplicada com sucesso e criou o contador em zero.
 - Pós-publicação: `DATABASE_OK=True`, Redis `PONG`, frontend 200, consulta pública do contador retornou `{"total":0}`, API protegida 401 e painel 200. A validação usou apenas GET e não aumentou artificialmente o total.
+
+## Correção dos alertas falsos do WhatsApp (27/09/2026)
+
+- A caixa de entrada estava recebendo a cada hora o assunto “URGENTE: WhatsApp Desconectado no Salão_PRO!” porque o cron executava `check_waha_status`, mas o `backend/.env` ainda apontava `WAHA_SESSION=default`. Essa sessão não existe no ambiente multiempresa.
+- Em produção, `WAHA_SESSION` foi corrigido para `tenant_3`, a sessão principal atualmente conectada. Foi criada antes a cópia privada `/root/backend-env-before-waha-monitor-fix-20260928-013319`.
+- Somente o container backend foi recriado, sem interromper ou recriar PostgreSQL, Redis, WAHA ou volumes.
+- O mesmo comando usado pelo cron foi executado manualmente e confirmou: `WAHA está operando normalmente. Sessão 'tenant_3' conectada.` O monitor horário permanece ativo e agora só deve enviar e-mail se essa sessão realmente ficar indisponível.
+- As mensagens antigas da caixa de entrada não foram apagadas.
