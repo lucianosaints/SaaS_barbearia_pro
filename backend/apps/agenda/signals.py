@@ -3,9 +3,17 @@ from django.dispatch import receiver
 from django.core.mail import send_mail
 from django.conf import settings
 from apps.agenda.models import Agendamento, FilaEspera
+from apps.agenda.background import enqueue_notification
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _dispatch_notification(callback) -> None:
+    if settings.AGENDA_NOTIFICATIONS_ASYNC:
+        enqueue_notification(callback)
+    else:
+        callback()
 
 @receiver(post_save, sender=Agendamento)
 def marcar_agendamento_criado(sender, instance: Agendamento, created: bool, **kwargs) -> None:
@@ -173,7 +181,10 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
                 logger.error(f"Falha ao enviar WAHA para cliente no agendamento {inst.id}: {str(e)}")
 
         from django.db import transaction
-        transaction.on_commit(disparar_notificacoes)
+        # O WAHA pode aguardar até 10 segundos por destinatário. Executar essas
+        # chamadas no on_commit atrasa a resposta HTTP e faz o navegador acusar
+        # timeout mesmo depois de a reserva ter sido salva com sucesso.
+        transaction.on_commit(lambda: _dispatch_notification(disparar_notificacoes))
 
 
 @receiver(pre_save, sender=Agendamento)

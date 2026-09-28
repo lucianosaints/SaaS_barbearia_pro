@@ -22,6 +22,7 @@ load_dotenv(BASE_DIR / '.env', override=False)
 
 # Security
 DEBUG = env_bool('DJANGO_DEBUG')
+AGENDA_NOTIFICATIONS_ASYNC = env_bool('AGENDA_NOTIFICATIONS_ASYNC', not DEBUG)
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
 if DEBUG and not SECRET_KEY:
     SECRET_KEY = 'django-insecure-local-development-only-not-for-production'

@@ -8,6 +8,7 @@ import StepDataHora from '../components/StepDataHora';
 import StepPagamento from '../components/StepPagamento';
 import AuthModal from '../components/AuthModal';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatApiError } from '../utils/apiError';
 
 import bannerImg from '../imagem/Babearia2.jpg';
 
@@ -97,11 +98,7 @@ export default function AgendamentoWizard() {
       resetStore();
     } catch (err) {
       console.error('Erro ao salvar agendamento:', err);
-      setSubmitError(
-        err.response?.data?.non_field_errors?.[0] || 
-        err.response?.data?.detail || 
-        'Ocorreu uma falha ao realizar o agendamento. Por favor, tente novamente.'
-      );
+      setSubmitError(formatApiError(err));
     } finally {
       setSubmitting(false);
     }
