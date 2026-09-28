@@ -220,6 +220,10 @@ CSRF_COOKIE_SECURE = not DEBUG
 SECURE_HSTS_SECONDS = int(os.environ.get('DJANGO_HSTS_SECONDS', '0' if DEBUG else '3600'))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool('DJANGO_HSTS_INCLUDE_SUBDOMAINS')
 SECURE_HSTS_PRELOAD = env_bool('DJANGO_HSTS_PRELOAD')
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+X_FRAME_OPTIONS = 'DENY'
 # Ative apenas quando o proxy remove o header fornecido pelo cliente e o define corretamente.
 if env_bool('DJANGO_TRUST_PROXY'):
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

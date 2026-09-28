@@ -62,6 +62,13 @@ class DatabaseConfigurationTests(SimpleTestCase):
         self.assertEqual(config['LOCATION'], 'redis://cache.internal:6379/7')
         self.assertEqual(config['KEY_PREFIX'], 'barbeiro-pro')
 
+    def test_browser_security_headers_are_explicit(self):
+        config = self.settings()
+        self.assertTrue(config['SECURE_CONTENT_TYPE_NOSNIFF'])
+        self.assertEqual(config['SECURE_REFERRER_POLICY'], 'strict-origin-when-cross-origin')
+        self.assertEqual(config['SECURE_CROSS_ORIGIN_OPENER_POLICY'], 'same-origin')
+        self.assertEqual(config['X_FRAME_OPTIONS'], 'DENY')
+
     def test_development_cache_remains_local(self):
         config = self.settings(DJANGO_DEBUG='True', DB_ENGINE=None)['CACHES']['default']
         self.assertEqual(config['BACKEND'], 'django.core.cache.backends.locmem.LocMemCache')

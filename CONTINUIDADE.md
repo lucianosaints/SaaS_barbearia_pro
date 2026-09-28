@@ -635,3 +635,12 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Somente o container backend foi recriado, sem interromper ou recriar PostgreSQL, Redis, WAHA ou volumes.
 - O mesmo comando usado pelo cron foi executado manualmente e confirmou: `WAHA está operando normalmente. Sessão 'tenant_3' conectada.` O monitor horário permanece ativo e agora só deve enviar e-mail se essa sessão realmente ficar indisponível.
 - As mensagens antigas da caixa de entrada não foram apagadas.
+
+## Endurecimento de segurança do navegador (27/09/2026)
+
+- Foi preparada localmente a primeira etapa de baixo risco do reforço de segurança. O Nginx do frontend agora envia CSP restritiva, `Permissions-Policy`, `Referrer-Policy`, proteção contra MIME sniffing e enquadramento, isolamento de contexto e oculta a versão do servidor.
+- A CSP permite somente os recursos usados atualmente: arquivos da própria aplicação, Google Fonts, imagens HTTPS e dados/blob necessários para avatares, QR codes e exportações. Scripts continuam limitados à própria origem.
+- O Django passou a declarar explicitamente `nosniff`, referência restrita, isolamento de abertura entre origens e bloqueio total de frames.
+- Validação local: 85 testes backend aprovados (um ignorado), 19 testes frontend aprovados, lint e build aprovados. `npm audit --omit=dev` encontrou zero vulnerabilidades nas dependências de produção.
+- A migração dos tokens do `localStorage` para cookies `HttpOnly` não faz parte desta etapa; ela altera o fluxo completo de autenticação e deve ser implementada e homologada separadamente.
+- `HSTS includeSubDomains/preload` permanece desativado até que todos os subdomínios sejam inventariados e confirmados com HTTPS, evitando indisponibilidade acidental.
