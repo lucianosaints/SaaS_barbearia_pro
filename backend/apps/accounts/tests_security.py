@@ -1,6 +1,8 @@
 from django.core.cache import cache
+from django.core import mail
 from django.test import override_settings
 from rest_framework.test import APIClient, APITestCase
+from urllib.parse import parse_qs, urlparse
 
 from apps.accounts.models import Usuario
 from apps.tenants.models import Empresa
@@ -73,6 +75,49 @@ class SecurityHardeningTests(APITestCase):
         self.assertTrue(user.aceitou_termos)
         self.assertIsNotNone(user.data_aceite_termos)
         self.assertEqual(user.ip_aceite_termos, '10.20.30.40')
+
+    @override_settings(
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        PUBLIC_FRONTEND_URL='https://www.salaopro.site',
+        PASSWORD_RESET_TIMEOUT=1800,
+    )
+    def test_password_reset_email_is_neutral_single_use_and_revokes_sessions(self):
+        login = self.client.post('/api/token/', {
+            'username': self.manager.username, 'password': 'SecurityTest!2026'
+        }, format='json')
+        old_access = APIClient()
+        old_access.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
+
+        requested = self.client.post('/api/senha/recuperar/', {'email': self.manager.email}, format='json')
+        self.assertEqual(requested.status_code, 200)
+        self.assertNotIn('existe', requested.data['detail'].casefold())
+        self.assertEqual(len(mail.outbox), 1)
+        link = next(line for line in mail.outbox[0].body.splitlines() if line.startswith('https://'))
+        query = parse_qs(urlparse(link).query)
+        payload = {
+            'uid': query['uid'][0], 'token': query['token'][0],
+            'nova_senha': 'NewSecurity!2027', 'confirmar_senha': 'NewSecurity!2027',
+        }
+        changed = self.client.post('/api/senha/redefinir/', payload, format='json')
+        self.assertEqual(changed.status_code, 200, changed.data)
+        self.assertEqual(old_access.get('/api/usuarios/me/').status_code, 401)
+        self.assertEqual(self.client.post('/api/token/refresh/', {'refresh': login.data['refresh']}, format='json').status_code, 401)
+        self.assertEqual(self.client.post('/api/token/', {'username': self.manager.username, 'password': 'SecurityTest!2026'}, format='json').status_code, 401)
+        self.assertEqual(self.client.post('/api/token/', {'username': self.manager.username, 'password': 'NewSecurity!2027'}, format='json').status_code, 200)
+        self.assertEqual(self.client.post('/api/senha/redefinir/', payload, format='json').status_code, 400)
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_password_reset_unknown_email_has_same_response(self):
+        response = self.client.post('/api/senha/recuperar/', {'email': 'unknown@example.test'}, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_password_reset_rejects_invalid_link_and_weak_password(self):
+        invalid = self.client.post('/api/senha/redefinir/', {
+            'uid': 'invalid', 'token': 'invalid',
+            'nova_senha': 'Weak!1aa', 'confirmar_senha': 'Weak!1aa',
+        }, format='json')
+        self.assertEqual(invalid.status_code, 400)
 
     def test_waha_requires_tenant_manager(self):
         self.client.force_authenticate(self.professional)

@@ -99,6 +99,25 @@ class RegistroClienteSerializer(serializers.Serializer):
         return attrs
 
 
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=150)
+
+    def validate_email(self, value):
+        return value.strip().lower()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField(max_length=128)
+    token = serializers.CharField(max_length=256)
+    nova_senha = serializers.CharField(write_only=True, trim_whitespace=False)
+    confirmar_senha = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate(self, attrs):
+        if attrs['nova_senha'] != attrs['confirmar_senha']:
+            raise serializers.ValidationError({'confirmar_senha': 'As senhas não são iguais.'})
+        return attrs
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Serializer customizado para injetar dados do perfil do usuário no retorno de autenticação.

@@ -11,6 +11,7 @@ const AgendamentoWizard = lazy(() => import('./pages/AgendamentoWizard'))
 const PainelCliente = lazy(() => import('./pages/PainelCliente'))
 const FinanceiroDashboard = lazy(() => import('./pages/FinanceiroDashboard'))
 const Assinatura = lazy(() => import('./pages/Assinatura'))
+const RedefinirSenha = lazy(() => import('./pages/RedefinirSenha'))
 
 const LoadingScreen = () => (
   <div className="flex min-h-[50vh] items-center justify-center text-sm text-text-secondary">
@@ -33,7 +34,7 @@ function App() {
 
   // Redireciona para a landing page se logout, ou para o dashboard se login
   useEffect(() => {
-    if (location.pathname.startsWith('/agendar/') || location.pathname.startsWith('/checkout-assinatura')) {
+    if (location.pathname.startsWith('/agendar/') || location.pathname.startsWith('/checkout-assinatura') || location.pathname.startsWith('/redefinir-senha')) {
        // Se estiver na rota de agendamento ou assinatura, não força a aba landing.
        return;
     }
@@ -176,6 +177,10 @@ function App() {
         ) : location.pathname.startsWith('/checkout-assinatura') ? (
           <Routes>
             <Route path="/checkout-assinatura" element={<Assinatura />} />
+          </Routes>
+        ) : location.pathname.startsWith('/redefinir-senha') ? (
+          <Routes>
+            <Route path="/redefinir-senha" element={<RedefinirSenha />} />
           </Routes>
         ) : (
           <>

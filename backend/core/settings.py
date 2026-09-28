@@ -234,12 +234,16 @@ EMAIL_USE_SSL = env_bool('EMAIL_USE_SSL', False)
 EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', not EMAIL_USE_SSL)
 EMAIL_TIMEOUT = 10
 EMAIL_ALERT_TO = env_list('EMAIL_ALERT_TO')
+PUBLIC_FRONTEND_URL = os.environ.get('PUBLIC_FRONTEND_URL', 'http://localhost:3000' if DEBUG else '').rstrip('/')
+PASSWORD_RESET_TIMEOUT = int(os.environ.get('PASSWORD_RESET_TIMEOUT', '1800'))
 if EMAIL_USE_SSL and EMAIL_USE_TLS:
     raise ImproperlyConfigured('EMAIL_USE_SSL e EMAIL_USE_TLS nao podem estar ativos ao mesmo tempo.')
 if not DEBUG and EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':
     missing = [name for name in ('EMAIL_HOST', 'EMAIL_HOST_USER', 'EMAIL_HOST_PASSWORD', 'DEFAULT_FROM_EMAIL') if not os.environ.get(name, '').strip()]
     if missing:
         raise ImproperlyConfigured('Configure as variaveis SMTP: ' + ', '.join(missing))
+if not DEBUG and not PUBLIC_FRONTEND_URL.startswith('https://'):
+    raise ImproperlyConfigured('Configure PUBLIC_FRONTEND_URL com uma origem HTTPS valida.')
 
 FILE_UPLOAD_PERMISSIONS = 0o644
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755

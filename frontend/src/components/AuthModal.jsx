@@ -14,6 +14,7 @@ export default function AuthModal({ onAuthSuccess }) {
   const [activeTab, setActiveTab] = useState('login'); // 'login' ou 'cadastro'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   // Estados dos inputs
   const [email, setEmail] = useState('');
@@ -93,6 +94,21 @@ export default function AuthModal({ onAuthSuccess }) {
     }
   };
 
+  const handleRecuperacao = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const response = await api.post('/api/senha/recuperar/', { email });
+      setSuccessMessage(response.data.detail);
+    } catch (err) {
+      setError(err.response?.data?.email?.[0] || err.response?.data?.detail || 'Não foi possível solicitar a recuperação agora.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-background-darker/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-background-paper border border-white/5 rounded-2xl w-full max-w-md overflow-hidden relative shadow-2xl shadow-gold/5">
@@ -108,7 +124,7 @@ export default function AuthModal({ onAuthSuccess }) {
         {/* Abas */}
         <div className="flex border-b border-white/5">
           <button
-            onClick={() => { setActiveTab('login'); setError(null); }}
+            onClick={() => { setActiveTab('login'); setError(null); setSuccessMessage(null); }}
             className={`flex-1 py-4 text-sm font-semibold transition-all ${
               activeTab === 'login'
                 ? 'border-b-2 border-gold text-gold bg-white/[0.01]'
@@ -118,7 +134,7 @@ export default function AuthModal({ onAuthSuccess }) {
             Acessar Conta
           </button>
           <button
-            onClick={() => { setActiveTab('cadastro'); setError(null); }}
+            onClick={() => { setActiveTab('cadastro'); setError(null); setSuccessMessage(null); }}
             className={`flex-1 py-4 text-sm font-semibold transition-all ${
               activeTab === 'cadastro'
                 ? 'border-b-2 border-gold text-gold bg-white/[0.01]'
@@ -135,8 +151,30 @@ export default function AuthModal({ onAuthSuccess }) {
               ⚠️ {error}
             </div>
           )}
+          {successMessage && (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs p-3 rounded-lg mb-4 text-center">
+              ✓ {successMessage}
+            </div>
+          )}
 
-          {activeTab === 'login' ? (
+          {activeTab === 'recuperacao' ? (
+            <form onSubmit={handleRecuperacao} className="space-y-4">
+              <div>
+                <h3 className="text-lg font-bold text-gold-light">Recuperar senha</h3>
+                <p className="mt-1 text-xs text-text-muted">Informe o e-mail da conta para receber um link válido por 30 minutos.</p>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">E-mail</label>
+                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="exemplo@gmail.com" className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold transition-colors" />
+              </div>
+              <button type="submit" disabled={loading} className="btn-gold w-full py-3 text-sm">
+                {loading ? 'Enviando...' : 'Enviar link de recuperação'}
+              </button>
+              <button type="button" onClick={() => { setActiveTab('login'); setError(null); setSuccessMessage(null); }} className="w-full text-xs text-text-secondary hover:text-gold">
+                Voltar para o login
+              </button>
+            </form>
+          ) : activeTab === 'login' ? (
             /* Formulário de Login */
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
@@ -162,6 +200,10 @@ export default function AuthModal({ onAuthSuccess }) {
                   className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold transition-colors"
                 />
               </div>
+
+              <button type="button" onClick={() => { setActiveTab('recuperacao'); setError(null); setSuccessMessage(null); }} className="text-xs font-semibold text-gold hover:text-gold-light underline">
+                Esqueci minha senha
+              </button>
 
               <button
                 type="submit"

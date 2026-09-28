@@ -1,5 +1,13 @@
 from django.db import IntegrityError, transaction
 from django.conf import settings
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
+from django.core.cache import cache
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.mail import send_mail
+from django.db.models import Q
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny, SAFE_METHODS, IsAuthenticated
@@ -11,12 +19,14 @@ from rest_framework.throttling import AnonRateThrottle, SimpleRateThrottle
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from apps.accounts.models import Usuario
 from apps.accounts.permissions import PublicReadAdminWrite, is_manager
 from apps.accounts.serializers import (
     UsuarioSerializer, ProfissionalPublicoSerializer, RegistroClienteSerializer,
     CustomTokenObtainPairSerializer,
+    PasswordResetConfirmSerializer, PasswordResetRequestSerializer,
 )
 
 
@@ -60,6 +70,79 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class CustomTokenRefreshView(TokenRefreshView):
     throttle_classes = [AuthIPThrottle, AuthAccountThrottle]
+
+
+PASSWORD_RESET_RESPONSE = {
+    'detail': 'Se existir uma conta ativa para esse e-mail, enviaremos as instruções de recuperação.'
+}
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([AuthIPThrottle, AuthAccountThrottle])
+def solicitar_recuperacao_senha(request):
+    serializer = PasswordResetRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    email = serializer.validated_data['email']
+    usuario = Usuario.objects.filter(
+        Q(email__iexact=email) | Q(username__iexact=email),
+        is_active=True,
+    ).order_by('pk').first()
+
+    if usuario and usuario.email:
+        uid = urlsafe_base64_encode(force_bytes(usuario.pk))
+        token = default_token_generator.make_token(usuario)
+        base_url = settings.PUBLIC_FRONTEND_URL.rstrip('/')
+        link = f'{base_url}/redefinir-senha?uid={uid}&token={token}'
+        nome = usuario.get_full_name() or usuario.username
+        send_mail(
+            subject='Recuperação de senha — Salão Pro',
+            message=(
+                f'Olá, {nome}!\n\n'
+                'Recebemos uma solicitação para redefinir sua senha no Salão Pro.\n'
+                f'Acesse o link abaixo em até {settings.PASSWORD_RESET_TIMEOUT // 60} minutos:\n\n'
+                f'{link}\n\n'
+                'Se você não solicitou essa alteração, ignore esta mensagem. Sua senha continuará a mesma.'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[usuario.email],
+            fail_silently=True,
+        )
+
+    return Response(PASSWORD_RESET_RESPONSE, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([AuthIPThrottle, AuthAccountThrottle])
+def confirmar_recuperacao_senha(request):
+    serializer = PasswordResetConfirmSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    data = serializer.validated_data
+    try:
+        usuario_id = force_str(urlsafe_base64_decode(data['uid']))
+        usuario = Usuario.objects.get(pk=usuario_id, is_active=True)
+    except (TypeError, ValueError, OverflowError, Usuario.DoesNotExist):
+        usuario = None
+
+    if not usuario or not default_token_generator.check_token(usuario, data['token']):
+        return Response({'detail': 'Link inválido ou expirado. Solicite uma nova recuperação.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        validate_password(data['nova_senha'], usuario)
+    except DjangoValidationError as exc:
+        raise ValidationError({'nova_senha': exc.messages})
+
+    usuario.set_password(data['nova_senha'])
+    usuario.save(update_fields=['password'])
+    for outstanding in OutstandingToken.objects.filter(user=usuario):
+        BlacklistedToken.objects.get_or_create(token=outstanding)
+    cache.set(
+        f'user_tokens_valid_after:{usuario.pk}',
+        int(timezone.now().timestamp()),
+        timeout=int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds()) + 60,
+    )
+    return Response({'detail': 'Senha redefinida com sucesso. Entre novamente com a nova senha.'})
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):

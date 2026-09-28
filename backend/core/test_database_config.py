@@ -12,6 +12,7 @@ class DatabaseConfigurationTests(SimpleTestCase):
             'DJANGO_DEBUG': 'False',
             'DJANGO_SECRET_KEY': 'test-only-key-never-use-in-production-' + 'x' * 50,
             'DJANGO_ALLOWED_HOSTS': 'www.salaopro.site,salaopro.site',
+            'PUBLIC_FRONTEND_URL': 'https://www.salaopro.site',
             'DB_ENGINE': 'postgresql', 'DB_NAME': 'test_config',
             'DB_USER': 'test_config', 'DB_HOST': '127.0.0.1',
         }
@@ -27,6 +28,10 @@ class DatabaseConfigurationTests(SimpleTestCase):
     def test_production_cannot_fall_back_to_sqlite(self):
         with self.assertRaises(ImproperlyConfigured):
             self.settings(DB_ENGINE='sqlite')
+
+    def test_production_password_reset_requires_https_frontend(self):
+        with self.assertRaises(ImproperlyConfigured):
+            self.settings(PUBLIC_FRONTEND_URL='http://salaopro.site')
 
     def test_missing_production_database_fields_fail_before_connecting(self):
         for field in ('DB_NAME', 'DB_USER', 'DB_HOST'):
