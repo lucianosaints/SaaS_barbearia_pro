@@ -647,3 +647,11 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Publicado em produção no commit `d8719d5`. Antes da troca foi criado e validado o backup `/root/salaopro-predeploy-security-d8719d5`, com dump PostgreSQL e mídia compactada e hashes SHA-256 registrados.
 - A imagem candidata passou em `nginx -t`. Somente backend e frontend foram recriados com `--no-deps`; banco, Redis, WAHA e volumes foram preservados. Depois da publicação: frontend 200, API protegida 401, painel 302 para login, Redis `PONG`, containers ativos e nenhuma migração pendente.
 - Os cabeçalhos novos foram confirmados externamente. O Nginx do host também recebeu `server_tokens off`, com cópia anterior em `/root/salaopro-nginx-before-server-tokens-d8719d5.conf`; `nginx -t` passou e o reload não interrompeu o site. O cabeçalho público agora informa apenas `Server: nginx`, sem versão.
+
+## Ideia para implementar: Vitrine do Salão (28/09/2026)
+
+- Criar uma pequena loja/vitrine para cada estabelecimento divulgar produtos de cabelo, barba, kits e promoções. Nome sugerido para o recurso: **Vitrine do Salão** ou **Loja do Salão**.
+- Primeira versão recomendada: cadastro de produto com foto, nome, descrição, preço, estoque/disponibilidade e promoção; catálogo público por salão; carrinho; retirada no estabelecimento; pedido encaminhado ao WhatsApp do próprio salão. Não incluir pagamento online nem entrega nesta primeira fase.
+- Integrar a vitrine ao agendamento: oferecer produtos depois da reserva e permitir que o cliente adicione itens para retirar no dia do atendimento.
+- Evoluções posteriores, somente após validar o uso: baixa automática de estoque, histórico de pedidos, PIX/cartão, cupons, entrega local, fidelidade nas compras, comissão por vendedor e relatórios de produtos.
+- Manter isolamento multiempresa: cada salão administra e exibe apenas seus próprios produtos, pedidos, promoções e estoque.
