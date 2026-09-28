@@ -606,3 +606,14 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Pós-publicação: nenhuma migração pendente, Gunicorn 26.2.0 ativo, `DATABASE_OK=True`, Redis `PONG`, frontend 200, API protegida 401 e painel 200. `AGENDA_NOTIFICATIONS_ASYNC=True` e o novo bundle frontend foram confirmados nos containers.
 - WAHA: `tenant_3` permaneceu `WORKING`; `tenant_5` estava em `SCAN_QR_CODE`. O comando genérico `check_waha_status` consultou a configuração legada `default`, inexistente, e enviou um alerta por e-mail. Esse alerta isolado não representa queda da sessão principal; revisar futuramente o valor de `WAHA_SESSION` ou tornar o monitoramento multiempresa.
 - Permaneceram preservados no servidor os arquivos não rastreados `backend/media/profissionais/pedro_0SJUBdN.jpg` e `backend/test_error.py`. Localmente, a foto e os materiais de marketing não foram incluídos no commit da correção.
+
+## Recuperação de senha por e-mail (27/09/2026)
+
+- Implementada e publicada no commit `802e196`. O login agora oferece “Esqueci minha senha”; a solicitação envia um link por SMTP e a rota pública `/redefinir-senha` permite definir e confirmar uma nova senha.
+- O link usa o gerador de tokens do Django, expira em 30 minutos, é de uso único e aplica os mesmos validadores fortes do cadastro. A resposta de solicitação é neutra para não revelar se uma conta existe, e os endpoints reutilizam os limites de autenticação por IP/conta.
+- Após a troca, refresh tokens existentes são incluídos na blacklist e access tokens emitidos anteriormente são recusados pelo cache compartilhado até expirarem. O usuário precisa entrar novamente com a nova senha.
+- Configuração de produção adicionada ao `backend/.env`: `PUBLIC_FRONTEND_URL=https://www.salaopro.site` e `PASSWORD_RESET_TIMEOUT=1800`. Cópia privada anterior em `/root/backend-env-before-password-reset-20260928-010543`.
+- Backup pré-publicação validado em `/root/salaopro-predeploy-20260928-010510`, contendo dump PostgreSQL e mídia compactada, ambos com verificação estrutural e hashes SHA-256.
+- Validação: 82 testes backend aprovados (um ignorado), 11 testes frontend aprovados, lint e build aprovados. Na imagem candidata, os testes de link, uso único e revogação passaram com HTTPS desativado apenas no processo descartável; `nginx -t` passou.
+- Somente backend e frontend foram recriados com `--no-deps`. Pós-publicação: nenhuma migração pendente, Gunicorn ativo, `DATABASE_OK=True`, Redis `PONG`, página inicial 200, página de redefinição 200, solicitação neutra com e-mail inexistente 200, API protegida 401 e painel 200.
+- O teste automático em produção não enviou e-mail real: usou endereço inexistente. Fazer a confirmação visual final pelo botão “Esqueci minha senha” com uma conta autorizada e verificar recebimento, link, redefinição e novo login.
