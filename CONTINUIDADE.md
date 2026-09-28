@@ -617,3 +617,13 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Validação: 82 testes backend aprovados (um ignorado), 11 testes frontend aprovados, lint e build aprovados. Na imagem candidata, os testes de link, uso único e revogação passaram com HTTPS desativado apenas no processo descartável; `nginx -t` passou.
 - Somente backend e frontend foram recriados com `--no-deps`. Pós-publicação: nenhuma migração pendente, Gunicorn ativo, `DATABASE_OK=True`, Redis `PONG`, página inicial 200, página de redefinição 200, solicitação neutra com e-mail inexistente 200, API protegida 401 e painel 200.
 - O teste automático em produção não enviou e-mail real: usou endereço inexistente. Fazer a confirmação visual final pelo botão “Esqueci minha senha” com uma conta autorizada e verificar recebimento, link, redefinição e novo login.
+
+## Contador real de visitas (27/09/2026)
+
+- Implementado e publicado no commit `6c8b666`. A landing page exibe “Plataforma em crescimento — X visitas reais”, sem valor inicial artificial.
+- Cada aba/sessão do navegador registra no máximo uma visita por meio de `sessionStorage`. O backend mantém somente um total agregado na tabela `tenants_sitevisitcounter`; não armazena IP, identidade, user-agent ou histórico individual.
+- O incremento usa operação atômica no banco e o endpoint público de escrita possui limitação por IP. `GET /api/site/visitas/` apenas consulta; `POST` incrementa.
+- Backup pré-publicação validado em `/root/salaopro-predeploy-20260928-012405`, com dump PostgreSQL e mídia verificados e hashes SHA-256 registrados.
+- Validação local: migrações sem divergência, 84 testes backend aprovados (um ignorado), 11 testes frontend aprovados, lint e build aprovados. Os dois testes específicos também passaram na imagem candidata.
+- Somente backend e frontend foram recriados com `--no-deps`. A migração `tenants.0010_sitevisitcounter` foi aplicada com sucesso e criou o contador em zero.
+- Pós-publicação: `DATABASE_OK=True`, Redis `PONG`, frontend 200, consulta pública do contador retornou `{"total":0}`, API protegida 401 e painel 200. A validação usou apenas GET e não aumentou artificialmente o total.
