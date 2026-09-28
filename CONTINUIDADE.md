@@ -595,3 +595,14 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Alterados/novos desta sessão: `backend/apps/agenda/tests.py`, `backend/apps/agenda/tests_e2e_journey.py`, `backend/qa_production_journey.py` e `marketing/`.
 - A foto local não rastreada `backend/media/profissionais/carlos.barbergoldenbarber.com_b1f33bd6.jpg` já existia e continua preservada; não adicionar nem remover sem decisão explícita.
 - As mudanças desta sessão ainda não receberam commit nem foram enviadas para `develop`. Não descartar os arquivos locais.
+
+## Correção do falso erro após agendamento (27/09/2026)
+
+- Um teste real mostrou a mensagem genérica de falha mesmo com o agendamento criado. O log confirmou `POST /api/agendamentos/` com HTTP 201 e criação do agendamento ID 18, enquanto dois envios WAHA sequenciais atingiram timeout de 10 segundos cada. O Axios do frontend expira em 15 segundos e, por isso, interpretava a resposta demorada como falha.
+- O commit `da90c4c` colocou e-mail/WhatsApp em uma fila interna assíncrona quando `AGENDA_NOTIFICATIONS_ASYNC=True` (padrão com `DEBUG=False`). Desenvolvimento e testes com `DEBUG=True` permanecem síncronos por padrão para evitar concorrência com SQLite. A resposta HTTP não aguarda mais o WAHA.
+- O frontend passou a exibir mensagens de validação associadas a campos e, em eventual timeout, orienta a conferir “Minha Agenda” antes de tentar novamente.
+- Validação local: 78 testes backend aprovados (um ignorado), 11 testes frontend aprovados, lint e build aprovados. Nas imagens candidatas do servidor, os dois testes específicos da fila passaram e `nginx -t` foi aprovado.
+- Backup pré-publicação validado em `/root/salaopro-predeploy-20260928-002638`, com dump PostgreSQL e mídia. Somente backend e frontend foram recriados com `docker compose up -d --no-deps backend frontend`; volumes, PostgreSQL, Redis e WAHA foram preservados.
+- Pós-publicação: nenhuma migração pendente, Gunicorn 26.2.0 ativo, `DATABASE_OK=True`, Redis `PONG`, frontend 200, API protegida 401 e painel 200. `AGENDA_NOTIFICATIONS_ASYNC=True` e o novo bundle frontend foram confirmados nos containers.
+- WAHA: `tenant_3` permaneceu `WORKING`; `tenant_5` estava em `SCAN_QR_CODE`. O comando genérico `check_waha_status` consultou a configuração legada `default`, inexistente, e enviou um alerta por e-mail. Esse alerta isolado não representa queda da sessão principal; revisar futuramente o valor de `WAHA_SESSION` ou tornar o monitoramento multiempresa.
+- Permaneceram preservados no servidor os arquivos não rastreados `backend/media/profissionais/pedro_0SJUBdN.jpg` e `backend/test_error.py`. Localmente, a foto e os materiais de marketing não foram incluídos no commit da correção.
