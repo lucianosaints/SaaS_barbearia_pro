@@ -1,5 +1,9 @@
 from decimal import Decimal
+import base64
+import tempfile
 
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import override_settings
 from rest_framework.test import APITestCase
 
 from apps.accounts.models import Usuario
@@ -43,3 +47,17 @@ class ProdutoIsolationTests(APITestCase):
         }, format='json')
         self.assertEqual(response.status_code, 400)
         self.assertIn('preco_promocional', response.data)
+
+    def test_admin_pode_enviar_foto_do_produto(self):
+        imagem = SimpleUploadedFile(
+            'produto.png',
+            base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),
+            content_type='image/png',
+        )
+        self.client.force_authenticate(self.admin_a)
+        with tempfile.TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            response = self.client.post('/api/produtos/', {
+                'nome': 'Produto com foto', 'preco': '25.00', 'estoque': 1, 'foto': imagem,
+            }, format='multipart')
+            self.assertEqual(response.status_code, 201, response.data)
+            self.assertTrue(Produto.objects.get(pk=response.data['id']).foto.name.startswith('produtos/'))

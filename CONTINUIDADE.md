@@ -679,3 +679,10 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - A migração `vitrine.0001_initial` foi aplicada com sucesso. Pós-publicação: nenhuma migração pendente, Gunicorn 26.2.0 ativo, `DATABASE_OK=True`, Redis `PONG`, página inicial 200, vitrine 200, API protegida 401 e endpoint de produtos 200 para `golden-barber`.
 - O catálogo de produção iniciou sem produtos, como esperado; os três produtos fictícios permaneceram somente no banco SQLite local de demonstração.
 - Os arquivos não rastreados `backend/media/profissionais/pedro_0SJUBdN.jpg` e `backend/test_error.py` permaneceram preservados no servidor.
+
+## Correção de uploads da vitrine e foto do cliente (29/09/2026)
+
+- Identificado em produção que a configuração global do Axios forçava `application/json` mesmo para `FormData`, fazendo a foto do produto chegar ao Django como texto. O interceptor agora remove esse cabeçalho para uploads e permite que o navegador gere corretamente o boundary multipart; o formulário de produtos também declara multipart explicitamente.
+- O modal “Meus Dados” do cliente agora permite escolher, pré-visualizar e salvar uma foto de perfil JPG, PNG ou WebP pelo endpoint seguro `/api/usuarios/me/`.
+- Foram adicionados testes de upload real para produto e para a foto do próprio cliente usando armazenamento temporário.
+- Validação local: 71 testes backend aprovados (1 ignorado), incluindo uploads reais para produto e cliente; 19 testes frontend, lint e build aprovados; nenhuma migração nova e `git diff --check` aprovado. Commit e publicação ainda pendentes neste registro.

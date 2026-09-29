@@ -27,6 +27,11 @@ const processQueue = (error, token = null) => {
 // Request Interceptor: Injeta o Access Token no Header de Autorização
 api.interceptors.request.use(
   (config) => {
+    // O navegador precisa gerar automaticamente o boundary de uploads multipart.
+    // Manter application/json aqui transforma arquivos em texto no Django.
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

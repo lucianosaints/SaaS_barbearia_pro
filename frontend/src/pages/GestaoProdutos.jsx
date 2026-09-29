@@ -47,8 +47,9 @@ export default function GestaoProdutos() {
     ['controlar_estoque', 'disponivel', 'destaque'].forEach((campo) => dados.append(campo, String(form[campo])));
     if (form.foto) dados.append('foto', form.foto);
     try {
-      if (form.id) await api.patch(`/api/produtos/${form.id}/`, dados);
-      else await api.post('/api/produtos/', dados);
+      const config = { headers: { 'Content-Type': 'multipart/form-data' } };
+      if (form.id) await api.patch(`/api/produtos/${form.id}/`, dados, config);
+      else await api.post('/api/produtos/', dados, config);
       setAberto(false);
       setMensagem('Produto salvo com sucesso.');
       await carregar();

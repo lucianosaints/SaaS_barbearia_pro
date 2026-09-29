@@ -1,6 +1,9 @@
 from django.core.cache import cache
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
+import base64
+import tempfile
 from rest_framework.test import APIClient, APITestCase
 from urllib.parse import parse_qs, urlparse
 
@@ -134,6 +137,23 @@ class SecurityHardeningTests(APITestCase):
         member = Usuario.objects.get(pk=response.data['id'])
         self.assertEqual(member.tipo, 'PROFISSIONAL')
         self.assertEqual(member.empresa, self.company)
+
+    def test_client_can_upload_own_profile_photo(self):
+        client_user = Usuario.objects.create_user(
+            username='client-photo@example.test', password='SecurityTest!2026',
+            tipo='CLIENTE', empresa=self.company,
+        )
+        imagem = SimpleUploadedFile(
+            'perfil.png',
+            base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),
+            content_type='image/png',
+        )
+        self.client.force_authenticate(client_user)
+        with tempfile.TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            response = self.client.patch('/api/usuarios/me/', {'foto': imagem}, format='multipart')
+            self.assertEqual(response.status_code, 200, response.data)
+            client_user.refresh_from_db()
+            self.assertTrue(client_user.foto.name.startswith('profissionais/'))
 
     def test_cors_allowlist_and_clickjacking_header(self):
         denied = self.client.get('/api/empresas/', HTTP_ORIGIN='https://evil.example')

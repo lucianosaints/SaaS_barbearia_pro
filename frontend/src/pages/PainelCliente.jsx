@@ -12,7 +12,7 @@ export default function PainelCliente() {
   
   // Estados para o modal de Perfil
   const [perfilModalOpen, setPerfilModalOpen] = useState(false);
-  const [perfilData, setPerfilData] = useState({ first_name: '', last_name: '', email: '', telefone: '' });
+  const [perfilData, setPerfilData] = useState({ first_name: '', last_name: '', email: '', telefone: '', foto: null, fotoAtual: '' });
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [perfilSuccess, setPerfilSuccess] = useState('');
   const [perfilError, setPerfilError] = useState('');
@@ -51,7 +51,9 @@ export default function PainelCliente() {
         first_name: response.data.first_name || '',
         last_name: response.data.last_name || '',
         email: response.data.email || '',
-        telefone: response.data.telefone || ''
+        telefone: response.data.telefone || '',
+        foto: null,
+        fotoAtual: response.data.foto || ''
       });
     } catch {
       setPerfilError('Não foi possível carregar os dados do perfil.');
@@ -64,15 +66,22 @@ export default function PainelCliente() {
     setPerfilSuccess('');
     setPerfilError('');
     try {
-      await api.patch('/api/usuarios/me/', {
-        first_name: perfilData.first_name,
-        last_name: perfilData.last_name,
-        telefone: perfilData.telefone
+      const dados = new FormData();
+      dados.append('first_name', perfilData.first_name);
+      dados.append('last_name', perfilData.last_name);
+      dados.append('telefone', perfilData.telefone);
+      if (perfilData.foto instanceof File) dados.append('foto', perfilData.foto);
+      const response = await api.patch('/api/usuarios/me/', dados, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
+      setPerfilData((atual) => ({ ...atual, foto: null, fotoAtual: response.data.foto || atual.fotoAtual }));
       setPerfilSuccess('Perfil atualizado com sucesso!');
       setTimeout(() => setPerfilModalOpen(false), 2000);
-    } catch {
-      setPerfilError('Erro ao atualizar o perfil. Tente novamente.');
+    } catch (erro) {
+      const dadosErro = erro.response?.data;
+      setPerfilError(dadosErro && typeof dadosErro === 'object'
+        ? Object.values(dadosErro).flat().join(' ')
+        : 'Erro ao atualizar o perfil. Tente novamente.');
     } finally {
       setSalvandoPerfil(false);
     }
@@ -254,6 +263,25 @@ export default function PainelCliente() {
             )}
 
             <form onSubmit={handleSavePerfil} className="space-y-4 text-left">
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-gold/40 bg-background-darker text-3xl">
+                  {perfilData.foto ? (
+                    <img src={URL.createObjectURL(perfilData.foto)} alt="Prévia do perfil" className="h-full w-full object-cover" />
+                  ) : perfilData.fotoAtual ? (
+                    <img src={perfilData.fotoAtual} alt="Foto do perfil" className="h-full w-full object-cover" />
+                  ) : '👤'}
+                </div>
+                <label className="cursor-pointer rounded-lg border border-gold/30 px-4 py-2 text-xs font-semibold text-gold hover:bg-gold/10">
+                  Escolher foto
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={(e) => setPerfilData({ ...perfilData, foto: e.target.files?.[0] || null })}
+                  />
+                </label>
+                <p className="text-[10px] text-text-muted">Use uma imagem JPG, PNG ou WebP.</p>
+              </div>
               <div>
                 <label className="block text-xs font-semibold text-text-muted mb-1">Nome</label>
                 <input
