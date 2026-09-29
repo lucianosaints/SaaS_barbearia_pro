@@ -669,3 +669,13 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - O catálogo público passou a permitir adicionar produtos ao carrinho, alterar quantidades respeitando o estoque, remover itens e visualizar o subtotal. O carrinho é separado por salão e persiste no `localStorage` do navegador. A criação do pedido e o encaminhamento ao WhatsApp ainda permanecem pendentes.
 - Validação: `makemigrations --check --dry-run` sem divergências; 69 testes Django aprovados e 1 ignorado; 19 testes frontend aprovados; lint e build Vite aprovados; `git diff --check` aprovado (somente avisos de conversão de final de linha do Git no Windows).
 - Arquivos anteriores de marketing e a foto local não rastreada foram preservados e não fazem parte desta implementação.
+
+### Publicação em produção (29/09/2026)
+
+- Funcionalidade enviada à `develop` no commit `7b957e3` e publicada no servidor de produção.
+- Backup pré-publicação criado e validado em `/root/salaopro-predeploy-vitrine-20260929-011442`, contendo dump PostgreSQL e mídia compactada. Hashes SHA-256: `f3ca41172cd15a2bf5102598bb52665935860ca727a5fa19070cad5268be10a0` para o dump e `31a90c7c1570ae82227411865cf017cdb412ce7180e90ca9fbb00976524b2097` para a mídia.
+- As imagens candidatas do backend e frontend foram construídas com sucesso. Os quatro testes de isolamento e validação da vitrine passaram no PostgreSQL candidato com o redirecionamento HTTPS desativado somente no processo descartável; `nginx -t` foi aprovado.
+- Somente backend e frontend foram recriados com `docker compose up -d --no-deps backend frontend`. PostgreSQL, Redis, WAHA e volumes foram preservados; nenhum órfão foi removido.
+- A migração `vitrine.0001_initial` foi aplicada com sucesso. Pós-publicação: nenhuma migração pendente, Gunicorn 26.2.0 ativo, `DATABASE_OK=True`, Redis `PONG`, página inicial 200, vitrine 200, API protegida 401 e endpoint de produtos 200 para `golden-barber`.
+- O catálogo de produção iniciou sem produtos, como esperado; os três produtos fictícios permaneceram somente no banco SQLite local de demonstração.
+- Os arquivos não rastreados `backend/media/profissionais/pedro_0SJUBdN.jpg` e `backend/test_error.py` permaneceram preservados no servidor.
