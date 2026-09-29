@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'apps.accounts',
     'apps.agenda',
     'apps.payments',
+    'apps.vitrine',
 ]
 
 # Middlewares

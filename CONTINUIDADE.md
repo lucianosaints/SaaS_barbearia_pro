@@ -655,3 +655,17 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Integrar a vitrine ao agendamento: oferecer produtos depois da reserva e permitir que o cliente adicione itens para retirar no dia do atendimento.
 - Evoluções posteriores, somente após validar o uso: baixa automática de estoque, histórico de pedidos, PIX/cartão, cupons, entrega local, fidelidade nas compras, comissão por vendedor e relatórios de produtos.
 - Manter isolamento multiempresa: cada salão administra e exibe apenas seus próprios produtos, pedidos, promoções e estoque.
+
+## Vitrine do Salão — primeiro incremento local (28/09/2026)
+
+- Implementação local concluída e validada; envio à `develop` e publicação em produção ainda pendentes neste registro.
+- Criado o aplicativo Django `apps.vitrine`, com produto vinculado obrigatoriamente à empresa: nome, descrição, preço normal e promocional, estoque opcional, disponibilidade, destaque e foto.
+- Criada a API `/api/produtos/`: gestores administram somente produtos da própria empresa; o catálogo público exige `empresa_id` ou `empresa_slug` e mostra somente itens disponíveis de empresa ativa. Exclusão pela API não foi habilitada para preservar o histórico.
+- Criada a migração `vitrine.0001_initial`. Ela ainda não foi aplicada fora dos bancos descartáveis de teste.
+- O painel de gestão recebeu a aba “Vitrine do Salão” para cadastrar e editar produtos. O catálogo público inicial está disponível em `/vitrine/:empresaSlug` e oferece retorno ao agendamento.
+- A navegação de usuários autenticados vinculados a uma empresa recebeu o atalho “Loja do Salão”, ao lado das demais opções superiores; ele abre a vitrine pública do salão na mesma aba e também aparece para clientes.
+- A navegação superior foi padronizada para a mesma aba: agendamento, loja, agenda do cliente, painel administrativo e financeiro não usam mais nova janela, e as opções internas retornam à rota principal antes de trocar o conteúdo.
+- Carrinho, pedidos, reserva para retirada e envio do pedido ao WhatsApp permanecem para o próximo incremento.
+- O catálogo público passou a permitir adicionar produtos ao carrinho, alterar quantidades respeitando o estoque, remover itens e visualizar o subtotal. O carrinho é separado por salão e persiste no `localStorage` do navegador. A criação do pedido e o encaminhamento ao WhatsApp ainda permanecem pendentes.
+- Validação: `makemigrations --check --dry-run` sem divergências; 69 testes Django aprovados e 1 ignorado; 19 testes frontend aprovados; lint e build Vite aprovados; `git diff --check` aprovado (somente avisos de conversão de final de linha do Git no Windows).
+- Arquivos anteriores de marketing e a foto local não rastreada foram preservados e não fazem parte desta implementação.

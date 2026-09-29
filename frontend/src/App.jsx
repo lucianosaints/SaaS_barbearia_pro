@@ -12,6 +12,7 @@ const PainelCliente = lazy(() => import('./pages/PainelCliente'))
 const FinanceiroDashboard = lazy(() => import('./pages/FinanceiroDashboard'))
 const Assinatura = lazy(() => import('./pages/Assinatura'))
 const RedefinirSenha = lazy(() => import('./pages/RedefinirSenha'))
+const VitrinePublica = lazy(() => import('./pages/VitrinePublica'))
 
 const LoadingScreen = () => (
   <div className="flex min-h-[50vh] items-center justify-center text-sm text-text-secondary">
@@ -34,7 +35,7 @@ function App() {
 
   // Redireciona para a landing page se logout, ou para o dashboard se login
   useEffect(() => {
-    if (location.pathname.startsWith('/agendar/') || location.pathname.startsWith('/checkout-assinatura') || location.pathname.startsWith('/redefinir-senha')) {
+    if (location.pathname.startsWith('/agendar/') || location.pathname.startsWith('/vitrine/') || location.pathname.startsWith('/checkout-assinatura') || location.pathname.startsWith('/redefinir-senha')) {
        // Se estiver na rota de agendamento ou assinatura, não força a aba landing.
        return;
     }
@@ -111,10 +112,20 @@ function App() {
               {/* Botões Comuns para Administradores/Profissionais */}
               {userToken && (userTipo === 'ADMINISTRADOR' || userTipo === 'PROFISSIONAL') && userEmpresa && userEmpresa.slug && (
                 <button
-                  onClick={() => window.open(`/agendar/${userEmpresa.slug}`, '_blank')}
+                  onClick={() => navigate(`/agendar/${userEmpresa.slug}`)}
                   className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all text-text-secondary hover:text-text-primary`}
                 >
                   Ver Meu Agendamento
+                </button>
+              )}
+
+              {/* Acesso rápido ao catálogo público do salão para equipe e clientes */}
+              {userToken && userEmpresa && userEmpresa.slug && (
+                <button
+                  onClick={() => navigate(`/vitrine/${userEmpresa.slug}`)}
+                  className="px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all text-text-secondary hover:text-gold-light"
+                >
+                  🛍️ Loja do Salão
                 </button>
               )}
 
@@ -140,7 +151,7 @@ function App() {
               {/* Admin ou Profissional */}
               {userToken && (userTipo === 'ADMINISTRADOR' || userTipo === 'PROFISSIONAL') && (
                 <button
-                  onClick={() => setCurrentTab('admin')}
+                  onClick={() => { setCurrentTab('admin'); navigate('/'); }}
                   className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${
                     currentTab === 'admin'
                       ? 'bg-gold text-background'
@@ -152,7 +163,7 @@ function App() {
               )}
               {userToken && userTipo === 'ADMINISTRADOR' && (
                 <button
-                  onClick={() => setCurrentTab('finance')}
+                  onClick={() => { setCurrentTab('finance'); navigate('/'); }}
                   className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${
                     currentTab === 'finance'
                       ? 'bg-gold text-background'
@@ -173,6 +184,10 @@ function App() {
         {location.pathname.startsWith('/agendar/') ? (
           <Routes>
             <Route path="/agendar/:empresaSlug" element={<AgendamentoWizard />} />
+          </Routes>
+        ) : location.pathname.startsWith('/vitrine/') ? (
+          <Routes>
+            <Route path="/vitrine/:empresaSlug" element={<VitrinePublica />} />
           </Routes>
         ) : location.pathname.startsWith('/checkout-assinatura') ? (
           <Routes>

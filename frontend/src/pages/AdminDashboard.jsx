@@ -7,6 +7,7 @@ import GestaoServicos from './GestaoServicos';
 import GestaoEquipe from './GestaoEquipe';
 import GestaoClientes from './GestaoClientes';
 import GestaoConfiguracoes from './GestaoConfiguracoes';
+import GestaoProdutos from './GestaoProdutos';
 import BloqueioHorarioModal from '../components/BloqueioHorarioModal';
 import GerenciarBloqueiosModal from '../components/GerenciarBloqueiosModal';
 import ConfirmModal from '../components/ConfirmModal';
@@ -200,6 +201,15 @@ export default function AdminDashboard() {
                 <span className="text-xl">✂️</span>
                 {!isSidebarCollapsed && <span>Serviços</span>}
               </button>
+
+              <button
+                onClick={() => setActiveTab('produtos')}
+                className={`flex items-center gap-3 px-3 py-3 text-sm font-semibold rounded-lg transition-all ${activeTab === 'produtos' ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' : 'text-text-secondary hover:text-white hover:bg-white/5'} ${isSidebarCollapsed ? 'justify-center' : 'justify-start'}`}
+                title="Vitrine do Salão"
+              >
+                <span className="text-xl">🛍️</span>
+                {!isSidebarCollapsed && <span>Vitrine do Salão</span>}
+              </button>
               
               <button
                 onClick={() => setActiveTab('equipe')}
@@ -332,6 +342,9 @@ export default function AdminDashboard() {
                     }`}
                   >
                     <span className="text-xl">✂️</span> Serviços
+                  </button>
+                  <button onClick={() => { setActiveTab('produtos'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold rounded-lg transition-all ${activeTab === 'produtos' ? 'bg-gold text-background-darker shadow-lg shadow-gold/20' : 'text-text-secondary hover:text-white hover:bg-white/5'}`}>
+                    <span className="text-xl">🛍️</span> Vitrine do Salão
                   </button>
                   <button
                     onClick={() => { setActiveTab('equipe'); setIsMobileMenuOpen(false); }}
@@ -474,6 +487,9 @@ export default function AdminDashboard() {
 
         {/* ABA: SERVIÇOS */}
         {activeTab === 'servicos' && <GestaoServicos />}
+
+        {/* ABA: VITRINE */}
+        {activeTab === 'produtos' && <GestaoProdutos />}
 
         {/* ABA: EQUIPE */}
         {activeTab === 'equipe' && <GestaoEquipe />}
