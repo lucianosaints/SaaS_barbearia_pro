@@ -701,3 +701,10 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - A resposta dos agendamentos agora inclui `empresa_slug` e `empresa_nome`. O painel do cliente usa o salão do perfil quando disponível e, como compatibilidade, o salão presente no histórico de agendamentos.
 - O painel passou a exibir “Loja do Salão” e “Novo Agendamento” juntos de “Meus Dados”, com navegação na mesma aba e layout flexível no celular.
 - Validação local: 72 testes backend aprovados (1 ignorado), incluindo a regressão de cliente sem empresa; 19 testes frontend, lint e build aprovados; nenhuma migração nova e `git diff --check` aprovado. Publicação ainda pendente neste registro.
+
+### Publicação da correção mobile (29/09/2026)
+
+- Hotfix enviado à `develop` no commit `24386cc` e publicado em produção.
+- Backup pré-publicação criado e validado em `/root/salaopro-predeploy-mobile-vitrine-20260929-021806`. Hashes SHA-256: `0af99ef58c532a7c78064e3eb635e61f8b4d1b30de527520d9b5c97b094370f4` para o PostgreSQL e `bdea2f6e34270c1d70b75c49caeda80926fca04146e623859af51fedd86a48e1` para a mídia.
+- O teste de cliente sem empresa passou na imagem candidata e `nginx -t` foi aprovado. Somente backend e frontend foram recriados com `--no-deps`; banco, Redis, WAHA e volumes foram preservados.
+- Pós-publicação: nenhuma migração pendente, Gunicorn 26.2.0 ativo, página inicial 200, API protegida 401 e Redis `PONG`.
