@@ -686,3 +686,11 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - O modal “Meus Dados” do cliente agora permite escolher, pré-visualizar e salvar uma foto de perfil JPG, PNG ou WebP pelo endpoint seguro `/api/usuarios/me/`.
 - Foram adicionados testes de upload real para produto e para a foto do próprio cliente usando armazenamento temporário.
 - Validação local: 71 testes backend aprovados (1 ignorado), incluindo uploads reais para produto e cliente; 19 testes frontend, lint e build aprovados; nenhuma migração nova e `git diff --check` aprovado. Commit e publicação ainda pendentes neste registro.
+
+### Publicação da correção (29/09/2026)
+
+- Hotfix enviado à `develop` no commit `8b60f36` e publicado em produção.
+- Backup pré-publicação criado e validado em `/root/salaopro-predeploy-upload-fix-20260929-015040`. Hashes SHA-256: `24ac89d1997932dd62ee2e8c0a1cc0672222caabf28dca147e808cd57f57b420` para o PostgreSQL e `31a90c7c1570ae82227411865cf017cdb412ce7180e90ca9fbb00976524b2097` para a mídia.
+- Na imagem candidata, os seis testes direcionados de vitrine e upload do cliente passaram e `nginx -t` foi aprovado.
+- Somente backend e frontend foram recriados com `--no-deps`; banco, Redis, WAHA e volumes foram preservados. Não houve nova migração.
+- Pós-publicação: Gunicorn 26.2.0 ativo, `DATABASE_OK=True`, nenhuma migração pendente, página inicial 200, vitrine 200, API protegida 401, volume `/app/media` gravável e Redis `PONG`.
