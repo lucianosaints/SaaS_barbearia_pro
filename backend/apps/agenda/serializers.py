@@ -45,11 +45,13 @@ class AgendamentoSerializer(serializers.ModelSerializer):
     cliente = serializers.PrimaryKeyRelatedField(queryset=Usuario.objects.filter(tipo='CLIENTE', is_active=True), required=False)
     cliente_nome = serializers.SerializerMethodField()
     profissional_nome = serializers.SerializerMethodField()
+    empresa_slug = serializers.CharField(source='empresa.slug', read_only=True)
+    empresa_nome = serializers.CharField(source='empresa.nome', read_only=True)
     servicos_detalhes = ServicoSerializer(source='servicos', many=True, read_only=True)
 
     class Meta:
         model = Agendamento
-        fields = ['id', 'empresa', 'cliente', 'cliente_nome', 'profissional', 'profissional_nome',
+        fields = ['id', 'empresa', 'empresa_slug', 'empresa_nome', 'cliente', 'cliente_nome', 'profissional', 'profissional_nome',
                   'servicos', 'servicos_detalhes', 'data_hora_inicio', 'data_hora_fim', 'status',
                   'observacoes', 'valor_total', 'valor_comissao', 'lucro_liquido', 'status_pagamento', 'metodo_pagamento']
         read_only_fields = ['id', 'empresa', 'data_hora_fim', 'valor_total', 'valor_comissao', 'lucro_liquido']

@@ -133,6 +133,10 @@ export default function PainelCliente() {
     return dataAgendamento < agora || a.status === 'CANCELADO';
   });
 
+  // Contas antigas de clientes podem não ter empresa no perfil. Nesse caso,
+  // recupera o salão a partir do próprio histórico de agendamentos.
+  const empresaSlug = userEmpresa?.slug || agendamentos.find((item) => item.empresa_slug)?.empresa_slug;
+
 
 
   return (
@@ -151,9 +155,17 @@ export default function PainelCliente() {
           >
             Meus Dados
           </button>
-          {userEmpresa && userEmpresa.slug && (
+          {empresaSlug && (
             <button
-              onClick={() => window.open(`/agendar/${userEmpresa.slug}`, '_blank')}
+              onClick={() => { window.location.href = `/vitrine/${empresaSlug}`; }}
+              className="px-4 py-2.5 text-sm font-semibold rounded-lg bg-background-darker border border-gold/30 text-gold hover:bg-gold/10 transition-colors"
+            >
+              🛍️ Loja do Salão
+            </button>
+          )}
+          {empresaSlug && (
+            <button
+              onClick={() => { window.location.href = `/agendar/${empresaSlug}`; }}
               className="btn-gold px-6 py-2.5 text-sm"
             >
               + Novo Agendamento

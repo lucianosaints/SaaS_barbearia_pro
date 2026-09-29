@@ -119,6 +119,16 @@ class DevelopIntegrationTests(APITestCase):
         for url in ('/api/saas/registrar/', '/api/whatsapp/status/', '/api/fidelidade/meu-cartao/', '/api/assinaturas/webhook/'):
             self.assertIsNotNone(resolve(url).func)
 
+    def test_unbound_client_receives_company_slug_from_booking(self):
+        self.customer.empresa = None
+        self.customer.save(update_fields=['empresa'])
+        created = self.client.post('/api/agendamentos/', self.payload(), format='json')
+        self.assertEqual(created.status_code, 201, created.data)
+        response = self.client.get('/api/agendamentos/')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data[0]['empresa_slug'], self.company.slug)
+        self.assertEqual(response.data[0]['empresa_nome'], self.company.nome)
+
     def test_tenant_settings_remain_available_but_subscription_is_readonly(self):
         self.client.force_authenticate(self.manager)
         response = self.client.patch(f'/api/empresas/{self.company.pk}/', {'fidelidade_meta': 5, 'horas_limite_cancelamento': 12, 'assinatura_ativa': True}, format='json')

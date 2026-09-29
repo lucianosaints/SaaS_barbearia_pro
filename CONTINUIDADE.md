@@ -694,3 +694,10 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Na imagem candidata, os seis testes direcionados de vitrine e upload do cliente passaram e `nginx -t` foi aprovado.
 - Somente backend e frontend foram recriados com `--no-deps`; banco, Redis, WAHA e volumes foram preservados. Não houve nova migração.
 - Pós-publicação: Gunicorn 26.2.0 ativo, `DATABASE_OK=True`, nenhuma migração pendente, página inicial 200, vitrine 200, API protegida 401, volume `/app/media` gravável e Redis `PONG`.
+
+## Acesso à vitrine no painel mobile do cliente (29/09/2026)
+
+- Identificado que contas antigas de clientes sem `empresa` no perfil não recebiam `userEmpresa.slug`; por isso o painel móvel ocultava “Loja do Salão” e “Novo Agendamento”, apesar de o cliente possuir agendamentos vinculados ao estabelecimento.
+- A resposta dos agendamentos agora inclui `empresa_slug` e `empresa_nome`. O painel do cliente usa o salão do perfil quando disponível e, como compatibilidade, o salão presente no histórico de agendamentos.
+- O painel passou a exibir “Loja do Salão” e “Novo Agendamento” juntos de “Meus Dados”, com navegação na mesma aba e layout flexível no celular.
+- Validação local: 72 testes backend aprovados (1 ignorado), incluindo a regressão de cliente sem empresa; 19 testes frontend, lint e build aprovados; nenhuma migração nova e `git diff --check` aprovado. Publicação ainda pendente neste registro.
