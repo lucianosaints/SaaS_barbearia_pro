@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
+import GestaoPedidos from './GestaoPedidos';
 
 const vazio = { id: null, nome: '', descricao: '', preco: '', preco_promocional: '', estoque: 0, controlar_estoque: true, disponivel: true, destaque: false, foto: null };
 const moeda = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(valor || 0));
@@ -61,7 +62,9 @@ export default function GestaoProdutos() {
     }
   };
 
-  return <div className="space-y-6">
+  return <div className="space-y-10">
+    <GestaoPedidos />
+    <div className="border-t border-white/10 pt-8 space-y-6">
     <div className="flex flex-col sm:flex-row justify-between gap-4">
       <div><h2 className="text-xl font-bold">Vitrine do Salão</h2><p className="text-xs text-text-muted mt-1">Cadastre os produtos exibidos no catálogo público.</p></div>
       <button className="btn-gold text-xs px-4 py-2" onClick={() => editar()}>+ Novo Produto</button>
@@ -98,5 +101,6 @@ export default function GestaoProdutos() {
         <div className="flex gap-3 pt-2"><button type="button" onClick={() => setAberto(false)} className="flex-1 rounded-lg border border-white/10 py-3">Cancelar</button><button disabled={salvando} className="btn-gold flex-1 py-3">{salvando ? 'Salvando...' : 'Salvar'}</button></div>
       </form>
     </div>}
+    </div>
   </div>;
 }

@@ -13,6 +13,7 @@ const FinanceiroDashboard = lazy(() => import('./pages/FinanceiroDashboard'))
 const Assinatura = lazy(() => import('./pages/Assinatura'))
 const RedefinirSenha = lazy(() => import('./pages/RedefinirSenha'))
 const VitrinePublica = lazy(() => import('./pages/VitrinePublica'))
+const TicketPedido = lazy(() => import('./pages/TicketPedido'))
 
 const LoadingScreen = () => (
   <div className="flex min-h-[50vh] items-center justify-center text-sm text-text-secondary">
@@ -35,7 +36,7 @@ function App() {
 
   // Redireciona para a landing page se logout, ou para o dashboard se login
   useEffect(() => {
-    if (location.pathname.startsWith('/agendar/') || location.pathname.startsWith('/vitrine/') || location.pathname.startsWith('/checkout-assinatura') || location.pathname.startsWith('/redefinir-senha')) {
+    if (location.pathname.startsWith('/agendar/') || location.pathname.startsWith('/vitrine/') || location.pathname.startsWith('/pedido/') || location.pathname.startsWith('/checkout-assinatura') || location.pathname.startsWith('/redefinir-senha')) {
        // Se estiver na rota de agendamento ou assinatura, não força a aba landing.
        return;
     }
@@ -188,6 +189,10 @@ function App() {
         ) : location.pathname.startsWith('/vitrine/') ? (
           <Routes>
             <Route path="/vitrine/:empresaSlug" element={<VitrinePublica />} />
+          </Routes>
+        ) : location.pathname.startsWith('/pedido/') ? (
+          <Routes>
+            <Route path="/pedido/:token" element={<TicketPedido />} />
           </Routes>
         ) : location.pathname.startsWith('/checkout-assinatura') ? (
           <Routes>

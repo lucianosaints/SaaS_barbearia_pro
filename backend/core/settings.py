@@ -242,6 +242,7 @@ EMAIL_TIMEOUT = 10
 EMAIL_ALERT_TO = env_list('EMAIL_ALERT_TO')
 PUBLIC_FRONTEND_URL = os.environ.get('PUBLIC_FRONTEND_URL', 'http://localhost:3000' if DEBUG else '').rstrip('/')
 PASSWORD_RESET_TIMEOUT = int(os.environ.get('PASSWORD_RESET_TIMEOUT', '1800'))
+PEDIDO_TICKET_DIAS_VALIDADE = int(os.environ.get('PEDIDO_TICKET_DIAS_VALIDADE', '90'))
 if EMAIL_USE_SSL and EMAIL_USE_TLS:
     raise ImproperlyConfigured('EMAIL_USE_SSL e EMAIL_USE_TLS nao podem estar ativos ao mesmo tempo.')
 if not DEBUG and EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':

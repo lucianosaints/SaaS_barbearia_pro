@@ -1,17 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 
 const moeda = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(valor));
 
 export default function VitrinePublica() {
   const { empresaSlug } = useParams();
+  const navigate = useNavigate();
   const chaveCarrinho = `vitrine_carrinho_${empresaSlug}`;
   const [produtos, setProdutos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
   const [carrinhoAberto, setCarrinhoAberto] = useState(false);
   const [aviso, setAviso] = useState('');
+  const [checkout, setCheckout] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [dadosCliente, setDadosCliente] = useState({ cliente_nome: '', cliente_telefone: '', forma_pagamento: 'PIX' });
   const [carrinho, setCarrinho] = useState(() => {
     try { return JSON.parse(localStorage.getItem(chaveCarrinho)) || []; }
     catch { return []; }
@@ -46,6 +50,26 @@ export default function VitrinePublica() {
   }));
   const remover = (id) => setCarrinho((atual) => atual.filter((item) => item.id !== id));
 
+  const finalizar = async (event) => {
+    event.preventDefault();
+    setEnviando(true);
+    setErro('');
+    try {
+      const { data } = await api.post('/api/pedidos/', {
+        ...dadosCliente, empresa_slug: empresaSlug,
+        itens: carrinho.map((item) => ({ produto: item.id, quantidade: item.quantidade })),
+      });
+      setCarrinho([]);
+      setCarrinhoAberto(false);
+      navigate(data.ticket_url.replace('/api/pedidos/ticket/', '/pedido/').replace(/\/$/, ''), {
+        state: { pedidoReutilizado: Boolean(data.pedido_reutilizado) },
+      });
+    } catch (error) {
+      const resposta = error.response?.data;
+      setErro(resposta?.detail || resposta?.itens?.[0] || 'Não foi possível finalizar o pedido. Confira os dados.');
+    } finally { setEnviando(false); }
+  };
+
   return <section className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
     <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div><span className="text-xs uppercase tracking-[0.25em] text-gold">Vitrine do Salão</span><h1 className="mt-2 text-3xl font-bold">Produtos para cuidar do seu estilo</h1><p className="mt-2 text-sm text-text-muted">Escolha online e retire diretamente no salão.</p></div>
@@ -68,7 +92,7 @@ export default function VitrinePublica() {
           {carrinho.map((item) => <div key={item.id} className="flex gap-3 rounded-xl border border-white/10 p-3"><div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background-darker">{item.foto ? <img src={item.foto} alt="" className="h-full w-full object-cover" /> : '🛍️'}</div><div className="min-w-0 flex-1"><h3 className="truncate text-sm font-bold">{item.nome}</h3><p className="text-sm text-gold">{moeda(Number(item.preco_atual) * item.quantidade)}</p><div className="mt-2 flex items-center gap-2"><button onClick={() => alterarQuantidade(item.id, -1)} className="h-7 w-7 rounded border border-white/15">−</button><span className="w-5 text-center text-sm">{item.quantidade}</span><button onClick={() => alterarQuantidade(item.id, 1)} disabled={item.controlar_estoque && item.quantidade >= item.estoque} className="h-7 w-7 rounded border border-white/15 disabled:opacity-30">+</button><button onClick={() => remover(item.id)} className="ml-auto text-xs text-rose-400">Remover</button></div></div></div>)}
           {!carrinho.length && <div className="py-20 text-center"><div className="text-5xl">🛒</div><p className="mt-4 text-text-muted">Seu carrinho está vazio.</p><button onClick={() => setCarrinhoAberto(false)} className="mt-4 text-sm text-gold underline">Continuar escolhendo</button></div>}
         </div>
-        {carrinho.length > 0 && <div className="border-t border-white/10 p-5"><div className="mb-4 flex justify-between"><span className="text-text-muted">Subtotal</span><strong className="text-xl text-gold">{moeda(subtotal)}</strong></div><p className="mb-3 text-xs text-text-muted">Os itens ficam salvos neste navegador. A confirmação do pedido para retirada será adicionada na próxima etapa.</p><button className="w-full cursor-not-allowed rounded-lg border border-white/10 py-3 text-sm text-text-muted" disabled>Finalizar pedido — em breve</button></div>}
+        {carrinho.length > 0 && <div className="border-t border-white/10 p-5"><div className="mb-4 flex justify-between"><span className="text-text-muted">Subtotal</span><strong className="text-xl text-gold">{moeda(subtotal)}</strong></div>{!checkout ? <><p className="mb-3 text-xs text-text-muted">O salão confirmará a reserva e avisará quando estiver pronta.</p><button onClick={() => setCheckout(true)} className="btn-gold w-full py-3 text-sm">Finalizar pedido</button></> : <form onSubmit={finalizar} className="space-y-3"><input required maxLength="150" placeholder="Seu nome" value={dadosCliente.cliente_nome} onChange={(e) => setDadosCliente({ ...dadosCliente, cliente_nome: e.target.value })} className="w-full rounded-lg border border-white/10 bg-background-darker p-3 text-sm" /><input required inputMode="tel" placeholder="WhatsApp com DDD" value={dadosCliente.cliente_telefone} onChange={(e) => setDadosCliente({ ...dadosCliente, cliente_telefone: e.target.value })} className="w-full rounded-lg border border-white/10 bg-background-darker p-3 text-sm" /><select value={dadosCliente.forma_pagamento} onChange={(e) => setDadosCliente({ ...dadosCliente, forma_pagamento: e.target.value })} className="w-full rounded-lg border border-white/10 bg-background-darker p-3 text-sm"><option value="PIX">PIX</option><option value="DINHEIRO">Dinheiro</option><option value="DEBITO">Cartão de débito</option><option value="CREDITO">Cartão de crédito</option></select>{erro && <p className="text-xs text-rose-400">{erro}</p>}<div className="flex gap-2"><button type="button" onClick={() => setCheckout(false)} className="flex-1 rounded-lg border border-white/10 py-3 text-sm">Voltar</button><button disabled={enviando} className="btn-gold flex-1 py-3 text-sm disabled:opacity-50">{enviando ? 'Enviando...' : 'Reservar produtos'}</button></div></form>}</div>}
       </aside>
     </div>}
   </section>;

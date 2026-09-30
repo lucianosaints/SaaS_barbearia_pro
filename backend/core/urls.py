@@ -14,7 +14,7 @@ from apps.tenants.views import EmpresaViewSet, SiteVisitCounterView
 from apps.accounts.views import UsuarioViewSet, registrar_cliente, registrar_saas, CustomTokenObtainPairView, CustomTokenRefreshView, LogoutView, solicitar_recuperacao_senha, confirmar_recuperacao_senha
 from apps.agenda.views import ServicoViewSet, AgendamentoViewSet, obter_disponibilidade, FinancasDashboardView, ComissoesView, MeuCartaoFidelidadeView, BloqueioHorarioViewSet, FilaEsperaViewSet
 from apps.tenants.waha_views import WahaQRCodeView, WahaPairingCodeView, WahaSessionStatusView
-from apps.vitrine.views import ProdutoViewSet
+from apps.vitrine.views import PedidoViewSet, ProdutoViewSet, ticket_pedido
 
 # Inicializando o roteador principal do DRF
 router = DefaultRouter()
@@ -25,6 +25,7 @@ router.register(r'agendamentos', AgendamentoViewSet, basename='agendamento')
 router.register(r'bloqueios', BloqueioHorarioViewSet, basename='bloqueio')
 router.register(r'fila-espera', FilaEsperaViewSet, basename='fila_espera')
 router.register(r'produtos', ProdutoViewSet, basename='produto')
+router.register(r'pedidos', PedidoViewSet, basename='pedido')
 
 urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
@@ -61,6 +62,7 @@ urlpatterns = [
     path('api/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('api/logout/', LogoutView.as_view(), name='logout'),
     path('api/site/visitas/', SiteVisitCounterView.as_view(), name='site_visit_counter'),
+    path('api/pedidos/ticket/<uuid:token>/', ticket_pedido, name='pedido_ticket'),
     path('api/senha/recuperar/', solicitar_recuperacao_senha, name='password_reset_request'),
     path('api/senha/redefinir/', confirmar_recuperacao_senha, name='password_reset_confirm'),
 ]

@@ -708,3 +708,60 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Backup pré-publicação criado e validado em `/root/salaopro-predeploy-mobile-vitrine-20260929-021806`. Hashes SHA-256: `0af99ef58c532a7c78064e3eb635e61f8b4d1b30de527520d9b5c97b094370f4` para o PostgreSQL e `bdea2f6e34270c1d70b75c49caeda80926fca04146e623859af51fedd86a48e1` para a mídia.
 - O teste de cliente sem empresa passou na imagem candidata e `nginx -t` foi aprovado. Somente backend e frontend foram recriados com `--no-deps`; banco, Redis, WAHA e volumes foram preservados.
 - Pós-publicação: nenhuma migração pendente, Gunicorn 26.2.0 ativo, página inicial 200, API protegida 401 e Redis `PONG`.
+
+## Materiais de marketing (29/09/2026)
+
+- Foram recebidos os vídeos de demonstração do sistema, incluindo `marketing/1-fazendo cadastro.mp4` e `marketing/5-fazendo agendamento.mp4`, além dos prints reais `marketing/MSG barbeiro,salao.jpeg` e `marketing/MSG cliente.jpeg`.
+- Foi produzido o vídeo vertical `marketing/salaopro-agendamento-whatsapp-vertical.mp4`, com aproximadamente 34 segundos, demonstrando o agendamento e as notificações enviadas ao salão e ao cliente pelo WhatsApp. A prévia está em `marketing/salaopro-agendamento-whatsapp-preview.jpg`.
+- Também foram criadas as artes `marketing/propaganda-salaopro-vertical.png`, `marketing/notificacoes-whatsapp-salaopro.png` e `marketing/checklist-funcoes-gestor-salaopro.png`.
+- O vídeo de cadastro recebeu narração feminina em português, sincronizada com as etapas apresentadas, sem ler em voz alta nomes, e-mail, telefone ou senha. Resultado final: `marketing/salaopro-cadastro-narrado.mp4`, com 1 minuto e 22 segundos, vídeo H.264 e áudio AAC mono em 48 kHz.
+- A geração pode ser repetida pelos arquivos `marketing/render_cadastro_narrado.py` e `marketing/gerar_narracao_cadastro.ps1`. Os recursos temporários da narração estão em `marketing/cadastro-narracao-assets/`.
+- O vídeo narrado foi validado integralmente com FFmpeg: imagem e faixa de áudio estão presentes e o arquivo foi processado sem erros.
+- Os materiais de marketing permanecem somente no computador local e ainda não foram adicionados a um commit nem enviados ao repositório remoto.
+
+## Pagamentos habilitados em produção (29/09/2026)
+
+- O usuário alterou `PERMITIR_PAGAMENTOS=True` no arquivo efetivamente carregado pelo backend: `/root/SaaS_barbearia_pro/backend/.env`.
+- O container `barbeiro_pro_backend` foi recriado isoladamente com `docker compose up -d --no-deps --force-recreate backend`. PostgreSQL, Redis, WAHA, frontend e volumes não foram recriados.
+- O aviso de container órfão para `barbeiro_pro_db` continua esperado devido à divergência conhecida do Compose. Não executar `--remove-orphans`, pois o container contém o PostgreSQL de produção que deve ser preservado.
+- A variável foi conferida dentro do novo container com `os.getenv` e retornou `PERMITIR_PAGAMENTOS=True`. Ela é consultada diretamente por `apps/payments/views.py`, não existe como atributo `settings.PERMITIR_PAGAMENTOS`; por isso uma primeira tentativa de verificação via `django.conf.settings` gerou somente `AttributeError`, sem falha operacional.
+- A inicialização terminou normalmente: configuração Django sem erros, nenhuma migração pendente, 154 arquivos estáticos preservados, Gunicorn 26.2.0 iniciado e ouvindo na porta interna 8000.
+- O usuário testou o funcionamento e confirmou que ficou correto.
+
+## Próximo incremento da Vitrine do Salão — pedidos e sinal PIX (29/09/2026)
+
+- O usuário pediu para ativar o botão atualmente desabilitado `Finalizar pedido — em breve`. Não existe chave de ambiente para ativá-lo: a finalização de pedidos ainda precisa ser implementada no backend e no frontend.
+- O fluxo desejado é uma **reserva de produtos**, não uma venda considerada concluída no momento em que o carrinho é enviado.
+- Requisitos informados pelo usuário:
+  - o cliente escolhe produtos e quantidades;
+  - informa nome, WhatsApp e forma de pagamento;
+  - o salão recebe uma notificação com todos os itens escolhidos;
+  - o cliente recebe uma nota/ticket com número do pedido, itens, quantidades, valores, forma de pagamento e orientação para pagar/retirar na barbearia;
+  - o salão pode solicitar um sinal via PIX para reservar os produtos.
+- Proposta funcional registrada para implementação:
+  1. Criar o pedido com status inicial `AGUARDANDO_CONFIRMACAO`.
+  2. Oferecer formas de pagamento PIX, dinheiro, cartão de débito e cartão de crédito.
+  3. Notificar o salão pelo WhatsApp com o resumo do pedido.
+  4. Exibir ao cliente um ticket digital persistente com os dados do pedido.
+  5. Permitir ao gestor confirmar, solicitar sinal PIX, marcar como pronto para retirada, concluir ou cancelar.
+  6. Quando houver sinal, mostrar no ticket o valor solicitado, a chave PIX/beneficiário do salão e o estado da confirmação.
+- A integração Mercado Pago existente é exclusiva para cobranças da assinatura do SaaS (`CobrancaAssinatura`) e não deve ser reutilizada automaticamente para receber compras dos clientes dos salões. Os valores de produtos devem ir diretamente para cada estabelecimento.
+- A primeira versão recomendada usa a chave PIX e o beneficiário já cadastrados em `Empresa`, com confirmação manual do comprovante pelo salão. Não implementar pagamento online ou repasse pela conta Mercado Pago do SalaoPro sem um projeto financeiro específico para marketplace/subcontas.
+- Decisão confirmada pelo usuário: quando o salão solicitar sinal para reservar os produtos, o valor será sempre de **50% do total do pedido**. O ticket deve discriminar total, sinal de 50% e saldo restante; não oferecer percentual ou valor livre ao gestor nessa primeira versão. A cobrança usa a chave PIX e o beneficiário do próprio salão, com confirmação manual do recebimento.
+- Nenhum código de pedidos, migração ou alteração de produção foi realizado nesta etapa. O próximo trabalho deve começar pelo modelo transacional de `Pedido`/`ItemPedido`, isolamento por empresa, validação server-side de preços e estoque, API, painel gestor, ticket do cliente, notificações WAHA e testes.
+
+## Pedidos e sinal PIX da Vitrine — implementação local (30/09/2026)
+
+- Implementação local concluída; ainda não houve commit, envio à `develop`, migração ou publicação em produção.
+- Criados `Pedido` e `ItemPedido`, com fotografia imutável de nome/preço, ticket público por UUID, reserva transacional de estoque e total sempre recalculado no servidor.
+- O checkout público coleta nome, WhatsApp e forma de pagamento (PIX, dinheiro, débito ou crédito), cria a reserva e abre o ticket persistente do cliente.
+- O painel da Vitrine lista os pedidos e permite somente as transições previstas: confirmar, solicitar sinal PIX, confirmar sinal, marcar como pronto, concluir ou cancelar. Cancelar devolve o estoque uma única vez.
+- O sinal é fixo em 50%; chave e beneficiário PIX vêm da empresa e são exigidos antes da solicitação. O ticket discrimina total, sinal e saldo.
+- Notificações WAHA são disparadas somente depois do commit: novo pedido para administradores ativos do salão e cliente; mudanças relevantes de status para o cliente. Falhas de WhatsApp não desfazem o pedido.
+- Criada a migração `vitrine.0002_pedido_itempedido` e testes de preço server-side, estoque, isolamento multiempresa, transições e cancelamento.
+- Validação: `makemigrations --check --dry-run` sem divergências; 9 testes específicos aprovados; suíte Django com 96 testes executada (90 aprovados, 1 ignorado e 5 bloqueados somente pela permissão do sandbox). A suíte separada do entrypoint passou com 8/8 fora dessa restrição. Frontend: lint aprovado, 19 testes aprovados e build Vite aprovado. `git diff --check` sem erros, apenas avisos esperados de final de linha no Windows.
+- Materiais de marketing, a foto local e a exclusão anterior de `marketing/render_video_real.py` foram preservados e não fazem parte deste incremento.
+- Próximo passo seguro: revisão funcional local do checkout/painel/ticket; depois preparar commit, homologação PostgreSQL candidato, backup e publicação controlada. Não publicar sem confirmação do usuário.
+- Validação funcional local adicional em 30/09/2026: pedido PIX percorreu `AGUARDANDO_CONFIRMACAO` → `AGUARDANDO_SINAL` → `SINAL_CONFIRMADO` → `PRONTO` → `CONCLUIDO`, mantendo o estoque reservado. Um segundo pedido cancelado restaurou exatamente a unidade reservada. O teste revelou e corrigiu o saldo do ticket enquanto o sinal ainda aguardava pagamento: para total de R$ 69,90, passou a mostrar sinal de R$ 34,95 e saldo de R$ 34,95. Após a correção, 10 testes da vitrine passaram e não há divergência de migrações. O WAHA não existe na prévia Windows; os envios falharam de forma isolada, sem reverter pedidos, como previsto. A entrega real de WhatsApp ainda exige homologação no ambiente Docker com WAHA.
+- Segurança dos pedidos reforçada localmente em 30/09/2026: o ticket público passou a mascarar nome e WhatsApp e usa serializer separado do painel; respostas têm `no-store`; links expiram em 90 dias por padrão (`PEDIDO_TICKET_DIAS_VALIDADE`) e o gestor pode regenerá-los, invalidando imediatamente o anterior. A criação pública ficou limitada a cinco pedidos por IP a cada dez minutos e pedidos idênticos do mesmo telefone são recusados por dois minutos. Criada a migração `vitrine.0003_pedido_token_ticket_criado_em`. Validação: 14 testes da vitrine, 19 testes frontend, lint e build aprovados; `makemigrations --check` sem divergências e `git diff --check` sem erros. A migração foi aplicada somente ao SQLite da prévia; produção permanece inalterada.
+- O bloqueio de duplicidade foi refinado após revisão com o usuário: se o primeiro envio foi concluído e a resposta se perdeu, uma nova tentativa idêntica em até dois minutos devolve o pedido e o ticket já existentes com HTTP 200, sem nova baixa de estoque. Somente uma tentativa verdadeiramente simultânea ainda recebe aviso temporário para tentar em alguns segundos. Os 14 testes da vitrine e o lint continuaram aprovados após a alteração.
