@@ -786,3 +786,11 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Validação: 96 testes funcionais do backend aprovados e 1 ignorado; os 8 testes do entrypoint passaram separadamente fora da restrição do sandbox; 19 testes frontend, lint e build Vite aprovados; `git diff --check` sem erros (somente avisos de final de linha no Windows).
 - Materiais de marketing, a foto local não rastreada e a exclusão antiga de `marketing/render_video_real.py` foram preservados fora deste trabalho.
 - Próximo passo: revisar visualmente em ambiente local e, somente após confirmação do usuário, preparar homologação PostgreSQL, backup e publicação controlada.
+
+### Publicação das correções operacionais (30/09/2026)
+
+- Correções publicadas em produção no commit `b2e5926` após validação local e envio à branch `develop`.
+- Backup pré-publicação criado e validado em `/root/salaopro-predeploy-b2e5926-20260930-233104`. SHA-256: `ae057f14c00022b7e50d76cecf3d03d9aae4a2c10707dc2672e2d32d29c32a8b` para o PostgreSQL e `3bbc6527caf868dfc4e5dced3696ea12a9efeb32cb004bef284985d961b3cbde` para a mídia.
+- As imagens de backend e frontend foram construídas no servidor. `nginx -t` passou e os 26 testes direcionados de agenda passaram no PostgreSQL descartável com `AGENDA_NOTIFICATIONS_ASYNC=False`. Uma primeira execução com a fila assíncrona de produção ativa deixou uma conexão no banco de testes; o banco temporário foi removido com `dropdb --force` e a repetição correta passou integralmente. O banco de produção não foi alterado por esses testes.
+- Somente backend e frontend foram recriados com `docker compose up -d --no-deps backend frontend`. PostgreSQL, Redis, WAHA e volumes foram preservados; nenhum órfão foi removido.
+- Pós-publicação: nenhuma migração pendente, Django sem erros, Gunicorn 26.2.0 ativo, `DATABASE_OK=True`, Redis `PONG`, página pública 200, API protegida 401 e painel administrativo 302 para autenticação.
