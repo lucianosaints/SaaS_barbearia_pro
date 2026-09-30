@@ -47,7 +47,7 @@ export default function GerenciarBloqueiosModal({ isOpen, onClose, onBlocksChang
 
   const formatDateTime = (isoString) => {
     const d = new Date(isoString);
-    return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    return `${d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}`;
   };
 
   if (!isOpen) return null;

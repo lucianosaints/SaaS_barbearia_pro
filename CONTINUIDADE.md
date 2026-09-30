@@ -774,3 +774,15 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Por confirmação explícita do usuário, todos os dados de empresas e usuários eram fictícios. Foi preservada exclusivamente a conta superadministradora ativa `lucianosaintsadmin`. Antes da limpeza foi criado e validado o backup `/root/salaopro-precleanup-20260930-105329`, com hashes `65f839a07d6c390af68c69c8cbc6730b7c6be2c7f418fd090928daf1d25da635` para o PostgreSQL e `60d7b35ea9a7adcce1afa40e57ec4873185740eed55d51d9347e0a87d057622d` para a mídia.
 - A limpeza ocorreu em transação e removeu quatro empresas, quatorze usuários comuns e todos os serviços, agendamentos, bloqueios, fidelidade, cobranças, produtos e demais dados operacionais fictícios. As fotos órfãs das pastas de profissionais e produtos também foram removidas depois de confirmar que o superadministrador não possuía foto associada; permanecem recuperáveis no backup.
 - Validação final: zero empresas, um usuário (`lucianosaintsadmin`), zero serviços, agendamentos, cobranças, produtos e pedidos. Estrutura, migrações, permissões e contador agregado do site foram preservados. A sessão WAHA `tenant_3` permanece conectada no container, mas não corresponde mais a uma empresa existente; decidir se ela será reutilizada ou removida somente quando a primeira empresa real for criada.
+
+## Correções operacionais salvas localmente (30/09/2026)
+
+- Corrigida a agenda administrativa para mostrar a forma escolhida pelo cliente (PIX, dinheiro, débito ou crédito) junto da situação do pagamento, em vez de exibir somente “Pendente/Pago”.
+- Clientes antigos sem empresa explícita passam a aparecer na Gestão de Clientes quando possuem agendamento no salão. O primeiro novo agendamento válido consolida automaticamente o vínculo com a empresa.
+- O cartão fidelidade recupera a empresa pelo histórico de agendamentos para contas antigas sem vínculo e persiste a correção no perfil.
+- Datas, horários e o filtro diário da agenda foram padronizados para `America/Sao_Paulo`, evitando deslocamentos conforme o fuso do navegador ou a conversão UTC do banco.
+- O ticket web da Vitrine foi reorganizado em seções para itens, forma de pagamento, total, sinal PIX e saldo. As mensagens WAHA de novo pedido e atualização também receberam hierarquia visual e melhor quebra para nomes longos.
+- Não foi criada migração. Nenhuma mudança foi publicada em produção.
+- Validação: 96 testes funcionais do backend aprovados e 1 ignorado; os 8 testes do entrypoint passaram separadamente fora da restrição do sandbox; 19 testes frontend, lint e build Vite aprovados; `git diff --check` sem erros (somente avisos de final de linha no Windows).
+- Materiais de marketing, a foto local não rastreada e a exclusão antiga de `marketing/render_video_real.py` foram preservados fora deste trabalho.
+- Próximo passo: revisar visualmente em ambiente local e, somente após confirmação do usuário, preparar homologação PostgreSQL, backup e publicação controlada.

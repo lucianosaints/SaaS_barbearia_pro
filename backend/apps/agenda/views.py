@@ -72,11 +72,14 @@ class AgendamentoFilter(filters.FilterSet):
         field_name='profissional',
         label="Profissional / Barbeiro"
     )
-    data_hora_inicio = filters.DateFilter(
-        field_name='data_hora_inicio',
-        lookup_expr='date',
-        label="Data do Agendamento"
-    )
+    data_hora_inicio = filters.DateFilter(method='filtrar_data_local', label="Data do Agendamento")
+
+    def filtrar_data_local(self, queryset, _name, value):
+        """Converte o dia de São Paulo em intervalo UTC antes de consultar."""
+        tz = timezone.get_current_timezone()
+        inicio = timezone.make_aware(datetime.combine(value, time.min), tz)
+        fim = timezone.make_aware(datetime.combine(value, time.max), tz)
+        return queryset.filter(data_hora_inicio__range=(inicio, fim))
 
     class Meta:
         model = Agendamento
@@ -468,6 +471,15 @@ class MeuCartaoFidelidadeView(APIView):
     def get(self, request):
         user = request.user
         empresa = user.empresa
+
+        # Compatibilidade com clientes antigos: recupera o estabelecimento do
+        # histórico e consolida o vínculo para as próximas consultas.
+        if not empresa and user.tipo == 'CLIENTE':
+            ultimo = Agendamento.objects.filter(cliente=user).select_related('empresa').order_by('-data_hora_inicio').first()
+            if ultimo:
+                empresa = ultimo.empresa
+                user.empresa = empresa
+                user.save(update_fields=['empresa'])
 
         if not empresa:
             return Response(

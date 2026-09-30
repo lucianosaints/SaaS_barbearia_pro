@@ -167,7 +167,14 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         if is_manager(user):
             if user.is_superuser:
                 return Usuario.objects.all()
-            return Usuario.objects.filter(empresa=user.empresa, is_superuser=False, is_staff=False)
+            # Inclui contas antigas sem empresa explícita que já tenham
+            # agendamentos no estabelecimento. Novos agendamentos consolidam
+            # automaticamente esse vínculo.
+            return Usuario.objects.filter(
+                Q(empresa=user.empresa) | Q(agendamentos_cliente__empresa=user.empresa),
+                is_superuser=False,
+                is_staff=False,
+            ).distinct()
         if user.is_authenticated and user.tipo == 'PROFISSIONAL' and user.empresa_id:
             return Usuario.objects.filter(empresa=user.empresa, tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], is_staff=False, is_superuser=False, is_active=True)
         return Usuario.objects.filter(tipo__in=['PROFISSIONAL', 'ADMINISTRADOR'], is_staff=False, is_superuser=False, is_active=True, empresa__ativo=True)

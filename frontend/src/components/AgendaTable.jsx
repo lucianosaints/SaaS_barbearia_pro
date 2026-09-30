@@ -9,13 +9,13 @@ export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
   const formatTime = (dateStr) => {
     if (!dateStr) return '-';
     const data = new Date(dateStr);
-    return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
   };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     const data = new Date(dateStr);
-    return data.toLocaleDateString('pt-BR');
+    return data.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   };
 
   const formatMoeda = (valor) => {
@@ -53,13 +53,17 @@ export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
     if (metodo === 'DEBITO') { Icon = FaRegCreditCard; color = 'text-blue-400'; }
     
     const isPaid = status === 'PAGO';
+    const nomes = { PIX: 'Pix', CREDITO: 'Cartão de crédito', DEBITO: 'Cartão de débito', DINHEIRO: 'Dinheiro' };
     
     return (
       <div className="flex items-center gap-2">
         <Icon className={color} size={18} />
-        <span className={`text-xs font-semibold ${isPaid ? 'text-green-400' : 'text-orange-400'}`}>
-          {isPaid ? 'Pago' : 'Pendente'}
-        </span>
+        <div className="flex flex-col">
+          <span className="text-xs font-semibold text-gray-200">{nomes[metodo] || 'Não informado'}</span>
+          <span className={`text-[10px] font-semibold ${isPaid ? 'text-green-400' : 'text-orange-400'}`}>
+            {isPaid ? 'Pago' : 'Pagamento pendente'}
+          </span>
+        </div>
       </div>
     );
   };
@@ -227,8 +231,8 @@ export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
       <div className="block sm:hidden p-4 space-y-4 bg-background">
         {agendamentos.map((agendamento) => {
           const data = new Date(agendamento.data_hora_inicio);
-          const dataFormatada = data.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
-          const horaFormatada = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          const dataFormatada = data.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+          const horaFormatada = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
           
           const servicos = agendamento.servicos_detalhes || [];
           const nomesServicos = servicos.length > 0 ? servicos.map(s => s.nome).join(', ') : 'Serviços não listados';

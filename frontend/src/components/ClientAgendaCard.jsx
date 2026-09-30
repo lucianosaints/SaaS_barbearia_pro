@@ -4,8 +4,8 @@ import { BsCashCoin } from 'react-icons/bs';
 
 export default function ClientAgendaCard({ agendamento, isFuturo, onCancel }) {
   const data = new Date(agendamento.data_hora_inicio);
-  const dataFormatada = data.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
-  const horaFormatada = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const dataFormatada = data.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+  const horaFormatada = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
   
   const detalhes = agendamento.servicos_detalhes || [];
   const nomesServicos = detalhes.map(s => s.nome).join(', ') || 'Serviços não listados';

@@ -117,6 +117,12 @@ class AgendamentoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'servicos': 'Um serviço foi removido. Atualize a página.'})
         validated_data['data_hora_fim'] = validate_slot(profissional, servicos, validated_data['data_hora_inicio'])
         validated_data['empresa'] = profissional.empresa
+        cliente = validated_data.get('cliente')
+        # Contas antigas podiam ser criadas sem empresa. O primeiro agendamento
+        # válido passa a estabelecer o vínculo usado pela gestão e fidelidade.
+        if cliente and cliente.empresa_id is None:
+            cliente.empresa = profissional.empresa
+            cliente.save(update_fields=['empresa'])
         agendamento = Agendamento.objects.create(**validated_data)
         agendamento.servicos.set(servicos)
         return agendamento

@@ -40,12 +40,40 @@ class BusinessRulesTests(APITestCase):
         return response.data['id']
 
     def test_booking_and_end_time(self):
-        pk = self.book()
+        pk = self.book(metodo_pagamento='PIX')
         appointment = Agendamento.objects.get(pk=pk)
         self.assertEqual(appointment.cliente, self.customer)
         self.assertEqual(appointment.empresa, self.company)
         self.assertEqual(appointment.status, 'PENDENTE')
+        self.assertEqual(appointment.metodo_pagamento, 'PIX')
         self.assertEqual(appointment.data_hora_fim, self.start + timedelta(minutes=30))
+        self.customer.refresh_from_db()
+        self.assertEqual(self.customer.empresa, self.company)
+
+        self.client.force_authenticate(self.manager)
+        listed = self.client.get('/api/usuarios/')
+        self.assertEqual(listed.status_code, 200)
+        usuarios = listed.data.get('results', listed.data) if isinstance(listed.data, dict) else listed.data
+        self.assertIn(self.customer.pk, [item['id'] for item in usuarios if item['tipo'] == 'CLIENTE'])
+
+        self.client.force_authenticate(self.customer)
+        fidelidade = self.client.get('/api/fidelidade/meu-cartao/')
+        self.assertEqual(fidelidade.status_code, 200, fidelidade.data)
+        self.assertTrue(fidelidade.data['ativo'])
+
+    def test_date_filter_uses_sao_paulo_calendar_day(self):
+        from zoneinfo import ZoneInfo
+        local_start = datetime.combine(timezone.localdate() + timedelta(days=3), time(23, 30), tzinfo=ZoneInfo('America/Sao_Paulo'))
+        appointment = Agendamento.objects.create(
+            empresa=self.company, cliente=self.customer, profissional=self.barber,
+            data_hora_inicio=local_start, data_hora_fim=local_start + timedelta(minutes=30),
+        )
+        appointment.servicos.add(self.service)
+        self.client.force_authenticate(self.manager)
+        response = self.client.get('/api/agendamentos/', {'data_hora_inicio': local_start.date().isoformat()})
+        self.assertEqual(response.status_code, 200, response.data)
+        items = response.data.get('results', response.data) if isinstance(response.data, dict) else response.data
+        self.assertIn(appointment.pk, [item['id'] for item in items])
 
     def test_manager_creates_service_for_own_company_without_company_field(self):
         self.client.force_authenticate(self.manager)
