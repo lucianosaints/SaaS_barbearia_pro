@@ -68,6 +68,19 @@ class ComandaApiTests(APITestCase):
         self.assertEqual(Decimal(desconto.data['total']), Decimal('120.00'))
         self.assertEqual(desconto.data['desconto_autorizado_por'], self.admin.id)
 
+    def test_profissional_pode_descontar_somente_a_propria_comanda(self):
+        comanda_id = self.abrir().data['id']
+        self.client.force_authenticate(self.profissional)
+        response = self.client.patch(f'/api/comandas/{comanda_id}/', {'desconto': '5.00'}, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['desconto_autorizado_por'], self.profissional.id)
+
+        outro_profissional = Usuario.objects.create_user(
+            username='outro-prof-comanda-api', tipo='PROFISSIONAL', empresa=self.empresa,
+        )
+        self.client.force_authenticate(outro_profissional)
+        self.assertEqual(self.client.patch(f'/api/comandas/{comanda_id}/', {'desconto': '1.00'}, format='json').status_code, 404)
+
     def test_fechamento_registra_autor_pagamento_comissao_e_estoque(self):
         comanda_id = self.abrir().data['id']
         self.client.post(f'/api/comandas/{comanda_id}/adicionar-produto/', {'produto': self.produto.id, 'quantidade': 1}, format='json')
