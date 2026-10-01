@@ -133,10 +133,10 @@ class PedidoTests(APITestCase):
         self.client.force_authenticate(self.admin)
         response = self.client.get('/api/pedidos/dashboard/', {'periodo': 'mensal'})
         self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual(response.data['total_vendas'], '80')
+        self.assertEqual(Decimal(response.data['total_vendas']), Decimal('80.00'))
         self.assertEqual(response.data['pedidos_concluidos'], 1)
         self.assertEqual(response.data['itens_vendidos'], 2)
-        self.assertEqual(response.data['ticket_medio'], '80')
+        self.assertEqual(Decimal(response.data['ticket_medio']), Decimal('80.00'))
         self.assertEqual(response.data['por_forma_pagamento']['PIX']['quantidade'], 1)
 
     def test_produtos_e_pedidos_sao_paginados(self):
