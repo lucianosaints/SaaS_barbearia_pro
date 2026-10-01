@@ -811,3 +811,16 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - Escopo planejado: serviços e produtos na comanda, desconto controlado, totais calculados no servidor, comissão, baixa transacional de estoque no fechamento, cancelamento/estorno seguro e preservação dos valores históricos.
 - Etapas posteriores: abertura e fechamento de caixa, sangria e suprimento, despesas e contas, estoque avançado e financeiro consolidado. Pagamento dividido poderá ser acrescentado depois sem integração bancária.
 - Nenhum código de Comanda ou Caixa foi criado até este registro. O próximo trabalho deve começar pelos modelos transacionais, regras de fechamento/estorno, API e testes; depois integrar a tela administrativa. Não publicar sem homologação e backup.
+
+## Comanda publicada em produção (01/10/2026)
+
+- A primeira versão da Comanda foi concluída e publicada em produção no commit `e4ea93f` da branch `develop`.
+- A comanda fica vinculada ao agendamento, à empresa e ao profissional. Permite incluir e remover serviços e produtos, aplicar desconto, escolher a forma de pagamento, fechar e cancelar com auditoria dos usuários responsáveis.
+- Profissionais podem conceder desconto apenas nas próprias comandas; administradores podem conceder desconto nas comandas da empresa.
+- Os totais são calculados no servidor, os preços históricos são preservados, a comissão considera os serviços e o estoque dos produtos é baixado no fechamento e devolvido uma única vez em caso de cancelamento.
+- Foram adicionadas as migrações `agenda.0009_comanda_itemcomandaproduto_itemcomandaservico` e `agenda.0010_comanda_cancelado_por_and_more`, aplicadas com sucesso em produção.
+- Antes da publicação foi criado e validado o backup `/root/salaopro-predeploy-comanda-20261001-023021`. SHA-256: `96a4bfd445a2d827baf33986c1f08b1b8a3dd08fe0d4899154191c9daab3e36d` para o PostgreSQL e `126b8566e202ba519222ab6d28dc0f76c94951da39f1ac398a6d982ad20e2695` para a mídia.
+- Homologação: `nginx -t` aprovado e nove testes específicos dos modelos e endpoints da Comanda aprovados no PostgreSQL descartável.
+- Pós-publicação: nenhuma migração pendente, Django sem erros, `DATABASE_OK=True`, Redis `PONG`, página pública HTTP 200, API protegida HTTP 401 e painel administrativo HTTP 302, todos conforme esperado.
+- Somente backend e frontend foram recriados com `--no-deps`. PostgreSQL, Redis, WAHA e volumes foram preservados; o container órfão intencional do PostgreSQL não foi removido.
+- Próxima etapa funcional: validar visualmente a Comanda em um agendamento real. Depois, continuar com Caixa manual, sangria, suprimento, despesas e consolidação financeira, sem APIs de cartão e sem WhatsApp oficial nesta fase.
