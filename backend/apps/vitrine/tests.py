@@ -28,13 +28,13 @@ class ProdutoIsolationTests(APITestCase):
         Produto.objects.create(empresa=self.a, nome='Oculto', preco=Decimal('10'), disponivel=False)
         response = self.client.get('/api/produtos/', {'empresa_slug': self.a.slug})
         self.assertEqual(response.status_code, 200)
-        ids = {item['id'] for item in response.data}
+        ids = {item['id'] for item in response.data['results']}
         self.assertEqual(ids, {self.produto_a.id})
 
     def test_admin_lista_e_cria_apenas_na_propria_empresa(self):
         self.client.force_authenticate(self.admin_a)
         response = self.client.get('/api/produtos/')
-        self.assertEqual({item['id'] for item in response.data}, {self.produto_a.id})
+        self.assertEqual({item['id'] for item in response.data['results']}, {self.produto_a.id})
         created = self.client.post('/api/produtos/', {'nome': 'Shampoo', 'preco': '25.00', 'estoque': 4}, format='json')
         self.assertEqual(created.status_code, 201)
         self.assertEqual(Produto.objects.get(pk=created.data['id']).empresa, self.a)
@@ -119,6 +119,32 @@ class PedidoTests(APITestCase):
         pedido = Pedido.objects.create(empresa=outra, cliente_nome='Cliente', cliente_telefone='11999990000', forma_pagamento='PIX', total=Decimal('10.00'))
         self.client.force_authenticate(self.admin)
         self.assertEqual(self.client.get(f'/api/pedidos/{pedido.id}/').status_code, 404)
+
+    def test_dashboard_financeiro_filtra_periodo_e_somente_concluidos(self):
+        concluido = Pedido.objects.create(
+            empresa=self.empresa, cliente_nome='Cliente', cliente_telefone='11999990000',
+            forma_pagamento='PIX', total=Decimal('80.00'), status='CONCLUIDO', concluido_em=timezone.now(),
+        )
+        concluido.itens.create(produto=self.produto, nome_produto=self.produto.nome, quantidade=2, preco_unitario=Decimal('40'))
+        Pedido.objects.create(
+            empresa=self.empresa, cliente_nome='Pendente', cliente_telefone='11999990001',
+            forma_pagamento='DINHEIRO', total=Decimal('40.00'), status='CONFIRMADO',
+        )
+        self.client.force_authenticate(self.admin)
+        response = self.client.get('/api/pedidos/dashboard/', {'periodo': 'mensal'})
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data['total_vendas'], '80')
+        self.assertEqual(response.data['pedidos_concluidos'], 1)
+        self.assertEqual(response.data['itens_vendidos'], 2)
+        self.assertEqual(response.data['ticket_medio'], '80')
+        self.assertEqual(response.data['por_forma_pagamento']['PIX']['quantidade'], 1)
+
+    def test_produtos_e_pedidos_sao_paginados(self):
+        self.client.force_authenticate(self.admin)
+        produtos = self.client.get('/api/produtos/')
+        pedidos = self.client.get('/api/pedidos/')
+        self.assertIn('results', produtos.data)
+        self.assertIn('results', pedidos.data)
 
     @patch('apps.vitrine.views.notificar_status_pedido')
     def test_sinal_pix_mostra_metade_e_saldo_antes_da_confirmacao(self, notificar):

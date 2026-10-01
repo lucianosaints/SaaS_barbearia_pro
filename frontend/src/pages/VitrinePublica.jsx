@@ -15,6 +15,8 @@ export default function VitrinePublica() {
   const [aviso, setAviso] = useState('');
   const [checkout, setCheckout] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
   const [dadosCliente, setDadosCliente] = useState({ cliente_nome: '', cliente_telefone: '', forma_pagamento: 'PIX' });
   const [carrinho, setCarrinho] = useState(() => {
     try { return JSON.parse(localStorage.getItem(chaveCarrinho)) || []; }
@@ -22,11 +24,12 @@ export default function VitrinePublica() {
   });
 
   useEffect(() => {
-    api.get('/api/produtos/', { params: { empresa_slug: empresaSlug } })
-      .then(({ data }) => setProdutos(data.results || data))
+    setLoading(true);
+    api.get('/api/produtos/', { params: { empresa_slug: empresaSlug, page: pagina, page_size: 9 } })
+      .then(({ data }) => { setProdutos(data.results || data); setTotalPaginas(data.count ? Math.max(1, Math.ceil(data.count / 9)) : 1); })
       .catch(() => setErro('Não foi possível abrir esta vitrine.'))
       .finally(() => setLoading(false));
-  }, [empresaSlug]);
+  }, [empresaSlug, pagina]);
 
   useEffect(() => { localStorage.setItem(chaveCarrinho, JSON.stringify(carrinho)); }, [carrinho, chaveCarrinho]);
 
@@ -85,6 +88,7 @@ export default function VitrinePublica() {
       </article>)}
       {!produtos.length && <p className="col-span-full py-20 text-center text-text-muted">Este salão ainda não publicou produtos.</p>}
     </div>}
+    {!loading && !erro && totalPaginas > 1 && <div className="mt-8 flex items-center justify-center gap-3 text-sm"><button disabled={pagina === 1} onClick={() => setPagina((valor) => valor - 1)} className="rounded-lg border border-white/10 px-4 py-2 disabled:opacity-30">Anterior</button><span>Página {pagina} de {totalPaginas}</span><button disabled={pagina === totalPaginas} onClick={() => setPagina((valor) => valor + 1)} className="rounded-lg border border-white/10 px-4 py-2 disabled:opacity-30">Próxima</button></div>}
     {carrinhoAberto && <div className="fixed inset-0 z-[120] flex justify-end bg-black/70 backdrop-blur-sm" onClick={() => setCarrinhoAberto(false)}>
       <aside className="flex h-full w-full max-w-md flex-col border-l border-white/10 bg-background-paper shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-white/10 p-5"><div><h2 className="text-xl font-bold">Seu carrinho</h2><p className="text-xs text-text-muted">{totalItens} {totalItens === 1 ? 'item selecionado' : 'itens selecionados'}</p></div><button onClick={() => setCarrinhoAberto(false)} className="rounded-lg p-2 text-xl hover:bg-white/5" aria-label="Fechar carrinho">✕</button></div>

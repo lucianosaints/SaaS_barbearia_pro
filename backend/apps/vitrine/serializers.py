@@ -73,8 +73,8 @@ class PedidoSerializer(serializers.ModelSerializer):
         model = Pedido
         fields = ['id', 'empresa', 'empresa_nome', 'cliente_nome', 'cliente_telefone', 'forma_pagamento',
                   'status', 'total', 'sinal_solicitado', 'sinal_confirmado', 'valor_sinal', 'saldo_restante',
-                  'chave_pix', 'beneficiario_pix', 'ticket_url', 'ticket_expira_em', 'itens', 'criado_em', 'atualizado_em']
-        read_only_fields = ['id', 'empresa', 'status', 'total', 'sinal_solicitado', 'sinal_confirmado', 'criado_em', 'atualizado_em']
+                  'chave_pix', 'beneficiario_pix', 'ticket_url', 'ticket_expira_em', 'itens', 'criado_em', 'atualizado_em', 'concluido_em']
+        read_only_fields = ['id', 'empresa', 'status', 'total', 'sinal_solicitado', 'sinal_confirmado', 'criado_em', 'atualizado_em', 'concluido_em']
 
     def get_chave_pix(self, obj):
         return obj.empresa.chave_pix if obj.sinal_solicitado else ''

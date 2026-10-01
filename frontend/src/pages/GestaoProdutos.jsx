@@ -12,18 +12,21 @@ export default function GestaoProdutos() {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState('');
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
 
   const carregar = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/api/produtos/');
+      const { data } = await api.get('/api/produtos/', { params: { page: pagina, page_size: 9 } });
       setProdutos(data.results || data);
+      setTotalPaginas(data.count ? Math.max(1, Math.ceil(data.count / 9)) : 1);
     } catch {
       setMensagem('Não foi possível carregar os produtos.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pagina]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -85,6 +88,7 @@ export default function GestaoProdutos() {
         </article>)}
         {!produtos.length && <p className="col-span-full py-12 text-center text-text-muted">Nenhum produto cadastrado.</p>}
       </div>}
+      {totalPaginas > 1 && <div className="flex items-center justify-center gap-3 text-xs"><button disabled={pagina === 1} onClick={() => setPagina((valor) => valor - 1)} className="rounded-lg border border-white/10 px-3 py-2 disabled:opacity-30">Anterior</button><span>{pagina} de {totalPaginas}</span><button disabled={pagina === totalPaginas} onClick={() => setPagina((valor) => valor + 1)} className="rounded-lg border border-white/10 px-3 py-2 disabled:opacity-30">Próxima</button></div>}
 
     {aberto && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
       <form onSubmit={salvar} className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-white/10 bg-background-paper p-6 space-y-4">

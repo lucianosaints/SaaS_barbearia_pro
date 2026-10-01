@@ -1,14 +1,17 @@
 from decimal import Decimal
 import hashlib
 import re
+from datetime import datetime, time
 
 from django.core.cache import cache
 from django.db import transaction
+from django.db.models import Count, Sum
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, SAFE_METHODS
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
@@ -19,10 +22,36 @@ from .throttles import PedidoCreateThrottle
 from .notifications import notificar_novo_pedido, notificar_status_pedido
 
 
+class ProdutoPagination(PageNumberPagination):
+    page_size = 9
+    page_size_query_param = 'page_size'
+    max_page_size = 24
+
+
+class PedidoPagination(PageNumberPagination):
+    page_size = 12
+    page_size_query_param = 'page_size'
+    max_page_size = 30
+
+
+def inicio_periodo(periodo):
+    agora = timezone.localtime()
+    if periodo == 'diario':
+        data = agora.date()
+    elif periodo == 'mensal':
+        data = agora.date().replace(day=1)
+    elif periodo == 'anual':
+        data = agora.date().replace(month=1, day=1)
+    else:
+        return None
+    return timezone.make_aware(datetime.combine(data, time.min), timezone.get_current_timezone())
+
+
 class ProdutoViewSet(ModelViewSet):
     serializer_class = ProdutoSerializer
     permission_classes = [PublicReadAdminWrite]
     http_method_names = ['get', 'post', 'patch', 'put', 'head', 'options']
+    pagination_class = ProdutoPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -59,22 +88,53 @@ class ProdutoViewSet(ModelViewSet):
 class PedidoViewSet(ModelViewSet):
     serializer_class = PedidoSerializer
     http_method_names = ['get', 'post', 'patch', 'head', 'options']
+    pagination_class = PedidoPagination
 
     def get_queryset(self):
         user = self.request.user
         if not user.is_authenticated:
             return Pedido.objects.none()
         if user.is_superuser:
-            return Pedido.objects.select_related('empresa').prefetch_related('itens')
-        if user.tipo != 'ADMINISTRADOR' or not user.empresa_id:
+            queryset = Pedido.objects.select_related('empresa').prefetch_related('itens')
+        elif user.tipo != 'ADMINISTRADOR' or not user.empresa_id:
             raise PermissionDenied('Apenas o gestor pode consultar pedidos.')
-        return Pedido.objects.filter(empresa=user.empresa).select_related('empresa').prefetch_related('itens')
+        else:
+            queryset = Pedido.objects.filter(empresa=user.empresa).select_related('empresa').prefetch_related('itens')
+        periodo = self.request.query_params.get('periodo', 'todos')
+        if periodo not in {'todos', 'diario', 'mensal', 'anual'}:
+            raise ValidationError({'periodo': 'Use diario, mensal, anual ou todos.'})
+        inicio = inicio_periodo(periodo)
+        return queryset.filter(criado_em__gte=inicio) if inicio and self.action != 'dashboard' else queryset
 
     def get_permissions(self):
         return [AllowAny()] if self.action == 'create' else super().get_permissions()
 
     def get_throttles(self):
         return [PedidoCreateThrottle()] if self.action == 'create' else super().get_throttles()
+
+    @action(detail=False, methods=['get'])
+    def dashboard(self, request):
+        periodo = request.query_params.get('periodo', 'mensal')
+        if periodo not in {'diario', 'mensal', 'anual'}:
+            raise ValidationError({'periodo': 'Use diario, mensal ou anual.'})
+        inicio = inicio_periodo(periodo)
+        queryset = self.get_queryset().filter(status='CONCLUIDO', concluido_em__gte=inicio)
+        resumo = queryset.aggregate(total_vendas=Sum('total'), pedidos_concluidos=Count('id'))
+        total = resumo['total_vendas'] or Decimal('0')
+        quantidade = resumo['pedidos_concluidos'] or 0
+        itens = ItemPedido.objects.filter(pedido__in=queryset).aggregate(total=Sum('quantidade'))['total'] or 0
+        pagamentos = {
+            item['forma_pagamento']: {'quantidade': item['quantidade'], 'total': str(item['total'] or Decimal('0'))}
+            for item in queryset.values('forma_pagamento').annotate(quantidade=Count('id'), total=Sum('total')).order_by()
+        }
+        return Response({
+            'periodo': periodo,
+            'total_vendas': str(total),
+            'pedidos_concluidos': quantidade,
+            'itens_vendidos': itens,
+            'ticket_medio': str(total / quantidade if quantidade else Decimal('0')),
+            'por_forma_pagamento': pagamentos,
+        })
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -147,6 +207,8 @@ class PedidoViewSet(ModelViewSet):
         if novo == 'CANCELADO':
             pedido.devolver_estoque()
         pedido.status = novo
+        if novo == 'CONCLUIDO':
+            pedido.concluido_em = timezone.now()
         pedido.sinal_solicitado = novo in {'AGUARDANDO_SINAL', 'SINAL_CONFIRMADO', 'PRONTO', 'CONCLUIDO'} or pedido.sinal_solicitado
         pedido.sinal_confirmado = novo in {'SINAL_CONFIRMADO', 'PRONTO', 'CONCLUIDO'} and pedido.sinal_solicitado
         pedido.save()

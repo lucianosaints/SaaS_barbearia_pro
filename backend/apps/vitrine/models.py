@@ -69,6 +69,7 @@ class Pedido(models.Model):
     token_ticket_criado_em = models.DateTimeField(default=timezone.now, editable=False)
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
+    concluido_em = models.DateTimeField(null=True, blank=True, editable=False)
 
     class Meta:
         ordering = ['-criado_em']
