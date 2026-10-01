@@ -263,6 +263,8 @@ class ComandaSerializer(serializers.ModelSerializer):
         model = Comanda
         fields = ['id', 'agendamento', 'cliente_nome', 'profissional', 'profissional_nome', 'status',
                   'metodo_pagamento', 'desconto', 'subtotal_servicos', 'subtotal_produtos', 'total',
-                  'valor_comissao', 'itens_servico', 'itens_produto', 'criado_em', 'fechado_em', 'cancelado_em']
+                  'valor_comissao', 'itens_servico', 'itens_produto', 'criado_em', 'fechado_em', 'cancelado_em',
+                  'desconto_autorizado_por', 'fechado_por', 'cancelado_por']
         read_only_fields = ['id', 'profissional', 'status', 'metodo_pagamento', 'subtotal_servicos',
-                            'subtotal_produtos', 'total', 'valor_comissao', 'criado_em', 'fechado_em', 'cancelado_em']
+                            'subtotal_produtos', 'total', 'valor_comissao', 'criado_em', 'fechado_em', 'cancelado_em',
+                            'desconto_autorizado_por', 'fechado_por', 'cancelado_por']

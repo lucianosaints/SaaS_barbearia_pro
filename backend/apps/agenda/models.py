@@ -331,6 +331,9 @@ class Comanda(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     fechado_em = models.DateTimeField(null=True, blank=True)
     cancelado_em = models.DateTimeField(null=True, blank=True)
+    desconto_autorizado_por = models.ForeignKey(Usuario, on_delete=models.PROTECT, null=True, blank=True, related_name='descontos_comanda_autorizados')
+    fechado_por = models.ForeignKey(Usuario, on_delete=models.PROTECT, null=True, blank=True, related_name='comandas_fechadas')
+    cancelado_por = models.ForeignKey(Usuario, on_delete=models.PROTECT, null=True, blank=True, related_name='comandas_canceladas')
 
     class Meta:
         ordering = ['-criado_em']
@@ -345,7 +348,7 @@ class Comanda(models.Model):
         self.total = servicos + produtos - self.desconto
 
     @transaction.atomic
-    def fechar(self, metodo_pagamento):
+    def fechar(self, metodo_pagamento, usuario=None):
         comanda = Comanda.objects.select_for_update().get(pk=self.pk)
         if comanda.status != 'ABERTA':
             raise ValidationError('Somente comandas abertas podem ser fechadas.')
@@ -371,6 +374,7 @@ class Comanda(models.Model):
         comanda.metodo_pagamento = metodo_pagamento
         comanda.status = 'FECHADA'
         comanda.fechado_em = timezone.now()
+        comanda.fechado_por = usuario
         comanda.save()
         Agendamento.objects.filter(pk=comanda.agendamento_id).update(
             status='CONCLUIDO', status_pagamento='PAGO', metodo_pagamento=metodo_pagamento,
@@ -380,7 +384,7 @@ class Comanda(models.Model):
         return comanda
 
     @transaction.atomic
-    def cancelar(self):
+    def cancelar(self, usuario=None):
         comanda = Comanda.objects.select_for_update().get(pk=self.pk)
         if comanda.status == 'CANCELADA':
             raise ValidationError('A comanda já foi cancelada.')
@@ -391,7 +395,8 @@ class Comanda(models.Model):
                     Produto.objects.filter(pk=item.produto_id).update(estoque=models.F('estoque') + item.quantidade)
         comanda.status = 'CANCELADA'
         comanda.cancelado_em = timezone.now()
-        comanda.save(update_fields=['status', 'cancelado_em'])
+        comanda.cancelado_por = usuario
+        comanda.save(update_fields=['status', 'cancelado_em', 'cancelado_por'])
         return comanda
 
 

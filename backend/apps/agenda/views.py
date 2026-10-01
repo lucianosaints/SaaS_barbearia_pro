@@ -46,7 +46,7 @@ class ComandaViewSet(viewsets.ModelViewSet):
         comanda = self.get_object()
         if comanda.status != 'ABERTA' or set(serializer.validated_data) - {'desconto'}:
             raise ValidationError('Somente o desconto de uma comanda aberta pode ser alterado.')
-        comanda = serializer.save()
+        comanda = serializer.save(desconto_autorizado_por=self.request.user)
         comanda.recalcular()
         comanda.save()
 
@@ -101,14 +101,44 @@ class ComandaViewSet(viewsets.ModelViewSet):
         item.delete(); comanda.recalcular(); comanda.save()
         return Response(self.get_serializer(comanda).data)
 
+    @action(detail=True, methods=['post'], url_path='adicionar-servico')
+    @transaction.atomic
+    def adicionar_servico(self, request, pk=None):
+        comanda = self.get_queryset().select_for_update().get(pk=pk)
+        if comanda.status != 'ABERTA':
+            raise ValidationError('A comanda não está aberta.')
+        servico = Servico.objects.filter(pk=request.data.get('servico'), empresa=comanda.empresa, ativo=True).first()
+        try: quantidade = int(request.data.get('quantidade', 1))
+        except (TypeError, ValueError): quantidade = 0
+        if not servico or quantidade < 1:
+            raise ValidationError({'servico': 'Serviço ou quantidade inválida.'})
+        item, _ = ItemComandaServico.objects.get_or_create(comanda=comanda, servico=servico, defaults={'nome': servico.nome, 'preco_unitario': servico.preco, 'quantidade': 0})
+        item.quantidade += quantidade; item.save()
+        comanda.recalcular(); comanda.save()
+        return Response(self.get_serializer(comanda).data)
+
+    @action(detail=True, methods=['delete'], url_path=r'servicos/(?P<item_id>[^/.]+)')
+    @transaction.atomic
+    def remover_servico(self, request, pk=None, item_id=None):
+        comanda = self.get_queryset().select_for_update().get(pk=pk)
+        if comanda.status != 'ABERTA':
+            raise ValidationError('A comanda não está aberta.')
+        item = comanda.itens_servico.filter(pk=item_id).first()
+        if not item:
+            raise ValidationError({'servico': 'Item não encontrado.'})
+        if comanda.itens_servico.count() <= 1:
+            raise ValidationError({'servico': 'A comanda precisa manter ao menos um serviço.'})
+        item.delete(); comanda.recalcular(); comanda.save()
+        return Response(self.get_serializer(comanda).data)
+
     @action(detail=True, methods=['post'])
     def fechar(self, request, pk=None):
-        comanda = self.get_object().fechar(request.data.get('metodo_pagamento'))
+        comanda = self.get_object().fechar(request.data.get('metodo_pagamento'), request.user)
         return Response(self.get_serializer(comanda).data)
 
     @action(detail=True, methods=['post'])
     def cancelar(self, request, pk=None):
-        return Response(self.get_serializer(self.get_object().cancelar()).data)
+        return Response(self.get_serializer(self.get_object().cancelar(request.user)).data)
 
 class ServicoViewSet(viewsets.ModelViewSet):
     """
