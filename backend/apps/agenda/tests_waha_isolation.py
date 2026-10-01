@@ -24,6 +24,12 @@ class WahaIsolationTest(TransactionTestCase):
             telefone="11888888888",
             empresa=self.empresa_a
         )
+        self.administrador = Usuario.objects.create(
+            username="admin_a",
+            telefone="11777777777",
+            empresa=self.empresa_a,
+            tipo="ADMINISTRADOR",
+        )
 
         # Criar serviço para a empresa A
         self.servico = Servico.objects.create(
@@ -53,7 +59,8 @@ class WahaIsolationTest(TransactionTestCase):
             profissional=self.profissional,
             data_hora_inicio=data_inicio,
             data_hora_fim=data_fim,
-            status='PENDENTE'
+            status='PENDENTE',
+            metodo_pagamento='PIX',
         )
         
         # Adicionar o serviço dispara o signal m2m_changed
@@ -69,6 +76,13 @@ class WahaIsolationTest(TransactionTestCase):
         ]
         
         self.assertTrue(len(chamadas_waha) > 0, "Deveria ter disparado chamadas para o WAHA")
+
+        mensagens = [call.kwargs.get('json', {}) for call in chamadas_waha]
+        destinatarios = {payload.get('chatId') for payload in mensagens}
+        self.assertIn('5511888888888@c.us', destinatarios)
+        self.assertIn('5511777777777@c.us', destinatarios)
+        self.assertIn('5511999999999@c.us', destinatarios)
+        self.assertTrue(all('Forma de Pagamento: Pix' in payload.get('text', '') for payload in mensagens))
         
         sessao_a = f"tenant_{self.empresa_a.id}"
         sessao_b = f"tenant_{self.empresa_b.id}"

@@ -76,10 +76,11 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
                 except Exception as e:
                     logger.error(f"Falha ao enviar e-mail de confirmação para agendamento {inst.id}: {str(e)}")
 
-            # NOTIFICAÇÃO DO BARBEIRO VIA WAHA
+            # NOTIFICAÇÃO DO SALÃO VIA WAHA
             try:
-                if inst.profissional and getattr(inst.profissional, 'telefone', None):
+                if inst.empresa:
                     from services.waha_service import enviar_mensagem_whatsapp
+                    from apps.accounts.models import Usuario
                     
                     import re
                     cliente_telefone_raw = getattr(inst.cliente, 'telefone', '') if inst.cliente else ''
@@ -124,8 +125,25 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
                         
                     msg_barbeiro += "Tenha um ótimo trabalho!"
 
-                    session_id = f"tenant_{inst.empresa.id}" if inst.empresa else 'default'
-                    enviar_mensagem_whatsapp(inst.profissional.telefone, msg_barbeiro, waha_session=session_id)
+                    destinatarios = []
+                    if inst.profissional and getattr(inst.profissional, 'telefone', None):
+                        destinatarios.append(inst.profissional.telefone)
+                    destinatarios.extend(
+                        Usuario.objects.filter(
+                            empresa=inst.empresa,
+                            tipo='ADMINISTRADOR',
+                            is_active=True,
+                        ).exclude(telefone__isnull=True).exclude(telefone='').values_list('telefone', flat=True)
+                    )
+
+                    session_id = f"tenant_{inst.empresa.id}"
+                    numeros_enviados = set()
+                    for telefone in destinatarios:
+                        numero_normalizado = re.sub(r'\D', '', str(telefone))
+                        if not numero_normalizado or numero_normalizado in numeros_enviados:
+                            continue
+                        numeros_enviados.add(numero_normalizado)
+                        enviar_mensagem_whatsapp(telefone, msg_barbeiro, waha_session=session_id)
             except Exception as e:
                 logger.error(f"Falha ao enviar WAHA para agendamento {inst.id}: {str(e)}")
 
@@ -142,6 +160,7 @@ def enviar_confirmacao_agendamento(sender, instance: Agendamento, action: str, *
                         f"👤 Profissional: {barbeiro_nome}\n"
                         f"📅 Data/Hora: {data_formatada}\n"
                         f"✂️ Serviço(s): {lista_servicos}\n"
+                        f"💳 Forma de Pagamento: {forma_pagamento}\n"
                     )
 
                     empresa = inst.empresa
