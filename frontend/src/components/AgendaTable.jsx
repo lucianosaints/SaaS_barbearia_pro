@@ -4,7 +4,7 @@ import { FaWhatsapp, FaCut, FaCreditCard, FaRegCreditCard } from 'react-icons/fa
 import { MdOutlinePix } from 'react-icons/md';
 import { BsCashCoin } from 'react-icons/bs';
 
-export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
+export default function AgendaTable({ agendamentos, onEdit, onCancel, onComanda }) {
   // Formatters
   const formatTime = (dateStr) => {
     if (!dateStr) return '-';
@@ -195,6 +195,7 @@ export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
                       >
                         <FiEdit2 size={16} />
                       </button>
+                      {agendamento.status !== 'CANCELADO' && <button onClick={() => onComanda?.(agendamento)} className="rounded-lg border border-emerald-500/30 px-2 py-1 text-xs text-emerald-300">Comanda</button>}
 
                       
                       {agendamento.cliente_telefone && (
@@ -311,6 +312,7 @@ export default function AgendaTable({ agendamentos, onEdit, onCancel }) {
                 >
                   <FiEdit2 size={14} /> Editar
                 </button>
+                {agendamento.status !== 'CANCELADO' && <button onClick={() => onComanda?.(agendamento)} className="rounded-lg border border-emerald-500/30 px-3 py-1.5 text-xs font-bold text-emerald-300">Comanda</button>}
 
                 <div className="flex gap-2">
                   {agendamento.cliente_telefone && (

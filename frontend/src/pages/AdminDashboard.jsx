@@ -14,6 +14,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import LockoutScreen from '../components/LockoutScreen';
 import useAgendamentoStore from '../store/useAgendamentoStore';
 import PlacaQRCode from '../components/PlacaQRCode';
+import ComandaModal from '../components/ComandaModal';
 
 const FinanceiroDashboard = lazy(() => import('./FinanceiroDashboard'));
 
@@ -29,6 +30,7 @@ export default function AdminDashboard() {
   const [bloqueioModalOpen, setBloqueioModalOpen] = useState(false);
   const [gerenciarBloqueiosModalOpen, setGerenciarBloqueiosModalOpen] = useState(false);
   const [cancelamentoModal, setCancelamentoModal] = useState({ isOpen: false, agendamento: null });
+  const [agendamentoComanda, setAgendamentoComanda] = useState(null);
   
   // ==========================================
   // ESTADOS E FUNÇÕES DA ABA AGENDA (Padrão)
@@ -428,7 +430,7 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <>
-                <AgendaTable agendamentos={agendamentos} onEdit={handleEditClick} onCancel={handleCancelAgendamento} />
+                <AgendaTable agendamentos={agendamentos} onEdit={handleEditClick} onCancel={handleCancelAgendamento} onComanda={setAgendamentoComanda} />
 
             {/* Modal de Edição Rápida */}
             {editingAgendamento && (
@@ -521,6 +523,7 @@ export default function AdminDashboard() {
           if (activeTab === 'agenda') fetchAgendamentos(currentFilters);
         }}
       />
+      {agendamentoComanda && <ComandaModal agendamento={agendamentoComanda} onClose={() => setAgendamentoComanda(null)} onUpdated={() => fetchAgendamentos(currentFilters)} />}
 
       {/* MODAL DE GERENCIAR BLOQUEIOS */}
       <GerenciarBloqueiosModal 

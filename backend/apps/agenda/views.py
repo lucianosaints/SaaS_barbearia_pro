@@ -42,6 +42,14 @@ class ComandaViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(profissional=user)
         return queryset.select_related('agendamento__cliente', 'profissional').prefetch_related('itens_servico', 'itens_produto')
 
+    def perform_update(self, serializer):
+        comanda = self.get_object()
+        if comanda.status != 'ABERTA' or set(serializer.validated_data) - {'desconto'}:
+            raise ValidationError('Somente o desconto de uma comanda aberta pode ser alterado.')
+        comanda = serializer.save()
+        comanda.recalcular()
+        comanda.save()
+
     @transaction.atomic
     def create(self, request, *args, **kwargs):
         agendamento_id = request.data.get('agendamento')
@@ -79,6 +87,18 @@ class ComandaViewSet(viewsets.ModelViewSet):
         item, _ = ItemComandaProduto.objects.get_or_create(comanda=comanda, produto=produto, defaults={'nome': produto.nome, 'preco_unitario': produto.preco_atual, 'quantidade': 0})
         item.quantidade += quantidade; item.save()
         comanda.recalcular(); comanda.save()
+        return Response(self.get_serializer(comanda).data)
+
+    @action(detail=True, methods=['delete'], url_path=r'produtos/(?P<item_id>[^/.]+)')
+    @transaction.atomic
+    def remover_produto(self, request, pk=None, item_id=None):
+        comanda = self.get_queryset().select_for_update().get(pk=pk)
+        if comanda.status != 'ABERTA':
+            raise ValidationError('A comanda não está aberta.')
+        item = comanda.itens_produto.filter(pk=item_id).first()
+        if not item:
+            raise ValidationError({'produto': 'Item não encontrado.'})
+        item.delete(); comanda.recalcular(); comanda.save()
         return Response(self.get_serializer(comanda).data)
 
     @action(detail=True, methods=['post'])
