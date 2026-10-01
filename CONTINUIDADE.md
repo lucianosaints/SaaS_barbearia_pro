@@ -794,3 +794,20 @@ Depois da restauração, validar HTTPS: página inicial 200, `/api/` 401, `/pain
 - As imagens de backend e frontend foram construídas no servidor. `nginx -t` passou e os 26 testes direcionados de agenda passaram no PostgreSQL descartável com `AGENDA_NOTIFICATIONS_ASYNC=False`. Uma primeira execução com a fila assíncrona de produção ativa deixou uma conexão no banco de testes; o banco temporário foi removido com `dropdb --force` e a repetição correta passou integralmente. O banco de produção não foi alterado por esses testes.
 - Somente backend e frontend foram recriados com `docker compose up -d --no-deps backend frontend`. PostgreSQL, Redis, WAHA e volumes foram preservados; nenhum órfão foi removido.
 - Pós-publicação: nenhuma migração pendente, Django sem erros, Gunicorn 26.2.0 ativo, `DATABASE_OK=True`, Redis `PONG`, página pública 200, API protegida 401 e painel administrativo 302 para autenticação.
+
+## Hotfix do WhatsApp e evolução financeira da Vitrine (01/10/2026)
+
+- O hotfix `f2ade20` passou a enviar a forma de pagamento do agendamento ao profissional, aos administradores ativos do salão e ao cliente, eliminando telefones duplicados. Foi homologado no PostgreSQL candidato e publicado somente com a recriação do backend.
+- O incremento da Vitrine foi implementado no commit `7a6efab`, com ajuste de teste PostgreSQL no commit `05bad80`, e publicado em produção.
+- A Vitrine agora possui filtros Hoje/Este mês/Este ano, dashboard com vendas concluídas, pedidos concluídos, itens vendidos e ticket médio, pedidos compactos expansíveis e paginação. Produtos são paginados no painel e no catálogo público.
+- A migração `vitrine.0004_pedido_concluido_em` registra a data real de conclusão da venda e preserva pedidos concluídos antigos usando a última atualização. Foi aplicada com sucesso em produção.
+- Backup validado antes da publicação: `/root/salaopro-predeploy-dashboard-20261001-003830`. SHA-256: `b4c0b3a834628c6c97f67f26cf41ebc553808ae70ea44e5fab53517b53c49fb8` para o PostgreSQL e `3bbc6527caf868dfc4e5dced3696ea12a9efeb32cb004bef284985d961b3cbde` para a mídia.
+- Homologação: 16 testes da Vitrine aprovados no PostgreSQL candidato, `nginx -t` aprovado, migração conferida previamente por `migrate --plan`. Pós-publicação: migração aplicada, Django sem erros, Gunicorn e Nginx ativos e página pública HTTP 200.
+
+## Próxima etapa aprovada — Comanda e Caixa manual (01/10/2026)
+
+- Decisão do usuário: manter pagamentos sem APIs de cartão e sem WhatsApp oficial por enquanto. O estabelecimento recebe diretamente por PIX próprio, dinheiro ou maquininha externa; o SalaoPro apenas registra e concilia a operação.
+- Primeira versão aprovada: comanda vinculada a um agendamento e a um profissional, com uma forma de pagamento por fechamento.
+- Escopo planejado: serviços e produtos na comanda, desconto controlado, totais calculados no servidor, comissão, baixa transacional de estoque no fechamento, cancelamento/estorno seguro e preservação dos valores históricos.
+- Etapas posteriores: abertura e fechamento de caixa, sangria e suprimento, despesas e contas, estoque avançado e financeiro consolidado. Pagamento dividido poderá ser acrescentado depois sem integração bancária.
+- Nenhum código de Comanda ou Caixa foi criado até este registro. O próximo trabalho deve começar pelos modelos transacionais, regras de fechamento/estorno, API e testes; depois integrar a tela administrativa. Não publicar sem homologação e backup.
