@@ -16,6 +16,7 @@ from apps.accounts.models import Usuario
 from django.db.models import Q
 from django.db import transaction
 from rest_framework.exceptions import PermissionDenied
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
@@ -86,6 +87,7 @@ class ComandaViewSet(viewsets.ModelViewSet):
             raise ValidationError({'produto': 'Produto ou quantidade inválida.'})
         item, _ = ItemComandaProduto.objects.get_or_create(comanda=comanda, produto=produto, defaults={'nome': produto.nome, 'preco_unitario': produto.preco_atual, 'quantidade': 0})
         item.quantidade += quantidade; item.save()
+        comanda._prefetched_objects_cache = {}
         comanda.recalcular(); comanda.save()
         return Response(self.get_serializer(comanda).data)
 
@@ -98,7 +100,7 @@ class ComandaViewSet(viewsets.ModelViewSet):
         item = comanda.itens_produto.filter(pk=item_id).first()
         if not item:
             raise ValidationError({'produto': 'Item não encontrado.'})
-        item.delete(); comanda.recalcular(); comanda.save()
+        item.delete(); comanda._prefetched_objects_cache = {}; comanda.recalcular(); comanda.save()
         return Response(self.get_serializer(comanda).data)
 
     @action(detail=True, methods=['post'], url_path='adicionar-servico')
@@ -114,6 +116,7 @@ class ComandaViewSet(viewsets.ModelViewSet):
             raise ValidationError({'servico': 'Serviço ou quantidade inválida.'})
         item, _ = ItemComandaServico.objects.get_or_create(comanda=comanda, servico=servico, defaults={'nome': servico.nome, 'preco_unitario': servico.preco, 'quantidade': 0})
         item.quantidade += quantidade; item.save()
+        comanda._prefetched_objects_cache = {}
         comanda.recalcular(); comanda.save()
         return Response(self.get_serializer(comanda).data)
 
@@ -128,17 +131,24 @@ class ComandaViewSet(viewsets.ModelViewSet):
             raise ValidationError({'servico': 'Item não encontrado.'})
         if comanda.itens_servico.count() <= 1:
             raise ValidationError({'servico': 'A comanda precisa manter ao menos um serviço.'})
-        item.delete(); comanda.recalcular(); comanda.save()
+        item.delete(); comanda._prefetched_objects_cache = {}; comanda.recalcular(); comanda.save()
         return Response(self.get_serializer(comanda).data)
 
     @action(detail=True, methods=['post'])
     def fechar(self, request, pk=None):
-        comanda = self.get_object().fechar(request.data.get('metodo_pagamento'), request.user)
+        try:
+            comanda = self.get_object().fechar(request.data.get('metodo_pagamento'), request.user)
+        except DjangoValidationError as exc:
+            raise ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages) from exc
         return Response(self.get_serializer(comanda).data)
 
     @action(detail=True, methods=['post'])
     def cancelar(self, request, pk=None):
-        return Response(self.get_serializer(self.get_object().cancelar(request.user)).data)
+        try:
+            comanda = self.get_object().cancelar(request.user)
+        except DjangoValidationError as exc:
+            raise ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages) from exc
+        return Response(self.get_serializer(comanda).data)
 
 class ServicoViewSet(viewsets.ModelViewSet):
     """
