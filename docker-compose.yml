@@ -1,0 +1,83 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: barbeiro_pro_backend
+    command: gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 1 --timeout 120
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./backend:/app
+      - django_media:/app/media # Persiste arquivos de mídia (fotos, uploads)
+    env_file:
+      - ./backend/.env
+    environment:
+      CACHE_URL: redis://redis:6379/1
+      WAHA_API_URL: http://waha:3000
+      WAHA_API_KEY: ${WAHA_API_KEY:?Configure WAHA_API_KEY no ambiente}
+    depends_on:
+      redis:
+        condition: service_healthy
+    # Ao reintegrar a definicao do PostgreSQL, inclua tambem a dependencia de db.
+    networks:
+      - barbeiro_pro_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: barbeiro_pro_frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:80"
+    depends_on:
+      - backend
+    networks:
+      - barbeiro_pro_net
+    volumes:
+      - django_media:/app/media
+
+  waha:
+    image: devlikeapro/waha:chrome
+    container_name: barbeiro_pro_waha
+    restart: unless-stopped
+    expose:
+      - "3000" # Acessível apenas pela rede interna Docker (barbeiro_pro_net)
+    environment:
+      - WHATSAPP_DEFAULT_ENGINE=WEBJS
+      - WAHA_API_KEY=${WAHA_API_KEY:?Configure WAHA_API_KEY no ambiente}
+      - WHATSAPP_API_KEY=${WAHA_API_KEY:?Configure WAHA_API_KEY no ambiente}
+      - WHATSAPP_SWAGGER_USERNAME=${WAHA_ADMIN_USER:-admin}
+      - WHATSAPP_SWAGGER_PASSWORD=${WAHA_ADMIN_PASSWORD:?Configure WAHA_ADMIN_PASSWORD no ambiente}
+      - WHATSAPP_DASHBOARD_USERNAME=${WAHA_ADMIN_USER:-admin}
+      - WHATSAPP_DASHBOARD_PASSWORD=${WAHA_ADMIN_PASSWORD:?Configure WAHA_ADMIN_PASSWORD no ambiente}
+    networks:
+      - barbeiro_pro_net
+    volumes:
+      - waha_data:/app/.waha
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: barbeiro_pro_redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - barbeiro_pro_net
+
+volumes:
+  waha_data:
+  django_media:
+  # db_data: (Se habilitar postgres futuramente)
+
+networks:
+  barbeiro_pro_net:
+    driver: bridge

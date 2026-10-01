@@ -2,7 +2,8 @@ import axios from 'axios';
 
 // Instância base do Axios apontando para o nosso backend Django
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  baseURL: (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : '')).replace(/\/+$/, ''),
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -26,9 +27,16 @@ const processQueue = (error, token = null) => {
 // Request Interceptor: Injeta o Access Token no Header de Autorização
 api.interceptors.request.use(
   (config) => {
+    // O navegador precisa gerar automaticamente o boundary de uploads multipart.
+    // Manter application/json aqui transforma arquivos em texto no Django.
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      delete config.headers.Authorization;
     }
     return config;
   },
@@ -42,9 +50,13 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    if (error.response?.status === 402) {
+      window.location.href = '/admin/assinatura';
+      return Promise.reject(error);
+    }
 
     // Se o erro for 401 (Unauthorized) e não for uma tentativa repetida de obter token
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (originalRequest.url === '/api/token/' || originalRequest.url === '/api/token/refresh/') {
         // Se falhar na própria autenticação ou renovação, limpa os tokens e rejeita
         localStorage.removeItem('access_token');
@@ -52,6 +64,7 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      originalRequest._retry = true;
       if (isRefreshing) {
         // Enfileira as requisições concorrentes enquanto o refresh é processado
         return new Promise((resolve, reject) => {
@@ -66,7 +79,6 @@ api.interceptors.response.use(
           });
       }
 
-      originalRequest._retry = true;
       isRefreshing = true;
 
       const refreshToken = localStorage.getItem('refresh_token');
@@ -74,14 +86,15 @@ api.interceptors.response.use(
         isRefreshing = false;
         // Sem refresh token, força deslogar
         localStorage.removeItem('access_token');
+        window.dispatchEvent(new Event('auth_expired'));
         return Promise.reject(error);
       }
 
       try {
         // Faz a requisição de Refresh Token na API do Django
-        const response = await axios.post('http://localhost:8000/api/token/refresh/', {
+        const response = await axios.post(`${api.defaults.baseURL}/api/token/refresh/`, {
           refresh: refreshToken,
-        });
+        }, { timeout: 15000 });
 
         const newAccessToken = response.data.access;
         localStorage.setItem('access_token', newAccessToken);
@@ -92,7 +105,6 @@ api.interceptors.response.use(
         }
 
         // Atualiza a autorização na requisição original e na fila
-        api.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
         processQueue(null, newAccessToken);

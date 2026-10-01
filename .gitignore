@@ -5,7 +5,10 @@ __pycache__/
 *.sqlite3
 .env
 venv/
+.venv/
+backend/staticfiles/
 env/
+.venv/
 ENV/
 env.bak/
 venv.bak/

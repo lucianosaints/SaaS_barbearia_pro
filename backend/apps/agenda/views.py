@@ -1,5 +1,6 @@
 from datetime import datetime, time, timedelta
 from django.utils import timezone
+from rest_framework.throttling import ScopedRateThrottle
 from django.db.models import Sum
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
@@ -8,11 +9,19 @@ from django_filters import rest_framework as filters
 from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from apps.agenda.models import Servico, Agendamento
-from apps.agenda.serializers import ServicoSerializer, AgendamentoSerializer
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from apps.agenda.models import Servico, Agendamento, BloqueioHorario, FilaEspera
+from apps.agenda.serializers import ServicoSerializer, AgendamentoSerializer, BloqueioHorarioSerializer, FilaEsperaSerializer
 from apps.accounts.models import Usuario
+from django.db.models import Q
 
 from rest_framework.permissions import IsAuthenticated, AllowAny
+
+from apps.accounts.permissions import IsAdminUserOrReadOnly, PublicReadAdminWrite
+from rest_framework.permissions import SAFE_METHODS
+from rest_framework.exceptions import ValidationError
+from apps.agenda.rules import validate_selection
+from apps.tenants.permissions import IsEmpresaAtiva
 
 class ServicoViewSet(viewsets.ModelViewSet):
     """
@@ -20,13 +29,18 @@ class ServicoViewSet(viewsets.ModelViewSet):
     Garante isolamento multi-tenant e visualização pública.
     """
     serializer_class = ServicoSerializer
-    permission_classes = [AllowAny] # Permite visualização pública
+    permission_classes = [PublicReadAdminWrite, IsEmpresaAtiva]
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
 
     def get_queryset(self):
         # Filtro de listagem pública por empresa para o Wizard
         empresa_id = self.request.query_params.get('empresa_id')
-        if empresa_id:
-            return Servico.objects.filter(empresa_id=empresa_id, ativo=True)
+        if not empresa_id and not self.request.user.is_authenticated:
+            raise ValidationError({'empresa_id': 'Informe a empresa para consultar serviços.'})
+        if empresa_id and self.request.method in SAFE_METHODS:
+            if not empresa_id.isdigit():
+                raise ValidationError({'empresa_id': 'Identificador inválido.'})
+            return Servico.objects.filter(empresa_id=empresa_id, ativo=True, empresa__ativo=True)
 
         user = self.request.user
         if user.is_authenticated and user.tipo != 'CLIENTE':
@@ -35,9 +49,9 @@ class ServicoViewSet(viewsets.ModelViewSet):
             if user.empresa:
                 return Servico.objects.filter(empresa=user.empresa)
             return Servico.objects.none()
-            
+
         # Se for consulta anônima ou cliente final logado, lista todos os serviços ativos no MVP
-        return Servico.objects.filter(ativo=True)
+        return Servico.objects.filter(ativo=True, empresa__ativo=True)
 
     def perform_create(self, serializer):
         # Associa o serviço automaticamente à empresa do usuário criador
@@ -58,11 +72,14 @@ class AgendamentoFilter(filters.FilterSet):
         field_name='profissional',
         label="Profissional / Barbeiro"
     )
-    data_hora_inicio = filters.DateFilter(
-        field_name='data_hora_inicio',
-        lookup_expr='date',
-        label="Data do Agendamento"
-    )
+    data_hora_inicio = filters.DateFilter(method='filtrar_data_local', label="Data do Agendamento")
+
+    def filtrar_data_local(self, queryset, _name, value):
+        """Converte o dia de São Paulo em intervalo UTC antes de consultar."""
+        tz = timezone.get_current_timezone()
+        inicio = timezone.make_aware(datetime.combine(value, time.min), tz)
+        fim = timezone.make_aware(datetime.combine(value, time.max), tz)
+        return queryset.filter(data_hora_inicio__range=(inicio, fim))
 
     class Meta:
         model = Agendamento
@@ -75,9 +92,17 @@ class AgendamentoFilter(filters.FilterSet):
         if request and hasattr(request, 'user') and request.user.is_authenticated and not request.user.is_superuser:
             if request.user.tipo != 'CLIENTE':
                 empresa = request.user.empresa
-                self.filters['barbeiro'].queryset = Usuario.objects.filter(empresa=empresa)
+                self.filters['barbeiro'].queryset = Usuario.objects.filter(
+                    empresa=empresa, 
+                    is_staff=False, 
+                    is_superuser=False
+                )
             else:
-                self.filters['barbeiro'].queryset = Usuario.objects.filter(tipo='PROFISSIONAL')
+                self.filters['barbeiro'].queryset = Usuario.objects.filter(
+                    tipo='PROFISSIONAL',
+                    is_staff=False,
+                    is_superuser=False
+                )
 
 
 class AgendamentoViewSet(viewsets.ModelViewSet):
@@ -87,56 +112,33 @@ class AgendamentoViewSet(viewsets.ModelViewSet):
     Se for um cliente final, retorna apenas os seus próprios agendamentos.
     """
     serializer_class = AgendamentoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsEmpresaAtiva]
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
     filter_backends = [filters.DjangoFilterBackend]
     filterset_class = AgendamentoFilter
 
     def get_queryset(self):
         user = self.request.user
         if user.is_superuser:
-            return Agendamento.objects.all()
+            return Agendamento.objects.select_related('cliente', 'profissional', 'empresa').prefetch_related('servicos').all()
         
         # Cliente final: OBRIGATORIAMENTE retorna apenas seus próprios agendamentos
         if user.tipo == 'CLIENTE':
             return Agendamento.objects.filter(cliente=user)
             
-        # Profissionais e Administradores: veem todos os agendamentos da empresa
+        if user.tipo == 'PROFISSIONAL' and user.empresa_id:
+            return Agendamento.objects.filter(empresa=user.empresa, profissional=user)
+        # Administradores veem os agendamentos da empresa
         if user.tipo in ['ADMINISTRADOR', 'PROFISSIONAL'] and user.empresa:
             return Agendamento.objects.filter(empresa=user.empresa)
             
         return Agendamento.objects.none()
 
-    def perform_create(self, serializer):
-        user = self.request.user
-        # Se for cliente, associa-o automaticamente ao agendamento
-        if user.tipo == 'CLIENTE':
-            profissional = serializer.validated_data.get('profissional')
-            empresa = profissional.empresa if profissional else user.empresa
-            serializer.save(cliente=user, empresa=empresa)
-        else:
-            # Caso contrário (operadores/administradores), fluxo normal
-            empresa = user.empresa or serializer.validated_data.get('empresa')
-            serializer.save(empresa=empresa)
-
     @action(detail=True, methods=['patch'])
     def cancelar(self, request, pk=None):
-        agendamento = self.get_object()
-        
-        # Garante que só o próprio cliente ou um administrador possa cancelar
-        if request.user.tipo == 'CLIENTE' and agendamento.cliente != request.user:
-            return Response(
-                {"error": "Você não tem permissão para cancelar este agendamento."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-            
-        if agendamento.status == 'CANCELADO':
-            return Response(
-                {"error": "Este agendamento já está cancelado."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-            
-        agendamento.status = 'CANCELADO'
-        agendamento.save()
+        serializer = self.get_serializer(self.get_object(), data={'status': 'CANCELADO'}, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response({"message": "Agendamento cancelado com sucesso."})
 
 
@@ -167,44 +169,45 @@ def obter_disponibilidade(request):
 
     try:
         servico_ids = [int(id_str.strip()) for id_str in servicos_str.split(',') if id_str.strip()]
+        barbeiro_id = int(barbeiro_id)
     except ValueError:
         return Response(
             {"error": "Formato do parâmetro 'servicos' inválido. Use IDs separados por vírgula."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    if not servico_ids:
+    if not servico_ids or len(servico_ids) != len(set(servico_ids)):
         return Response(
             {"error": "Pelo menos um serviço deve ser selecionado."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    user = request.user
-    servicos_qs = Servico.objects.filter(id__in=servico_ids, ativo=True)
-    if user.is_authenticated and not user.is_superuser and user.empresa:
-        servicos_qs = servicos_qs.filter(empresa=user.empresa)
-
-    if servicos_qs.count() != len(set(servico_ids)):
-        return Response(
-            {"error": "Um ou mais serviços informados são inválidos ou não pertencem à empresa."},
-            status=status.HTTP_404_NOT_FOUND
-        )
-
-    # Busca o profissional para obter sua respectiva empresa (tenant)
     barbeiro = Usuario.objects.filter(id=barbeiro_id).first()
     if not barbeiro or not barbeiro.empresa:
         return Response(
             {"error": "Profissional inválido ou sem barbearia (empresa) vinculada."},
-            status=status.HTTP_404_NOT_FOUND
+            status=status.HTTP_400_BAD_REQUEST
         )
 
     empresa = barbeiro.empresa
-    duracao_total = sum(s.duracao_minutos for s in servicos_qs)
+
+    # Filtra os serviços pela empresa do barbeiro selecionado (não do usuário logado)
+    servicos_qs = Servico.objects.filter(id__in=servico_ids, ativo=True, empresa=empresa)
+
+    if servicos_qs.count() != len(set(servico_ids)):
+        return Response(
+            {"error": "Um ou mais serviços informados são inválidos ou não pertencem à empresa."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    duracao_total = validate_selection(barbeiro, list(servicos_qs))
+    if data_selecionada < timezone.localdate():
+        return Response({'horarios_disponiveis': [], 'horarios_ocupados': [], 'mensagem': None})
 
     tz = timezone.get_current_timezone()
     
     # Parâmetros de expediente e almoço dinâmicos da empresa
-    hora_abertura = registrar_tempo_certo = empresa.hora_abertura
+    hora_abertura = empresa.hora_abertura
     hora_fechamento = empresa.hora_fechamento
     almoco_inicio = empresa.intervalo_almoco_inicio
     almoco_fim = empresa.intervalo_almoco_fim
@@ -215,10 +218,21 @@ def obter_disponibilidade(request):
         data_hora_inicio__date=data_selecionada,
         status__in=['PENDENTE', 'CONFIRMADO', 'CONCLUIDO']
     )
-    if user.is_authenticated and not user.is_superuser and user.empresa:
-        agendamentos = agendamentos.filter(empresa=user.empresa)
+    
+    datetime_inicio_dia = timezone.make_aware(datetime.combine(data_selecionada, time.min), tz)
+    datetime_fim_dia = timezone.make_aware(datetime.combine(data_selecionada, time.max), tz)
+
+    bloqueios = BloqueioHorario.objects.filter(
+        empresa=empresa,
+        data_hora_inicio__lt=datetime_fim_dia,
+        data_hora_fim__gt=datetime_inicio_dia
+    ).filter(
+        Q(profissional_id=barbeiro_id) | Q(profissional__isnull=True)
+    )
+    
 
     horarios_disponiveis = []
+    horarios_ocupados = []
     agora = timezone.localtime(timezone.now())
 
     datetime_inicio_exp = timezone.make_aware(datetime.combine(data_selecionada, hora_abertura), tz)
@@ -243,24 +257,43 @@ def obter_disponibilidade(request):
 
         tem_sobreposicao = False
 
+        bloqueado_por_admin = False
+        
         # 1. Verifica colisão com o intervalo de almoço configurado da empresa
         if datetime_inicio_almoco and datetime_fim_almoco:
             if slot_inicio < datetime_fim_almoco and slot_fim > datetime_inicio_almoco:
-                tem_sobreposicao = True
+                bloqueado_por_admin = True
 
         # 2. Verifica colisão com os agendamentos já reservados no banco
-        if not tem_sobreposicao:
+        if not bloqueado_por_admin:
             for agendamento in agendamentos:
-                if slot_inicio < agendamento.data_hora_fim and slot_fim > agendamento.data_hora_inicio:
+                if (agendamento.data_hora_fim is None or slot_inicio < agendamento.data_hora_fim) and slot_fim > agendamento.data_hora_inicio:
                     tem_sobreposicao = True
                     break
 
-        if not tem_sobreposicao:
+        # 3. Verifica colisão com bloqueios de horário
+        if not tem_sobreposicao and not bloqueado_por_admin:
+            for bloqueio in bloqueios:
+                if slot_inicio < bloqueio.data_hora_fim and slot_fim > bloqueio.data_hora_inicio:
+                    bloqueado_por_admin = True
+                    break
+
+        if not tem_sobreposicao and not bloqueado_por_admin:
             horarios_disponiveis.append(timezone.localtime(slot_inicio).strftime('%H:%M'))
+        elif tem_sobreposicao:
+            horarios_ocupados.append(timezone.localtime(slot_inicio).strftime('%H:%M'))
 
         loop_time += timedelta(minutes=slot_intervalo_minutos)
 
-    return Response({"horarios_disponiveis": horarios_disponiveis})
+    mensagem = None
+    if not horarios_disponiveis and not horarios_ocupados and bloqueios.exists():
+        mensagem = "Este dia está totalmente bloqueado ou indisponível para agendamentos."
+
+    return Response({
+        "horarios_disponiveis": horarios_disponiveis,
+        "horarios_ocupados": horarios_ocupados,
+        "mensagem": mensagem
+    })
 
 
 class FinancasDashboardView(APIView):
@@ -288,19 +321,32 @@ class FinancasDashboardView(APIView):
             )
 
         hoje = timezone.localdate()
-        inicio_mes = hoje.replace(day=1)
+        data_inicio_str = request.query_params.get('data_inicio')
+        data_fim_str = request.query_params.get('data_fim')
         
-        # Filtra os agendamentos concluídos do mês atual para a empresa
-        agendamentos_mes = Agendamento.objects.filter(
-            status='CONCLUIDO',
-            data_hora_inicio__date__gte=inicio_mes,
-            data_hora_inicio__date__lte=hoje
-        )
+        # Filtra os agendamentos concluídos
+        agendamentos = Agendamento.objects.filter(status='CONCLUIDO')
+        
+        if data_inicio_str and data_fim_str:
+            try:
+                # Opcional: try/except em datetime.strptime caso a data venha inválida
+                agendamentos = agendamentos.filter(
+                    data_hora_inicio__date__gte=data_inicio_str,
+                    data_hora_inicio__date__lte=data_fim_str
+                )
+            except Exception:
+                pass
+        else:
+            agendamentos = agendamentos.filter(
+                data_hora_inicio__year=hoje.year,
+                data_hora_inicio__month=hoje.month
+            )
+            
         if not user.is_superuser:
-            agendamentos_mes = agendamentos_mes.filter(empresa=empresa)
+            agendamentos = agendamentos.filter(empresa=empresa)
 
         # Consolidado financeiro
-        consolidado = agendamentos_mes.aggregate(
+        consolidado = agendamentos.aggregate(
             faturamento_bruto=Sum('valor_total'),
             total_comissoes=Sum('valor_comissao'),
             lucro_liquido=Sum('lucro_liquido')
@@ -312,12 +358,14 @@ class FinancasDashboardView(APIView):
 
         # Desempenho dos profissionais
         desempenho_profissionais = []
-        barbeiros = Usuario.objects.filter(tipo='PROFISSIONAL')
+        barbeiros = Usuario.objects.filter(
+            Q(tipo='PROFISSIONAL') | Q(agendamentos_profissional__in=agendamentos)
+        ).distinct()
         if not user.is_superuser:
             barbeiros = barbeiros.filter(empresa=empresa)
             
         for barbeiro in barbeiros:
-            agendamentos_barbeiro = agendamentos_mes.filter(profissional=barbeiro)
+            agendamentos_barbeiro = agendamentos.filter(profissional=barbeiro)
             consolidado_barbeiro = agendamentos_barbeiro.aggregate(
                 faturamento=Sum('valor_total'),
                 comissao=Sum('valor_comissao')
@@ -338,3 +386,170 @@ class FinancasDashboardView(APIView):
             "lucro_liquido": float(lucro_liquido),
             "desempenho_profissionais": desempenho_profissionais
         })
+
+
+class ComissoesView(APIView):
+    """
+    Endpoint isolado para relatório de comissões.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.tipo != 'ADMINISTRADOR' and not user.is_superuser:
+            return Response(
+                {"error": "Apenas administradores podem visualizar o relatório de comissões."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        empresa = user.empresa
+        
+        data_inicio_str = request.query_params.get('data_inicio')
+        data_fim_str = request.query_params.get('data_fim')
+        
+        agendamentos = Agendamento.objects.filter(status='CONCLUIDO')
+        if not user.is_superuser:
+            agendamentos = agendamentos.filter(empresa=empresa)
+            
+        if data_inicio_str and data_fim_str:
+            try:
+                agendamentos = agendamentos.filter(
+                    data_hora_inicio__date__gte=data_inicio_str,
+                    data_hora_inicio__date__lte=data_fim_str
+                )
+            except Exception:
+                pass
+                
+        profissionais_data = []
+        barbeiros = Usuario.objects.filter(
+            Q(tipo='PROFISSIONAL') | Q(agendamentos_profissional__in=agendamentos)
+        ).distinct()
+        if not user.is_superuser:
+            barbeiros = barbeiros.filter(empresa=empresa)
+            
+        total_faturamento = 0.0
+        total_comissoes_geral = 0.0
+        total_lucro_liquido = 0.0
+            
+        for barbeiro in barbeiros:
+            agendamentos_barbeiro = agendamentos.filter(profissional=barbeiro)
+            faturamento_bruto = agendamentos_barbeiro.aggregate(total=Sum('valor_total'))['total'] or 0.0
+            
+            percentual = float(barbeiro.comissao_percentual) if hasattr(barbeiro, 'comissao_percentual') else 50.0
+            valor_comissao = float(faturamento_bruto) * (percentual / 100.0)
+            lucro_liquido = float(faturamento_bruto) - valor_comissao
+            
+            total_faturamento += float(faturamento_bruto)
+            total_comissoes_geral += valor_comissao
+            total_lucro_liquido += lucro_liquido
+            
+            profissionais_data.append({
+                "profissional_id": barbeiro.id,
+                "nome": barbeiro.get_full_name() or barbeiro.username,
+                "comissao_percentual": percentual,
+                "faturamento": float(faturamento_bruto),
+                "comissao": valor_comissao,
+                "lucro_liquido": lucro_liquido
+            })
+            
+        profissionais_data.sort(key=lambda x: x['faturamento'], reverse=True)
+            
+        return Response({
+            "faturamento_bruto": total_faturamento,
+            "total_comissoes": total_comissoes_geral,
+            "lucro_liquido": total_lucro_liquido,
+            "desempenho_profissionais": profissionais_data
+        })
+
+
+class MeuCartaoFidelidadeView(APIView):
+    """
+    Endpoint para o cliente visualizar o progresso do seu Cartão Fidelidade.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        empresa = user.empresa
+
+        # Compatibilidade com clientes antigos: recupera o estabelecimento do
+        # histórico e consolida o vínculo para as próximas consultas.
+        if not empresa and user.tipo == 'CLIENTE':
+            ultimo = Agendamento.objects.filter(cliente=user).select_related('empresa').order_by('-data_hora_inicio').first()
+            if ultimo:
+                empresa = ultimo.empresa
+                user.empresa = empresa
+                user.save(update_fields=['empresa'])
+
+        if not empresa:
+            return Response(
+                {"error": "Usuário não associado a nenhuma empresa."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not empresa.fidelidade_ativo:
+            return Response({
+                "ativo": False,
+                "mensagem": "O programa de fidelidade está inativo no momento."
+            })
+
+        from apps.agenda.models import CartaoFidelidade
+        cartao, _ = CartaoFidelidade.objects.get_or_create(
+            empresa=empresa,
+            cliente=user
+        )
+
+        return Response({
+            "ativo": True,
+            "estilo": empresa.fidelidade_estilo,
+            "meta": empresa.fidelidade_meta,
+            "qtd_selos_atual": cartao.qtd_selos_atual,
+            "premios_disponiveis": cartao.premios_disponiveis
+        })
+
+
+
+class BloqueioHorarioViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar os bloqueios de horário.
+    """
+    serializer_class = BloqueioHorarioSerializer
+    permission_classes = [IsAuthenticated, IsEmpresaAtiva]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser:
+            return BloqueioHorario.objects.all()
+        if user.tipo in ['ADMINISTRADOR', 'PROFISSIONAL'] and user.empresa:
+            return BloqueioHorario.objects.filter(empresa=user.empresa)
+        return BloqueioHorario.objects.none()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.tipo in ['ADMINISTRADOR', 'PROFISSIONAL'] and user.empresa:
+            serializer.save(empresa=user.empresa)
+        else:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Apenas administradores ou profissionais podem criar bloqueios.")
+
+class FilaEsperaViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar a fila de espera.
+    Clientes podem entrar na fila publicamente.
+    """
+    serializer_class = FilaEsperaSerializer
+    filter_backends = [filters.DjangoFilterBackend]
+    filterset_fields = ['data_desejada', 'notificado']
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'fila_espera'
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [AllowAny()]
+        return [IsAuthenticated(), IsEmpresaAtiva()]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated and user.tipo in ['ADMINISTRADOR', 'PROFISSIONAL'] and user.empresa:
+            return FilaEspera.objects.filter(empresa=user.empresa)
+        return FilaEspera.objects.none()

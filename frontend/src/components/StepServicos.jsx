@@ -13,14 +13,16 @@ export default function StepServicos() {
   const [error, setError] = useState(null);
 
   // Zustand
-  const { servicosIds, toggleServicoId } = useAgendamentoStore();
+  const { empresaId, servicosIds, toggleServicoId } = useAgendamentoStore();
 
   useEffect(() => {
     async function loadServicos() {
       setLoading(true);
       setError(null);
       try {
-        const response = await api.get('/api/servicos/');
+        const response = await api.get('/api/servicos/', {
+          params: { empresa_id: empresaId }
+        });
         setServicos(response.data.results || response.data);
       } catch (err) {
         console.error('Erro ao buscar serviços:', err);
@@ -29,8 +31,10 @@ export default function StepServicos() {
         setLoading(false);
       }
     }
-    loadServicos();
-  }, []);
+    if (empresaId) {
+      loadServicos();
+    }
+  }, [empresaId]);
 
   if (loading) {
     return (
@@ -98,7 +102,7 @@ export default function StepServicos() {
                 borderColor: { repeat: Infinity, duration: 2, ease: "easeInOut" },
                 boxShadow: { repeat: Infinity, duration: 2, ease: "easeInOut" }
               } : { duration: 0.2 }}
-              onClick={() => toggleServicoId(servico.id)}
+              onClick={() => toggleServicoId(servico.id, servico.empresa)}
               className={`p-4 rounded-xl border cursor-pointer flex justify-between items-center transition-colors duration-200 ${
                 isSelected ? 'bg-gold/10' : 'bg-background-darker hover:border-white/20'
               }`}

@@ -1,5 +1,6 @@
 import React from 'react';
 import StatusBadge from './StatusBadge';
+import useAgendamentoStore from '../store/useAgendamentoStore';
 
 /**
  * Componente AgendamentoTable.
@@ -8,7 +9,8 @@ import StatusBadge from './StatusBadge';
  * @param {object} props
  * @param {Array} props.agendamentos - Lista de agendamentos
  */
-export default function AgendamentoTable({ agendamentos }) {
+export default function AgendamentoTable({ agendamentos, onStatusChange, updatingId }) {
+  const { userId, userTipo } = useAgendamentoStore();
   // Auxiliar para formatar moeda brasileira
   const formatMoeda = (valor) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
@@ -23,7 +25,8 @@ export default function AgendamentoTable({ agendamentos }) {
       month: '2-digit',
       year: '2-digit',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'America/Sao_Paulo'
     });
   };
 
@@ -54,13 +57,16 @@ export default function AgendamentoTable({ agendamentos }) {
               <th className="px-6 py-4">Profissional</th>
               <th className="px-6 py-4">Valor Total</th>
               <th className="px-6 py-4 text-center">Status</th>
+              {onStatusChange && <th className="px-6 py-4">Ações</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5 text-sm text-text-primary">
             {agendamentos.map((agendamento) => {
               // Detalhes extras vindos do get_representation do backend
               const servicos = agendamento.servicos_detalhes || [];
-              const total = calcularValorTotal(servicos);
+              const total = agendamento.valor_total !== null && agendamento.valor_total !== undefined
+                ? Number(agendamento.valor_total) : calcularValorTotal(servicos);
+              const canManage = userTipo === 'ADMINISTRADOR' || Number(userId) === agendamento.profissional;
 
               return (
                 <tr key={agendamento.id} className="hover:bg-white/[0.02] transition-colors">
@@ -87,6 +93,15 @@ export default function AgendamentoTable({ agendamentos }) {
                   <td className="px-6 py-4 text-center">
                     <StatusBadge status={agendamento.status} />
                   </td>
+                  {onStatusChange && <td className="px-6 py-4">
+                    {canManage && ['PENDENTE', 'CONFIRMADO'].includes(agendamento.status) && (
+                      <div className="flex gap-2">
+                        {agendamento.status === 'PENDENTE' && <button disabled={updatingId !== null} className="btn-gold-outline text-xs" onClick={() => onStatusChange(agendamento.id, 'CONFIRMADO')}>Confirmar</button>}
+                        {agendamento.status === 'CONFIRMADO' && new Date(agendamento.data_hora_inicio) <= new Date() && <button disabled={updatingId !== null} className="btn-gold-outline text-xs" onClick={() => onStatusChange(agendamento.id, 'CONCLUIDO')}>Concluir</button>}
+                        <button disabled={updatingId !== null} className="text-rose-400 text-xs" onClick={() => onStatusChange(agendamento.id, 'CANCELADO')}>Cancelar</button>
+                      </div>
+                    )}
+                  </td>}
                 </tr>
               );
             })}

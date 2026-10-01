@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useAgendamentoStore from '../store/useAgendamentoStore';
 import api from '../services/api';
+import FilaEsperaModal from './FilaEsperaModal';
 
 /**
  * Passo do Wizard para seleção de Data e Hora.
@@ -8,22 +9,27 @@ import api from '../services/api';
  */
 export default function StepDataHora() {
   // Zustand State
-  const { dataHora, setDataHora, barbeiroId, servicosIds } = useAgendamentoStore();
+  const { dataHora, setDataHora, barbeiroId, servicosIds, empresaId, userEmpresa } = useAgendamentoStore();
   
   // Estados locais auxiliares para separar data e hora
   const [selectedDate, setSelectedDate] = useState(dataHora ? dataHora.split('T')[0] : '');
   const [selectedTime, setSelectedTime] = useState(dataHora && dataHora.includes('T') ? dataHora.split('T')[1].substring(0, 5) : '');
   
-  // Estados para dados da API
   const [horariosDisponiveis, setHorariosDisponiveis] = useState([]);
+  const [horariosOcupados, setHorariosOcupados] = useState([]);
+  const [filaModal, setFilaModal] = useState({ isOpen: false, hora: '' });
+  const [mensagemBloqueio, setMensagemBloqueio] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Busca os horários livres sempre que a data selecionada mudar
   useEffect(() => {
+    const controller = new AbortController();
     async function loadDisponibilidade() {
       if (!selectedDate || !barbeiroId || servicosIds.length === 0) {
         setHorariosDisponiveis([]);
+        setHorariosOcupados([]);
+        setMensagemBloqueio(null);
         return;
       }
 
@@ -33,6 +39,7 @@ export default function StepDataHora() {
       try {
         const servicosParam = servicosIds.join(',');
         const response = await api.get('/api/disponibilidade/', {
+          signal: controller.signal,
           params: {
             data: selectedDate,
             barbeiro_id: barbeiroId,
@@ -40,16 +47,22 @@ export default function StepDataHora() {
           },
         });
         setHorariosDisponiveis(response.data.horarios_disponiveis || []);
+        setHorariosOcupados(response.data.horarios_ocupados || []);
+        setMensagemBloqueio(response.data.mensagem || null);
       } catch (err) {
+        if (controller.signal.aborted) return;
         console.error('Erro ao carregar disponibilidade:', err);
         setError('Ocorreu um erro ao carregar os horários disponíveis.');
         setHorariosDisponiveis([]);
+        setHorariosOcupados([]);
+        setMensagemBloqueio(null);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
     loadDisponibilidade();
+    return () => controller.abort();
   }, [selectedDate, barbeiroId, servicosIds]);
 
   const handleDateChange = (e) => {
@@ -63,7 +76,7 @@ export default function StepDataHora() {
     setSelectedTime(time);
     if (selectedDate && time) {
       // Salva no formato ISO com fuso local que o backend espera
-      setDataHora(`${selectedDate}T${time}:00`);
+      setDataHora(`${selectedDate}T${time}:00-03:00`);
     } else {
       setDataHora(null);
     }
@@ -82,11 +95,23 @@ export default function StepDataHora() {
           <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
             Escolher Dia
           </label>
+          <style>{`
+            input[type="date"]::-webkit-calendar-picker-indicator {
+              opacity: 0.8;
+              cursor: pointer;
+              /* Como o color-scheme já é dark, o ícone é nativamente claro. 
+                 Se precisarmos forçar a cor, podemos usar um SVG via background-image. */
+            }
+            input[type="date"]::-webkit-calendar-picker-indicator:hover {
+              opacity: 1;
+            }
+          `}</style>
           <input
             type="date"
             value={selectedDate}
             onChange={handleDateChange}
-            min={new Date().toISOString().split('T')[0]} // Impede datas retroativas
+            min={new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())}
+            style={{ colorScheme: 'dark' }}
             className="w-full bg-background-darker border border-white/10 rounded-lg px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-gold transition-colors"
           />
         </div>
@@ -107,7 +132,11 @@ export default function StepDataHora() {
               <div className="py-4 text-center text-xs text-rose-400 bg-rose-500/5 rounded-lg border border-rose-500/10">
                 ⚠️ {error}
               </div>
-            ) : horariosDisponiveis.length > 0 ? (
+            ) : mensagemBloqueio ? (
+              <div className="py-6 px-4 text-center text-sm font-semibold text-rose-400 bg-rose-500/10 rounded-xl border border-rose-500/20">
+                🚫 {mensagemBloqueio}
+              </div>
+            ) : horariosDisponiveis.length > 0 || horariosOcupados.length > 0 ? (
               <div className="grid grid-cols-4 gap-2 max-h-[220px] overflow-y-auto pr-1">
                 {horariosDisponiveis.map((time) => {
                   const isSelected = selectedTime === time;
@@ -126,6 +155,18 @@ export default function StepDataHora() {
                     </button>
                   );
                 })}
+                {horariosOcupados.map((time) => (
+                  <div key={time} className="flex flex-col justify-center items-center bg-background-darker/50 border border-red-500/20 rounded-lg py-1 px-1 gap-1">
+                    <span className="text-xs font-semibold text-red-400 line-through opacity-70">{time}</span>
+                    <button
+                      type="button"
+                      onClick={() => setFilaModal({ isOpen: true, hora: time })}
+                      className="text-[10px] bg-red-500/10 text-red-400 px-1 py-1 rounded hover:bg-red-500/20 transition-colors w-full"
+                    >
+                      Entrar na Fila
+                    </button>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="py-6 text-center text-xs text-text-secondary bg-background-darker/35 rounded-xl border border-white/5">
@@ -141,6 +182,14 @@ export default function StepDataHora() {
           </div>
         )}
       </div>
+
+      <FilaEsperaModal 
+        isOpen={filaModal.isOpen} 
+        onClose={() => setFilaModal({ isOpen: false, hora: '' })} 
+        data={selectedDate} 
+        hora={filaModal.hora} 
+        empresaId={empresaId || (userEmpresa ? userEmpresa.id : null)}
+      />
     </div>
   );
 }

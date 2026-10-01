@@ -1,39 +1,82 @@
-import React, { useState } from 'react'
+import React, { lazy, Suspense, useState, useEffect } from 'react'
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import useAgendamentoStore from './store/useAgendamentoStore'
-import AdminDashboard from './pages/AdminDashboard'
-import AgendamentoWizard from './pages/AgendamentoWizard'
-import PainelCliente from './pages/PainelCliente'
-import FinanceiroDashboard from './pages/FinanceiroDashboard'
 import ProtectedRoute from './components/ProtectedRoute'
+import LandingPage from './pages/LandingPage'
 import backgroundImg from './imagem/Background.jpg'
+import i9builderImg from './imagem/i9builder.png'
+
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const AgendamentoWizard = lazy(() => import('./pages/AgendamentoWizard'))
+const PainelCliente = lazy(() => import('./pages/PainelCliente'))
+const FinanceiroDashboard = lazy(() => import('./pages/FinanceiroDashboard'))
+const Assinatura = lazy(() => import('./pages/Assinatura'))
+const RedefinirSenha = lazy(() => import('./pages/RedefinirSenha'))
+const VitrinePublica = lazy(() => import('./pages/VitrinePublica'))
+const TicketPedido = lazy(() => import('./pages/TicketPedido'))
+
+const LoadingScreen = () => (
+  <div className="flex min-h-[50vh] items-center justify-center text-sm text-text-secondary">
+    Carregando…
+  </div>
+)
 
 function App() {
-  const [currentTab, setCurrentTab] = useState('client') // 'client' ou 'admin'
-  const { userToken, userNome, userTipo, logout } = useAgendamentoStore()
+  const [currentTab, setCurrentTab] = useState('landing') // 'landing' por padrão para visitantes
+  const { userToken, userNome, userTipo, userEmpresa, logout, setAuthModalOpen } = useAgendamentoStore()
+
+  useEffect(() => {
+    const onExpired = () => { logout(); setCurrentTab('landing'); };
+    window.addEventListener('auth_expired', onExpired);
+    return () => window.removeEventListener('auth_expired', onExpired);
+  }, [logout]);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Redireciona para a landing page se logout, ou para o dashboard se login
+  useEffect(() => {
+    if (location.pathname.startsWith('/agendar/') || location.pathname.startsWith('/vitrine/') || location.pathname.startsWith('/pedido/') || location.pathname.startsWith('/checkout-assinatura') || location.pathname.startsWith('/redefinir-senha')) {
+       // Se estiver na rota de agendamento ou assinatura, não força a aba landing.
+       return;
+    }
+    if (!userToken) {
+      setCurrentTab('landing');
+    } else if (currentTab === 'landing') {
+      // Quando logar a partir da landing page, redireciona para a aba correta
+      if (userTipo === 'ADMINISTRADOR' || userTipo === 'PROFISSIONAL') {
+        setCurrentTab('admin');
+      } else {
+        setCurrentTab('client_dashboard');
+      }
+    }
+  }, [userToken, userTipo, location.pathname, currentTab]);
 
   return (
     <div 
       className="min-h-screen bg-background text-text-primary font-sans flex flex-col"
       style={{
-        backgroundImage: `linear-gradient(rgba(18, 18, 18, 0.88), rgba(18, 18, 18, 0.94)), url(${backgroundImg})`,
+        backgroundImage: `linear-gradient(145deg, rgba(3, 9, 20, 0.96), rgba(7, 17, 31, 0.90)), url(${backgroundImg})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: 'fixed',
         backgroundRepeat: 'no-repeat',
       }}
     >
-      {/* Barra de Navegação Superior */}
-      <header className="bg-background-paper border-b border-white/5 sticky top-0 z-50 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:flex-row justify-between items-center">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">💈</span>
-            <span className="font-extrabold tracking-wider bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent uppercase">
-              Barbeiro_pro
-            </span>
-          </div>
+      {/* Barra de Navegação Superior (Oculta na Landing Page e na tela de Agendamento Pública) */}
+      {(currentTab !== 'landing' || userToken) && (
+        <header className="bg-background-paper border-b border-white/5 sticky top-0 z-50 px-6 py-4">
+          <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:flex-row justify-between items-center">
+            <div className="flex items-center gap-3">
+              <img 
+                src="/logo.png" 
+                alt="Salão PRO" 
+                className="h-10 sm:h-12 w-auto object-contain drop-shadow-[0_0_15px_rgba(212,175,55,0.3)]" 
+              />
+            </div>
 
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-            {userToken && (
+            {userToken ? (
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-text-secondary">Olá, <strong className="text-gold-light">{userNome}</strong></span>
                 <button 
@@ -43,22 +86,59 @@ function App() {
                   Sair
                 </button>
               </div>
+            ) : (
+              <button 
+                onClick={() => setAuthModalOpen(true)}
+                className="btn-gold-outline px-3 py-1 text-xs rounded-md"
+              >
+                Entrar
+              </button>
             )}
 
-            <nav className="flex bg-background-darker border border-white/10 rounded-lg p-0.5 sm:p-1">
-              <button
-                onClick={() => setCurrentTab('client')}
-                className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${
-                  currentTab === 'client'
-                    ? 'bg-gold text-background'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                Agendar
-              </button>
-              {userToken && (
+            <nav className="flex flex-wrap justify-center bg-background-darker border border-white/10 rounded-lg p-1 sm:p-1 gap-1">
+              {/* Visitante não logado */}
+              {!userToken && (
                 <button
-                  onClick={() => setCurrentTab('client_dashboard')}
+                  onClick={() => setCurrentTab('landing')}
+                  className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${
+                    currentTab === 'landing'
+                      ? 'bg-gold text-background'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  Vitrine SaaS
+                </button>
+              )}
+
+              {/* Botões Comuns para Administradores/Profissionais */}
+              {userToken && (userTipo === 'ADMINISTRADOR' || userTipo === 'PROFISSIONAL') && userEmpresa && userEmpresa.slug && (
+                <button
+                  onClick={() => navigate(`/agendar/${userEmpresa.slug}`)}
+                  className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all text-text-secondary hover:text-text-primary`}
+                >
+                  Ver Meu Agendamento
+                </button>
+              )}
+
+              {/* Acesso rápido ao catálogo público do salão para equipe e clientes */}
+              {userToken && userEmpresa && userEmpresa.slug && (
+                <button
+                  onClick={() => navigate(`/vitrine/${userEmpresa.slug}`)}
+                  className="px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all text-text-secondary hover:text-gold-light"
+                >
+                  🛍️ Loja do Salão
+                </button>
+              )}
+
+              {/* Cliente */}
+              {userToken && userTipo === 'CLIENTE' && (
+                <button
+                  onClick={() => {
+                     // Em vez de mudar para tab 'client', que não existe mais para o genérico,
+                     // a gente pode mandar pro dashboard de cliente.
+                     setCurrentTab('client_dashboard');
+                     navigate('/');
+                  }}
                   className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${
                     currentTab === 'client_dashboard'
                       ? 'bg-gold text-background'
@@ -68,9 +148,11 @@ function App() {
                   Minha Agenda
                 </button>
               )}
-              {userToken && userTipo !== 'CLIENTE' && (
+
+              {/* Admin ou Profissional */}
+              {userToken && (userTipo === 'ADMINISTRADOR' || userTipo === 'PROFISSIONAL') && (
                 <button
-                  onClick={() => setCurrentTab('admin')}
+                  onClick={() => { setCurrentTab('admin'); navigate('/'); }}
                   className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${
                     currentTab === 'admin'
                       ? 'bg-gold text-background'
@@ -82,7 +164,7 @@ function App() {
               )}
               {userToken && userTipo === 'ADMINISTRADOR' && (
                 <button
-                  onClick={() => setCurrentTab('finance')}
+                  onClick={() => { setCurrentTab('finance'); navigate('/'); }}
                   className={`px-2.5 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-semibold rounded-md transition-all ${
                     currentTab === 'finance'
                       ? 'bg-gold text-background'
@@ -96,33 +178,76 @@ function App() {
           </div>
         </div>
       </header>
+      )}
 
-      {/* Área de Conteúdo Principal */}
       <main className="flex-1 flex flex-col justify-start sm:justify-center py-4 sm:py-0">
-        {currentTab === 'client' && <AgendamentoWizard />}
-        {currentTab === 'client_dashboard' && <PainelCliente />}
-        {currentTab === 'admin' && (
-          <ProtectedRoute 
-            allowedRoles={['ADMINISTRADOR', 'PROFISSIONAL']} 
-            onDenied={() => setCurrentTab('client_dashboard')}
-          >
-            <AdminDashboard />
-          </ProtectedRoute>
+        <Suspense fallback={<LoadingScreen />}>
+        {location.pathname.startsWith('/agendar/') ? (
+          <Routes>
+            <Route path="/agendar/:empresaSlug" element={<AgendamentoWizard />} />
+          </Routes>
+        ) : location.pathname.startsWith('/vitrine/') ? (
+          <Routes>
+            <Route path="/vitrine/:empresaSlug" element={<VitrinePublica />} />
+          </Routes>
+        ) : location.pathname.startsWith('/pedido/') ? (
+          <Routes>
+            <Route path="/pedido/:token" element={<TicketPedido />} />
+          </Routes>
+        ) : location.pathname.startsWith('/checkout-assinatura') ? (
+          <Routes>
+            <Route path="/checkout-assinatura" element={<Assinatura />} />
+          </Routes>
+        ) : location.pathname.startsWith('/redefinir-senha') ? (
+          <Routes>
+            <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+          </Routes>
+        ) : (
+          <>
+            {currentTab === 'client_dashboard' && (
+              <ProtectedRoute 
+                allowedRoles={['CLIENTE']} 
+                onDenied={() => setCurrentTab('landing')}
+              >
+                <PainelCliente />
+              </ProtectedRoute>
+            )}
+            {currentTab === 'admin' && (
+              <ProtectedRoute 
+                allowedRoles={['ADMINISTRADOR', 'PROFISSIONAL']} 
+                onDenied={() => setCurrentTab(userToken ? 'client_dashboard' : 'landing')}
+              >
+                <AdminDashboard />
+              </ProtectedRoute>
+            )}
+            {currentTab === 'finance' && (
+              <ProtectedRoute 
+                allowedRoles={['ADMINISTRADOR']} 
+                onDenied={() => setCurrentTab(userToken ? 'admin' : 'landing')}
+              >
+                <FinanceiroDashboard />
+              </ProtectedRoute>
+            )}
+            {currentTab === 'landing' && <LandingPage />}
+          </>
         )}
-        {currentTab === 'finance' && (
-          <ProtectedRoute 
-            allowedRoles={['ADMINISTRADOR']} 
-            onDenied={() => setCurrentTab('client_dashboard')}
-          >
-            <FinanceiroDashboard />
-          </ProtectedRoute>
-        )}
+        </Suspense>
       </main>
 
       {/* Rodapé institucional */}
-      <footer className="text-center py-6 text-[10px] text-text-muted border-t border-white/5">
-        &copy; 2026 Barbeiro_pro SaaS. Todos os direitos reservados.
-      </footer>
+      {(currentTab !== 'landing' || userToken) && (
+        <footer className="py-4 flex items-center justify-center gap-3 text-xs text-text-muted border-t border-white/5 mt-auto">
+          <img 
+            src={i9builderImg} 
+            alt="i9builder Logo" 
+            className="w-8 h-8 rounded-full object-cover border border-white/10 shadow-sm" 
+          />
+          <span>&copy; {new Date().getFullYear()} Salão Pro. Todos os direitos reservados i9builder @luciano.saints</span>
+        </footer>
+      )}
+
+      {/* Botão Flutuante do WhatsApp */}
+      {/* <WhatsAppButton /> */}
     </div>
   )
 }

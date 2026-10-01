@@ -3,30 +3,72 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    font-synthesis: none;
+  }
+
   body {
     @apply bg-background text-text-primary antialiased selection:bg-gold selection:text-background;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Manrope', 'Inter', sans-serif;
+    color-scheme: dark;
+    background:
+      radial-gradient(circle at 10% 0%, rgba(33, 212, 216, 0.12), transparent 32rem),
+      radial-gradient(circle at 90% 10%, rgba(255, 92, 108, 0.14), transparent 30rem),
+      #07111f;
   }
+
 }
 
 @layer components {
   /* Estilo do Card Premium com efeito de Glassmorphism */
   .card-premium {
-    @apply bg-background-paper border border-white/5 rounded-xl p-6 transition-all duration-300 hover:border-gold/30 hover:shadow-lg hover:shadow-gold/5;
+    @apply bg-background-paper/90 backdrop-blur-xl border border-white/10 rounded-2xl p-6 transition-all duration-300 hover:border-gold/40 hover:shadow-2xl hover:shadow-gold/10;
   }
 
   /* Botão Premium Principal (Dourado Metálico) */
   .btn-gold {
-    @apply bg-gradient-to-r from-gold-dark via-gold to-gold-light text-background font-semibold px-6 py-2.5 rounded-lg shadow-md hover:opacity-90 active:scale-95 transition-all duration-200;
+    @apply bg-gradient-to-r from-gold-dark via-gold to-accent-orange text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-gold/20 hover:brightness-110 active:scale-95 transition-all duration-200;
   }
 
   /* Botão Premium Secundário (Borda Dourada / Transparente) */
   .btn-gold-outline {
-    @apply bg-transparent border border-gold text-gold font-medium px-6 py-2.5 rounded-lg hover:bg-gold/10 active:scale-95 transition-all duration-200;
+    @apply bg-white/5 border border-white/15 text-white font-semibold px-6 py-2.5 rounded-xl hover:border-gold/60 hover:bg-gold/10 active:scale-95 transition-all duration-200;
   }
 
   /* Botão Laranja de Alerta/Ação Alternativa */
   .btn-accent {
     @apply bg-accent-orange text-white font-semibold px-6 py-2.5 rounded-lg shadow-md hover:bg-opacity-90 active:scale-95 transition-all duration-200;
+  }
+
+  .wa-chat {
+    background-color: #0b141a;
+    background-image:
+      radial-gradient(circle at 18% 22%, rgba(255,255,255,.028) 0 1px, transparent 2px),
+      radial-gradient(circle at 72% 64%, rgba(255,255,255,.02) 0 1px, transparent 2px),
+      linear-gradient(135deg, rgba(255,255,255,.012) 25%, transparent 25% 50%, rgba(255,255,255,.012) 50% 75%, transparent 75%);
+    background-size: 23px 23px, 29px 29px, 38px 38px;
+  }
+
+  .wa-in,
+  .wa-out {
+    position: relative;
+  }
+
+  .wa-in::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 0;
+    border-top: 10px solid #202c33;
+    border-left: 10px solid transparent;
+  }
+
+  .wa-out::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: 0;
+    border-top: 10px solid #005c4b;
+    border-right: 10px solid transparent;
   }
 }
