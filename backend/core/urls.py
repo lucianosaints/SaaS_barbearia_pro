@@ -12,7 +12,7 @@ from rest_framework_simplejwt.views import (
 # Importando as ViewSets e views customizadas
 from apps.tenants.views import EmpresaViewSet, SiteVisitCounterView
 from apps.accounts.views import UsuarioViewSet, registrar_cliente, registrar_saas, CustomTokenObtainPairView, CustomTokenRefreshView, LogoutView, solicitar_recuperacao_senha, confirmar_recuperacao_senha
-from apps.agenda.views import ServicoViewSet, AgendamentoViewSet, obter_disponibilidade, FinancasDashboardView, ComissoesView, MeuCartaoFidelidadeView, BloqueioHorarioViewSet, FilaEsperaViewSet
+from apps.agenda.views import ServicoViewSet, AgendamentoViewSet, obter_disponibilidade, FinancasDashboardView, ComissoesView, MeuCartaoFidelidadeView, BloqueioHorarioViewSet, FilaEsperaViewSet, ComandaViewSet
 from apps.tenants.waha_views import WahaQRCodeView, WahaPairingCodeView, WahaSessionStatusView
 from apps.vitrine.views import PedidoViewSet, ProdutoViewSet, ticket_pedido
 
@@ -26,6 +26,7 @@ router.register(r'bloqueios', BloqueioHorarioViewSet, basename='bloqueio')
 router.register(r'fila-espera', FilaEsperaViewSet, basename='fila_espera')
 router.register(r'produtos', ProdutoViewSet, basename='produto')
 router.register(r'pedidos', PedidoViewSet, basename='pedido')
+router.register(r'comandas', ComandaViewSet, basename='comanda')
 
 urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),

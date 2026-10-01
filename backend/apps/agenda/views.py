@@ -10,10 +10,12 @@ from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from apps.agenda.models import Servico, Agendamento, BloqueioHorario, FilaEspera
-from apps.agenda.serializers import ServicoSerializer, AgendamentoSerializer, BloqueioHorarioSerializer, FilaEsperaSerializer
+from apps.agenda.models import Servico, Agendamento, BloqueioHorario, FilaEspera, Comanda, ItemComandaServico, ItemComandaProduto
+from apps.agenda.serializers import ServicoSerializer, AgendamentoSerializer, BloqueioHorarioSerializer, FilaEsperaSerializer, ComandaSerializer
 from apps.accounts.models import Usuario
 from django.db.models import Q
+from django.db import transaction
+from rest_framework.exceptions import PermissionDenied
 
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
@@ -22,6 +24,71 @@ from rest_framework.permissions import SAFE_METHODS
 from rest_framework.exceptions import ValidationError
 from apps.agenda.rules import validate_selection
 from apps.tenants.permissions import IsEmpresaAtiva
+
+
+class ComandaViewSet(viewsets.ModelViewSet):
+    serializer_class = ComandaSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser:
+            return Comanda.objects.select_related('agendamento__cliente', 'profissional').prefetch_related('itens_servico', 'itens_produto')
+        if user.tipo not in {'ADMINISTRADOR', 'PROFISSIONAL'} or not user.empresa_id:
+            raise PermissionDenied('Apenas a equipe pode acessar comandas.')
+        queryset = Comanda.objects.filter(empresa=user.empresa)
+        if user.tipo == 'PROFISSIONAL':
+            queryset = queryset.filter(profissional=user)
+        return queryset.select_related('agendamento__cliente', 'profissional').prefetch_related('itens_servico', 'itens_produto')
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        agendamento_id = request.data.get('agendamento')
+        agendamento = Agendamento.objects.select_for_update().filter(pk=agendamento_id).first()
+        if not agendamento:
+            raise ValidationError({'agendamento': 'Agendamento não encontrado.'})
+        if not request.user.is_superuser and agendamento.empresa_id != request.user.empresa_id:
+            raise PermissionDenied('Agendamento de outro estabelecimento.')
+        if request.user.tipo == 'PROFISSIONAL' and agendamento.profissional_id != request.user.id:
+            raise PermissionDenied('Profissional não autorizado para esta comanda.')
+        comanda, criada = Comanda.objects.get_or_create(
+            agendamento=agendamento,
+            defaults={'empresa': agendamento.empresa, 'profissional': agendamento.profissional},
+        )
+        if criada:
+            ItemComandaServico.objects.bulk_create([
+                ItemComandaServico(comanda=comanda, servico=s, nome=s.nome, preco_unitario=s.preco)
+                for s in agendamento.servicos.all()
+            ])
+            comanda.recalcular(); comanda.save()
+        return Response(self.get_serializer(comanda).data, status=status.HTTP_201_CREATED if criada else status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='adicionar-produto')
+    @transaction.atomic
+    def adicionar_produto(self, request, pk=None):
+        comanda = self.get_queryset().select_for_update().get(pk=pk)
+        if comanda.status != 'ABERTA':
+            raise ValidationError('A comanda não está aberta.')
+        from apps.vitrine.models import Produto
+        produto = Produto.objects.filter(pk=request.data.get('produto'), empresa=comanda.empresa, disponivel=True).first()
+        try: quantidade = int(request.data.get('quantidade', 1))
+        except (TypeError, ValueError): quantidade = 0
+        if not produto or quantidade < 1:
+            raise ValidationError({'produto': 'Produto ou quantidade inválida.'})
+        item, _ = ItemComandaProduto.objects.get_or_create(comanda=comanda, produto=produto, defaults={'nome': produto.nome, 'preco_unitario': produto.preco_atual, 'quantidade': 0})
+        item.quantidade += quantidade; item.save()
+        comanda.recalcular(); comanda.save()
+        return Response(self.get_serializer(comanda).data)
+
+    @action(detail=True, methods=['post'])
+    def fechar(self, request, pk=None):
+        comanda = self.get_object().fechar(request.data.get('metodo_pagamento'))
+        return Response(self.get_serializer(comanda).data)
+
+    @action(detail=True, methods=['post'])
+    def cancelar(self, request, pk=None):
+        return Response(self.get_serializer(self.get_object().cancelar()).data)
 
 class ServicoViewSet(viewsets.ModelViewSet):
     """

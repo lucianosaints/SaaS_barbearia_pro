@@ -3,7 +3,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
-from apps.agenda.models import Servico, Agendamento, BloqueioHorario, FilaEspera
+from apps.agenda.models import Servico, Agendamento, BloqueioHorario, FilaEspera, Comanda, ItemComandaServico, ItemComandaProduto
 from apps.accounts.models import Usuario
 from apps.agenda.rules import validate_slot
 
@@ -237,3 +237,32 @@ class FilaEsperaSerializer(serializers.ModelSerializer):
         model = FilaEspera
         fields = ['id', 'empresa', 'cliente_nome', 'cliente_telefone', 'data_desejada', 'horario_desejado', 'notificado', 'criado_em']
         read_only_fields = ['id', 'notificado', 'criado_em']
+
+
+class ItemComandaServicoSerializer(serializers.ModelSerializer):
+    subtotal = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    class Meta:
+        model = ItemComandaServico
+        fields = ['id', 'servico', 'nome', 'quantidade', 'preco_unitario', 'subtotal']
+
+
+class ItemComandaProdutoSerializer(serializers.ModelSerializer):
+    subtotal = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    class Meta:
+        model = ItemComandaProduto
+        fields = ['id', 'produto', 'nome', 'quantidade', 'preco_unitario', 'subtotal']
+
+
+class ComandaSerializer(serializers.ModelSerializer):
+    itens_servico = ItemComandaServicoSerializer(many=True, read_only=True)
+    itens_produto = ItemComandaProdutoSerializer(many=True, read_only=True)
+    cliente_nome = serializers.CharField(source='agendamento.cliente.get_full_name', read_only=True)
+    profissional_nome = serializers.CharField(source='profissional.get_full_name', read_only=True)
+
+    class Meta:
+        model = Comanda
+        fields = ['id', 'agendamento', 'cliente_nome', 'profissional', 'profissional_nome', 'status',
+                  'metodo_pagamento', 'desconto', 'subtotal_servicos', 'subtotal_produtos', 'total',
+                  'valor_comissao', 'itens_servico', 'itens_produto', 'criado_em', 'fechado_em', 'cancelado_em']
+        read_only_fields = ['id', 'profissional', 'status', 'metodo_pagamento', 'subtotal_servicos',
+                            'subtotal_produtos', 'total', 'valor_comissao', 'criado_em', 'fechado_em', 'cancelado_em']
