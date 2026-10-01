@@ -1,5 +1,9 @@
 from datetime import timedelta
+from decimal import Decimal, ROUND_HALF_UP
 from django.db import models
+from django.db import transaction
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
@@ -308,4 +312,109 @@ class CartaoFidelidade(models.Model):
 
     def __str__(self):
         return f"Fidelidade de {self.cliente} - {self.qtd_selos_atual} selos"
+
+
+class Comanda(models.Model):
+    STATUS_CHOICES = [('ABERTA', 'Aberta'), ('FECHADA', 'Fechada'), ('CANCELADA', 'Cancelada')]
+    PAGAMENTO_CHOICES = Agendamento.METODO_PAGAMENTO_CHOICES
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.PROTECT, related_name='comandas')
+    agendamento = models.OneToOneField(Agendamento, on_delete=models.PROTECT, related_name='comanda')
+    profissional = models.ForeignKey(Usuario, on_delete=models.PROTECT, related_name='comandas')
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='ABERTA')
+    metodo_pagamento = models.CharField(max_length=20, choices=PAGAMENTO_CHOICES, null=True, blank=True)
+    desconto = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    subtotal_servicos = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    subtotal_produtos = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    valor_comissao = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    criado_em = models.DateTimeField(auto_now_add=True)
+    fechado_em = models.DateTimeField(null=True, blank=True)
+    cancelado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-criado_em']
+
+    def recalcular(self):
+        servicos = sum((item.subtotal for item in self.itens_servico.all()), Decimal('0'))
+        produtos = sum((item.subtotal for item in self.itens_produto.all()), Decimal('0'))
+        if self.desconto < 0 or self.desconto > servicos + produtos:
+            raise ValidationError({'desconto': 'O desconto deve estar entre zero e o subtotal da comanda.'})
+        self.subtotal_servicos = servicos
+        self.subtotal_produtos = produtos
+        self.total = servicos + produtos - self.desconto
+
+    @transaction.atomic
+    def fechar(self, metodo_pagamento):
+        comanda = Comanda.objects.select_for_update().get(pk=self.pk)
+        if comanda.status != 'ABERTA':
+            raise ValidationError('Somente comandas abertas podem ser fechadas.')
+        if metodo_pagamento not in dict(self.PAGAMENTO_CHOICES):
+            raise ValidationError({'metodo_pagamento': 'Forma de pagamento inválida.'})
+        from apps.vitrine.models import Produto
+        itens = list(comanda.itens_produto.select_related('produto'))
+        produtos = {p.pk: p for p in Produto.objects.select_for_update().filter(pk__in=[i.produto_id for i in itens])}
+        for item in itens:
+            produto = produtos[item.produto_id]
+            if produto.empresa_id != comanda.empresa_id:
+                raise ValidationError('Produto de outro estabelecimento.')
+            if produto.controlar_estoque and produto.estoque < item.quantidade:
+                raise ValidationError({'estoque': f'Estoque insuficiente para {produto.nome}.'})
+        comanda.recalcular()
+        for item in itens:
+            produto = produtos[item.produto_id]
+            if produto.controlar_estoque:
+                produto.estoque -= item.quantidade
+                produto.save(update_fields=['estoque'])
+        taxa = Decimal(str(comanda.profissional.taxa_comissao))
+        comanda.valor_comissao = (comanda.subtotal_servicos * taxa / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        comanda.metodo_pagamento = metodo_pagamento
+        comanda.status = 'FECHADA'
+        comanda.fechado_em = timezone.now()
+        comanda.save()
+        Agendamento.objects.filter(pk=comanda.agendamento_id).update(
+            status='CONCLUIDO', status_pagamento='PAGO', metodo_pagamento=metodo_pagamento,
+            valor_total=comanda.subtotal_servicos, valor_comissao=comanda.valor_comissao,
+            lucro_liquido=comanda.subtotal_servicos - comanda.valor_comissao,
+        )
+        return comanda
+
+    @transaction.atomic
+    def cancelar(self):
+        comanda = Comanda.objects.select_for_update().get(pk=self.pk)
+        if comanda.status == 'CANCELADA':
+            raise ValidationError('A comanda já foi cancelada.')
+        if comanda.status == 'FECHADA':
+            from apps.vitrine.models import Produto
+            for item in comanda.itens_produto.select_related('produto'):
+                if item.produto.controlar_estoque:
+                    Produto.objects.filter(pk=item.produto_id).update(estoque=models.F('estoque') + item.quantidade)
+        comanda.status = 'CANCELADA'
+        comanda.cancelado_em = timezone.now()
+        comanda.save(update_fields=['status', 'cancelado_em'])
+        return comanda
+
+
+class ItemComandaServico(models.Model):
+    comanda = models.ForeignKey(Comanda, on_delete=models.CASCADE, related_name='itens_servico')
+    servico = models.ForeignKey(Servico, on_delete=models.PROTECT)
+    nome = models.CharField(max_length=150)
+    quantidade = models.PositiveIntegerField(default=1)
+    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+
+    @property
+    def subtotal(self):
+        return self.preco_unitario * self.quantidade
+
+
+class ItemComandaProduto(models.Model):
+    comanda = models.ForeignKey(Comanda, on_delete=models.CASCADE, related_name='itens_produto')
+    produto = models.ForeignKey('vitrine.Produto', on_delete=models.PROTECT)
+    nome = models.CharField(max_length=150)
+    quantidade = models.PositiveIntegerField(default=1)
+    preco_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+
+    @property
+    def subtotal(self):
+        return self.preco_unitario * self.quantidade
 
